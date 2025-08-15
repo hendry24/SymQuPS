@@ -1,6 +1,6 @@
 import sympy as sp
 
-from .hilbert_operators import Operator
+from ..objects.operators import Operator
 from .star_product import Star
 from ..utils.multiprocessing import _mp_helper
 

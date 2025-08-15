@@ -1,17 +1,13 @@
 import sympy as sp
-from itertools import permutations
-from typing import Tuple
 
-from ..core.base import _screen_type, _invalid_input
-from ..core import scalars
-from ..core.hilbert_operators import Operator, qOp, pOp, rho
+from ..objects import scalars
+from ..objects.operators import Operator, qOp, pOp, rho
 from ..utils.multiprocessing import _mp_helper
 
-
-def weyl_ordering(expr : sp.Expr):
+def s_quantize(expr : sp.Expr):
     '''
     Return the totally-symmetric (Weyl) ordering of the
-    input expression containing `Operator'.    
+    input expression containing `Operator'.
     '''
     expr = sp.expand(sp.sympify(expr))
     

@@ -1,8 +1,12 @@
 import sympy as sp
 
 import typing
-from . import scalars
-from .base import Base, _sub_cache, _treat_sub, _operation_routine
+from . import scalars 
+# Avoid, e.g., "from scalars import hbar" 
+# since we want its value to follow changes at runtime.
+from .base import Base
+from .cache import _sub_cache
+from ..utils._internal_routines import _treat_sub, _operation_routine
 from ..utils.multiprocessing import _mp_helper
 
 class Operator(Base):
@@ -35,8 +39,8 @@ class Dagger():
     """
     Hermitian conjugate of `A`.
     """
-    def __new__(cls, A : sp.Expr | Operator):
-        return _operation_routine(A,
+    def __new__(cls, expr : sp.Expr | Operator):
+        return _operation_routine(expr,
                                   "Dagger",
                                   (),
                                   (Operator,),
@@ -52,61 +56,46 @@ class Dagger():
                                   )
     
 class HermitianOp(Operator):
-    
     @typing.final
     def dagger(self):
         return self
     
 class qOp(HermitianOp):
     base = r"\hat{q}"
-
-    def wigner_transform(self):
-        return scalars.q(sub = self.sub)
     
 class pOp(HermitianOp):
     base = r"\hat{p}"
-        
-    def wigner_transform(self):
-        return scalars.p(sub = self.sub)
     
 class annihilateOp(Operator):
     base = r"\hat{a}"
         
     def define(self):
         with sp.evaluate(False):
-            return (qOp(sub=self.sub) + sp.I * pOp(sub=self.sub)) / sp.sqrt(2*scalars.hbar)
+            return ((qOp(sub=self.sub)*scalars.mu + sp.I*pOp(sub=self.sub)/scalars.mu) 
+                    / sp.sqrt(2*scalars.hbar))
     
     def dagger(self):
         return createOp(sub = self.sub)
-    
-    def wigner_transform(self):
-        with sp.evaluate(False):
-            return scalars.alpha(sub = self.sub)
     
 class createOp(Operator):
     base = r"\hat{a}^{\dagger}"
     
     def define(self):
-        return self.dagger().define()
+        with sp.evaluate(False):
+            mu_conj = sp.conjugate(scalars.mu)
+            
+            return ((qOp(sub=self.sub)*mu_conj - sp.I*pOp(sub=self.sub)/mu_conj) 
+                    / sp.sqrt(2*scalars.hbar))
         
     def dagger(self):
         return annihilateOp(sub = self.sub)
     
-    def wigner_transform(self):
-        with sp.evaluate(False):
-            return scalars.alphaD(sub = self.sub)
-        
 class densityOp(HermitianOp):
     base = r"\rho"
     has_sub = False
     
     def __new__(cls, sub=None):
         return super().__new__(cls, sub)
-    
-    def wigner_transform(self):
-        global _sub_cache
-        N = len(_sub_cache)
-        return (2*scalars.pi*scalars.hbar)**N * scalars.W()
     
 class rho():
     def __new__(cls):

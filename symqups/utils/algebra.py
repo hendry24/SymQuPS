@@ -1,7 +1,10 @@
 import sympy as sp
 from sympy.core.function import UndefinedFunction
-from ..core import scalars
+
+from ..objects.base import Base
+from ..objects import scalars
 from .multiprocessing import _mp_helper
+from ._internal_routines import _operation_routine
 
 __all__ = ["collect_by_derivative"]
 
@@ -77,3 +80,13 @@ def collect_by_derivative(A : sp.Expr,
     return sp.collect(A, [dq_m_dp_n(m, n) 
                           for m in range(max_order) 
                           for n in range(max_order - m)])
+    
+def define(expr):
+    """
+    Given a composite expression `expr`, call the `.define` method
+    where applicable.
+    """
+    expr : sp.Expr = sp.sympify(expr)
+
+    return expr.subs({A: A.define() for A in expr.atoms(Base)})
+    

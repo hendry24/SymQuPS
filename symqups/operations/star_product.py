@@ -1,6 +1,6 @@
 import sympy as sp
 
-from . import scalars
+from ..objects import scalars
 from ..utils.multiprocessing import _mp_helper
 
 __all__ = ["Bopp",
