@@ -1,7 +1,8 @@
 import sympy as sp
 
 from ..objects import scalars
-from ..objects.operators import Operator, qOp, pOp, rho
+from ..objects.cache import _sub_cache
+from ..objects.operators import Operator, qOp, pOp, annihilateOp, createOp
 from ..utils.multiprocessing import _mp_helper
 
 def s_quantize(expr : sp.Expr):
@@ -11,18 +12,33 @@ def s_quantize(expr : sp.Expr):
     '''
     expr = sp.expand(sp.sympify(expr))
     
-    _screen_type(expr, (scalars.Scalar), "weyl_ordering")
+    has_qp = expr.has(scalars.q, scalars.p)
+    has_alpha = expr.has(scalars.alpha, scalars.alphaD)
+    if has_qp and has_alpha:
+        msg = "Input expresion contains both (q,p) and (alpha). "
+        msg += "Please choose either one. "
+        raise TypeError(msg)
+    elif has_qp:
+        mode = "qp"
+    elif has_alpha:
+        mode = "alpha"
+    else: # nothing to quantize
+        return expr 
     
-    if not(expr.has(qOp, pOp)):
-        return expr
+    naive_quantization_dict = {}
+    for sub in _sub_cache:
+        naive_quantization_dict[scalars.q(sub)] = qOp(sub)
+        naive_quantization_dict[scalars.p(sub)] = pOp(sub)
+        naive_quantization_dict[scalars.alpha(sub)] = annihilateOp(sub)
+        naive_quantization_dict[scalars.alphaD(sub)] = createOp(sub)
+    expr_naive_quantized = expr.subs(naive_quantization_dict)
     
-    if isinstance(expr, (qOp, pOp, sp.Pow)):
-        return expr
+    """
+    Though 'alpha' is printed first before 'alphaD' in outputs, when 
+    we do the sub, the resulting expression is normal-ordered. 
+    """
     
-    if isinstance(expr, sp.Add):
-        return _mp_helper(expr.args, weyl_ordering)
-        
-    _invalid_input(expr, "weyl_ordering")
+    return expr_naive_quantized
 
 class WeylTransform():
     
