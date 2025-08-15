@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools >= 61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "SymQuPS"
+version = "0.0.1"
+dependencies = [
+    "sympy >= 1.13.3",
+    "dill"
+]
+requires-python = ">= 3.8"
+authors = [
+    {name = "Hendry Minfui Lim", email = "hendry01@ui.ac.id"}
+]
+description = "Python symbolic implementation of the quantum phase space formalism."
+readme = "README.md"
+license = {text = "Apache-2.0"}
+keywords = [
+    "Quantum phase space",
+    "Wigner transform",
+    "Weyl transform",
+    "Wigner-Weyl correspondence",
+    "Cahill-Glauber formulation",
+    "s-ordering",
+    "Weyl ordering",
+    "symmetric ordering",
+    "normal ordering",
+    "antinormal ordering",
+    "Wigner function",
+    "Husimi Q function",
+    "Glauber P function",
+    "Quasiprobability distribution",
+    "Moyal product",
+    "Bopp shift",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+]
+
+[project.urls]
+Repository = "https://github.com/hendry24/SymQuPS"
+Issues = "https://github.com/hendry24/SymQuPS/issues"
+Tutorial = "https://github.com/hendry24/SymQuPS/blob/main/tutorial.ipynb"
