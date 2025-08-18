@@ -4,9 +4,9 @@ import typing
 from . import scalars 
 # Avoid, e.g., "from scalars import hbar" 
 # since we want its value to follow changes at runtime.
-from .base import Base
+from .base import Base, qpTypePSO, alphaTypePSO
 from .cache import _sub_cache
-from ..utils._internal_routines import _treat_sub, _operation_routine
+from ..utils._internal import _treat_sub, _operation_routine
 from ..utils.multiprocessing import _mp_helper
 
 class Operator(Base):
@@ -59,14 +59,14 @@ class HermitianOp(Operator):
     @typing.final
     def dagger(self):
         return self
-    
-class qOp(HermitianOp):
+
+class qOp(HermitianOp, qpTypePSO):
     base = r"\hat{q}"
     
-class pOp(HermitianOp):
+class pOp(HermitianOp, qpTypePSO):
     base = r"\hat{p}"
     
-class annihilateOp(Operator):
+class annihilateOp(Operator, alphaTypePSO):
     base = r"\hat{a}"
         
     def define(self):
@@ -77,13 +77,12 @@ class annihilateOp(Operator):
     def dagger(self):
         return createOp(sub = self.sub)
     
-class createOp(Operator):
+class createOp(Operator, alphaTypePSO):
     base = r"\hat{a}^{\dagger}"
     
     def define(self):
+        mu_conj = sp.conjugate(scalars.mu)
         with sp.evaluate(False):
-            mu_conj = sp.conjugate(scalars.mu)
-            
             return ((qOp(sub=self.sub)*mu_conj - sp.I*pOp(sub=self.sub)/mu_conj) 
                     / sp.sqrt(2*scalars.hbar))
         

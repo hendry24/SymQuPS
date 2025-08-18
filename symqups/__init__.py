@@ -1,5 +1,7 @@
-from .objects.base import Base
-class s(Base):
+from .objects.base import Base, _ReadOnlyExpr
+from sympy.core.sympify import CantSympify
+
+class CahillGlauberSParameter(CantSympify, _ReadOnlyExpr, Base):
     """
     The Clahill-Glauber s-parameter. Set its value by setting its `.val` attribute.
     """
@@ -8,8 +10,8 @@ class s(Base):
         return name, {"commutative" : True}
         
     def __new__(cls):
-        from sympy import sympify
-        return super().__new__(cls, sympify(0))
+        from sympy import Number
+        return super().__new__(cls, Number(0))
         
     @property
     def val(self):
@@ -20,16 +22,30 @@ class s(Base):
 
     @val.setter
     def val(self, value):
-        accepted_types = (int, float, complex)
-        if not isinstance(value, accepted_types):
-            raise TypeError(f"Expected {accepted_types}, got {type(value)} instead.")
-        from sympy import sympify
-        self._val = sympify(value)
-        
+        from sympy import sympify, Number
+        value = sympify(value)
+        if (isinstance(value, Number) 
+            and value.is_real
+            and value <= 1 
+            and value >= -1):
+            pass
+        else:
+            from pprint import pprint
+            msg = "The Cahill-Glauber formalism works best when 's' is real and lies between -1 and 1. "
+            msg += "The input value does not identify as such."
+            pprint(msg)
+        self._val = value
+            
     def _latex(self, printer):
-        return r"s = %s" % self.val
-        
-s = s()
+        from sympy import latex
+        return r"\text{Cahill-Glauber s parameter,}\quad s = %s" % latex(self.val)
+    
+s = CahillGlauberSParameter()
+
+del CahillGlauberSParameter
+del Base
+
+###
 
 # from .objects.scalars import q, p, alpha, alphaD, P
 # from .objects.hilbert_operators import (qOp, pOp, 

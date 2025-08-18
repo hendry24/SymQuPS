@@ -1,22 +1,16 @@
 import pytest
 import dill
-import random
 import sympy as sp
 
-from symqups.objects.scalars import (hbar, pi, mu, Scalar, q, p, t, W, alpha, alphaD,
+from symqups.objects.base import PhaseSpaceObject, qpTypePSO, alphaTypePSO
+from symqups.objects.scalars import (hbar, mu, Scalar, q, p, t, W, alpha, alphaD,
                                     _Primed, _DePrimed, _DerivativeSymbol, StateFunction)
 from symqups.objects.operators import (Operator, qOp, pOp, createOp, annihilateOp,
                                         densityOp, rho, Dagger)
 
 from symqups.objects.cache import _sub_cache
-
-def get_random_poly(objects, coeffs=[1], max_pow=3, dice_throw=10):
-    """
-    Make a random polynomial in 'objects'.
-    """
-    return sp.Add(*[sp.Mul(*[random.choice(coeffs)*random.choice(objects)**random.randint(0, max_pow)
-                             for _ in range(dice_throw)])
-                    for _ in range(dice_throw)])
+from symqups.utils.algebra import get_random_poly
+from symqups.utils._internal import _treat_sub
 
 def arithmetic(A):
     A+2
@@ -35,11 +29,14 @@ def arithmetic(A):
     sp.exp(A)
     sp.log(A)
 
+@pytest.mark.fast
 @pytest.mark.order(0)
 class TestScalars():
     
-    def test_scalar_construction(self):
+    def test_treat_sub_and_scalar_construction(self):
         for sub in [None, "1", 1, sp.Number(1), sp.Symbol("1")]:
+            assert _treat_sub(_treat_sub(sub, True), True) == _treat_sub(sub, True)
+            assert _treat_sub(_treat_sub(sub, False), False) == _treat_sub(sub, False)
             obj = Scalar(sub)
             assert isinstance(obj.sub, sp.Symbol)
             assert obj.sub in _sub_cache
@@ -52,19 +49,23 @@ class TestScalars():
             assert isinstance(obj, Scalar)
             assert base in sp.latex(obj)
             assert obj.is_Atom
+        
+        for obj in [q(), p()]:
+            assert isinstance(obj, PhaseSpaceObject)
+            assert isinstance(obj, qpTypePSO)
+            
+        assert not(_treat_sub("xxx", True) == t("xxx").sub)
     
     def test_alpha(self):
-        a_sc = alpha()
-        assert a_sc.is_Atom
-        assert r"\alpha" in sp.latex(a_sc)
-        a_sc_expanded = (q()*mu + sp.I*p()/mu) / sp.sqrt(2*hbar)
-        assert (a_sc.define() - a_sc_expanded).expand() == 0
 
-        ad_sc = alphaD()
-        assert ad_sc.is_Atom
-        assert r"\alpha^*" in sp.latex(ad_sc)
-        ad_sc_expanded = (q()*sp.conjugate(mu) - sp.I*p()/sp.conjugate(mu)) / sp.sqrt(2*hbar)
-        assert (ad_sc.define() - ad_sc_expanded).expand() == 0
+        for obj, expanded in zip([alpha(), alphaD()],
+                                 [(q()*mu + sp.I*p()/mu) / sp.sqrt(2*hbar),
+                                  (q()*sp.conjugate(mu) - sp.I*p()/sp.conjugate(mu)) / sp.sqrt(2*hbar)]):
+            assert obj.is_Atom
+            assert isinstance(obj, PhaseSpaceObject)
+            assert isinstance(obj, alphaTypePSO)
+            assert r"\alpha" in sp.latex(obj) 
+            assert sp.expand(obj.define() - expanded) == 0
         
         assert sp.conjugate(alpha()) == alphaD()
         assert (sp.conjugate(alpha().define()) - alphaD().define()).expand() == 0
@@ -109,7 +110,8 @@ class TestScalars():
                 "q" in W_str and
                 "p" in W_str)
         assert W(False) == W(True)
-        
+
+@pytest.mark.fast
 @pytest.mark.order(1)
 class TestHilbertOps():
     def test_operator_construction(self):

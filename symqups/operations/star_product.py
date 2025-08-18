@@ -1,18 +1,25 @@
 import sympy as sp
+from pprint import pprint
 
+from ..objects.base import PhaseSpaceObject, qpTypePSO
 from ..objects import scalars
+from ..objects.scalars import q, p, alpha, alphaD, _DerivativeSymbol, _Primed, _DePrimed
+from ..objects.cache import _sub_cache
 from ..utils.multiprocessing import _mp_helper
+from ..utils._internal import _invalid_input
+from ..utils.algebra import qp2a
+from .. import s
 
 __all__ = ["Bopp",
            "Star"]
 
-class Bopp():
+class Bopp(sp.Expr):
     """
     Bopp shift the input quantity for the calculation of the Moyal star-product. 
 
-    `A(q,p)★B(q,p) = A(q + (i/2)*dpp, p - (i/2)*dqq) * B(qq, pp)`
+    `A(q,p)★B(q,p) = A(q + (i*hbar/2)*dpp, p - (i*hbar/2)*dqq) * B(qq, pp)`
 
-    `A(x,p)★B(x,p) = B(q - (i/2)*dpp, p + (i/2)*dqq) * A(qq, pp)`
+    `A(x,p)★B(x,p) = B(q - (i*hbar/2)*dpp, p + (i*hbar/2)*dqq) * A(qq, pp)`
     
     In the current version, this operation attempts to remove all `sympy.Derivative`
     in the input expression to ensure a correct Bopp shift. This is why `Star` only
@@ -25,8 +32,10 @@ class Bopp():
     A : sympy.Expr
         Quantity to be Bopp-shifted, should contain `objects.q` or `objects.p`.
 
-    left : bool, default: False
-        Whether the star-product operator is to the left of `A`. 
+    left : bool, default: True
+        Whether the star-product operator is to the `left` of `A`. The resulting 
+        Bopp-shifted expression contains differential operators that act on
+        the other expression situated to the `left` of the star-product operator.
 
     Returns
     -------
@@ -43,15 +52,19 @@ class Bopp():
 
     """
         
-    def __new__(cls, A : sp.Expr, left : bool = False):
+    def __new__(cls, expr : sp.Expr, left : bool = False):
         
-        if A.has(sp.Derivative):
-            A = A.doit()
-            if A.has(sp.Derivative):
-                s = "'A' contains persistent derivative(s), most possibly working on an UndefinedFunction."
-                s += "The function has tried to call 'A.doit()' but couldn't get rid of the 'Derivative"
-                s += "objecs. This leads to faulty Bopp-shifting which results in incorrect ★-products evaluation."
-                raise ValueError(s)
+        expr = sp.sympify(expr)
+        
+        if expr.has(sp.Derivative):
+            expr = expr.doit()
+            if expr.has(sp.Derivative):
+                msg = "'A' contains persistent derivative(s), most possibly working on an UndefinedFunction. "
+                msg += "The function has tried to call 'A.doit()' but could not evaluate the 'Derivative' "
+                msg += "objecs. This may lead to faulty Bopp-shifting which results in incorrect ★-products evaluation. "
+                msg += "As such, nothing is done to the input and a generic expression is returned."
+                pprint(msg)
+                return super().__new__(cls, expr, left)
             
         """
         The derivative evaluation attempt in `Bopp` will deal with intermediate
@@ -65,24 +78,47 @@ class Bopp():
         """
         
         def dxx(X):
-            return scalars._DerivativeSymbol(scalars._Primed(X))
+            return _DerivativeSymbol(_Primed(X))
 
         sgn = 1
         if left:
             sgn = -1
         
-        subs_dict = {}
-        for X in list(A.atoms()):
-            if isinstance(X, scalars.q):
-                subs_dict[X] = X + sgn * sp.I*scalars.hbar/2 * dxx(scalars.p(X.sub))
-            if isinstance(X, scalars.p):
-                subs_dict[X] = X - sgn * sp.I*scalars.hbar/2 *  dxx(scalars.q(X.sub))
+        hbar = scalars.hbar
+        mu = scalars.mu
         
-        return A.subs(subs_dict).expand()
+        subs_dict = {}
+        for A in list(expr.atoms(PhaseSpaceObject)):
+            if isinstance(A, alpha):
+                subs_dict[A] = A + (s.val + sgn)/2*dxx(alphaD(A.sub))
+            elif isinstance(A, alphaD):
+                subs_dict[A] = A + (s.val - sgn)/2*dxx(alpha(A.sub)) 
+            elif isinstance(A, q):
+                subs_dict[A] = A + sgn*sp.I*hbar/2*dxx(p(A.sub)) + (s.val*hbar/2)*(1/mu**2)*dxx(q(A.sub))
+            elif isinstance(A, p):
+                subs_dict[A] = A - sgn*sp.I*hbar/2*dxx(q(A.sub)) + (s.val*hbar/2)*(mu**2)*dxx(p(A.sub))
+            else:
+                 _invalid_input(A, "Bopp")
+                        
+        return sp.expand(expr.subs(subs_dict))
     
-class Star():
+    def _latex(self, printer):
+        left = self.args[1]
+        star_latex = r"\star"
+        bopp_arg = r"\left({%s}\right)" % sp.latex(self.args[0])
+        if left:
+            bopp_arg = star_latex + bopp_arg
+        else:
+            bopp_arg = bopp_arg + star_latex
+        return r"\mathrm{Bopp}\left[{%s}\right]" % bopp_arg
+
+class _CannotBoppFlag(BaseException):
+    pass
+
+class Star(sp.Expr):
     """
-    The Moyal star-product A(q,p) ★ B(q,p) ★ ..., calculated using the Bopp shift.
+    The s-parameterized star-product `A(q,p) ★ B(q,p) ★ ...` (or the `alpha` equivalent), 
+    calculated using the Bopp shift.
 
     Parameters
     ----------
@@ -90,9 +126,9 @@ class Star():
     *args
         The factors of the star-product, ordered from first to last. Since the algorithm
         utilizes the Bopp shift, only one operand may be "un-Bopp-shift-able", i.e. which contains:
-        (1) `sympy.Function`'s in `q` or `p`, or
-        (2) `sympy.Pow`'s that have `q` or `p` in the exponents, or
-        (3) `sympy.Pow`'s that are `q` or `p` raised to some non-positive-integer exponent.
+        (1) `sympy.Function`'s in the phase-space variables, or
+        (2) `sympy.Pow`'s that have the phase-space variables in the exponents, or
+        (3) `sympy.Pow`'s that are the phase-space variables raised to some non-positive-integer exponent.
 
     References
     ----------
@@ -112,17 +148,37 @@ class Star():
         if not(args):
             return sp.Integer(1)
         
-        out = sp.sympify(args[0])
-        for arg in args[1:]:
-            out = _star_base(out, sp.sympify(arg))
+        unboppable_args = []
+        
+        out = 1
+        for k, arg in enumerate(args):
+            try:
+                out = _star_base(out, arg)
+            except _CannotBoppFlag:
+                unboppable_args.append(out)
+                out = arg
+                if k == (len(args)-1):
+                    unboppable_args.append(arg)
+        
+        if unboppable_args:
+            return super().__new__(cls, *unboppable_args)
+        else:
+            return out
+        
+    def _latex(self, printer):
+        out = r"\left({%s}\right)" % sp.latex(self.args[0])
+        for arg in self.args[1:]:
+            out += r"\star \left({%s}\right)" % sp.latex(arg)
         return out
-    
+
 def _star_base(A : sp.Expr, B : sp.Expr) \
-    -> sp.Expr:    
-    any_phase_space_variable_in_A = A.has(scalars.q, scalars.p)
-    any_phase_space_variable_in_B = B.has(scalars.q, scalars.p)
-    if (not(any_phase_space_variable_in_A) or 
-        not(any_phase_space_variable_in_B)):
+    -> sp.Expr:
+        
+    A = sp.sympify(A)
+    B = sp.sympify(B)
+
+    if not(A.has(PhaseSpaceObject) or 
+        (B.has(PhaseSpaceObject))):
         return A*B
 
     def cannot_Bopp_pow(X):
@@ -133,34 +189,44 @@ def _star_base(A : sp.Expr, B : sp.Expr) \
             - Is a non-positive-integer power of q or p. 
         """
         pow_in_X = X.find(sp.Pow)
-        pow_in_X_with_qp = [x for x in pow_in_X if x.has(scalars.q, scalars.p)]
-        for x in pow_in_X_with_qp:
+        pow_in_X_with_pso = [x for x in pow_in_X if x.has(PhaseSpaceObject)]
+        for x in pow_in_X_with_pso:
             exp = x.args[1]
             if not(isinstance(exp, sp.Integer) and exp >= 0):
                 return True
         return False
 
     cannot_Bopp_A, cannot_Bopp_B = \
-        [any([x.atoms(scalars.q, scalars.p) for x in X.find(sp.Function)])
+        [any([x.atoms(PhaseSpaceObject) for x in X.find(sp.Function)])
          or cannot_Bopp_pow(X) for X in [A,B]]
 
     if cannot_Bopp_A and cannot_Bopp_B:
-        msg = "Both inputs cannot be properly Bopp shifted to work with the package. "
+        msg = "One or more pairs of consecutive inputs cannot be properly "
+        msg += "Bopp-shifted to work with the package. "
         msg += "Expressions that contain: "
         msg += "(1) 'Function's in q or p, or "
         msg += "(2) 'Pow's that have q or p in the exponents, or "
         msg += "(3) 'Pow's that are q or p raised to some non-positive-integer exponent, "
-        msg += "are problematic when Bopp-shifted."
-        raise ValueError(msg)
+        msg += "are problematic when Bopp-shifted. The package has did the best it could to "
+        msg += "evaluate the expression."
+        pprint(msg)
+        raise _CannotBoppFlag()
+    
+    if A.has(qpTypePSO):
+        A = qp2a(A)
+    if B.has(qpTypePSO):
+        B = qp2a(B)
+    # Bopp-shifting functions of (q,p) results in more terms, so we do this for efficiency
+    # also. 
     
     if cannot_Bopp_A:
         A = scalars._Primed(A)
         B = Bopp(B, left=True)
-        X = (B * A).expand()
+        X = sp.expand(B * A)
     else:
         A = Bopp(A, left=False)
         B = scalars._Primed(B)
-        X = (A * B).expand()
+        X = sp.expand(A * B)
 
     # Expanding is necessary to ensure that all arguments of X contain no Add objects.
     
@@ -173,7 +239,6 @@ def _star_base(A : sp.Expr, B : sp.Expr) \
     done by `_replace_diff`. This function then replaces q' and p' by q and p, respectively.
     """
 
-    X : sp.Expr
     if isinstance(X, sp.Add):
         X_args = X.args
     else:
@@ -181,7 +246,7 @@ def _star_base(A : sp.Expr, B : sp.Expr) \
     
     out = sp.Add(*_mp_helper(X_args, _replace_diff))
                 
-    return scalars._DePrimed(out).doit().expand()
+    return _DePrimed(out).doit().expand()
 
 def _first_index_and_diff_order(A : sp.Expr) \
     -> None | tuple[int, scalars.q|scalars.p, int|sp.Number]:
@@ -227,10 +292,10 @@ def _first_index_and_diff_order(A : sp.Expr) \
     if isinstance(A, sp.Add):
         raise TypeError("Input must not be 'Add'.")
     
-    if not(A.has(scalars._DerivativeSymbol)):
+    if not(A.has(_DerivativeSymbol)):
         return None # This stops the recursion. See _replace_diff.
     
-    if isinstance(A, scalars._DerivativeSymbol):
+    if isinstance(A, _DerivativeSymbol):
         return 0, A.diff_var, 1
 
     if isinstance(A, sp.Pow):
@@ -240,9 +305,9 @@ def _first_index_and_diff_order(A : sp.Expr) \
     
     if isinstance(A, sp.Mul):
         for idx, A_ in enumerate(A.args): 
-            if isinstance(A_, scalars._DerivativeSymbol):
+            if isinstance(A_, _DerivativeSymbol):
                 return idx, A_.diff_var, 1
-            if A_.has(scalars._DerivativeSymbol):
+            if A_.has(_DerivativeSymbol):
                 return idx, A_.args[0].diff_var, A_.args[1]
                 
     raise TypeError(r"Invalid input: \n\n {%s}" % sp.latex(A))

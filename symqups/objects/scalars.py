@@ -1,15 +1,15 @@
 import sympy as sp
 
-from .base import Base
+from .base import Base, qpTypePSO, alphaTypePSO, PhaseSpaceObject
 from .cache import _sub_cache
-from ..utils._internal_routines import _treat_sub, _screen_type
+from ..utils._internal import _treat_sub, _screen_type
 
 __all__ = ["q", "p", "alpha", "alphaD", "W"]
 
 global hbar, pi, mu
 hbar = sp.Symbol(r"hbar", real=True, positive=True)
 pi = sp.Symbol(r"pi", real=True, positive=True)
-mu = sp.Symbol(r"mu", real=False)
+mu = sp.Symbol(r"mu", real=True, positive=True)
 
 class Scalar(Base):
     base = NotImplemented
@@ -32,11 +32,15 @@ class Scalar(Base):
     def sub(self):
         return self._custom_args[0]
     
+###
+
 class t(Scalar):
     base = r"t"
     has_sub = False
-    
-class q(Scalar):
+
+###
+
+class q(Scalar, qpTypePSO):
     """
     The canonical position operator or first phase-space quadrature.
     
@@ -48,7 +52,7 @@ class q(Scalar):
     """
     base = r"q"
     
-class p(Scalar):
+class p(Scalar, qpTypePSO):
     """
     The canonical position operator or first phase-space quadrature.
     
@@ -60,7 +64,7 @@ class p(Scalar):
     """
     base = r"p"
     
-class alpha(Scalar):
+class alpha(Scalar, alphaTypePSO):
     base = r"\alpha"
     is_real = False
     
@@ -73,13 +77,13 @@ class alpha(Scalar):
     def _eval_conjugate(self):
         return self.conjugate()
     
-class alphaD(Scalar):
-    base = r"{\alpha^*}"
+class alphaD(Scalar, alphaTypePSO):
+    base = r"\overline{\alpha}"
     is_real = False
     
     def define(self):
+        mu_conj = sp.conjugate(mu)
         with sp.evaluate(False):
-            mu_conj = sp.conjugate(mu)
             return (mu_conj*q(self.sub) - sp.I * p(self.sub) / mu_conj) / sp.sqrt(2*hbar)
         
     def conjugate(self):
@@ -96,7 +100,7 @@ class _Primed(Base):
         
         A = sp.sympify(A)
         
-        if isinstance(A, (q, p, alpha, alphaD)):
+        if isinstance(A, PhaseSpaceObject):
             return super().__new__(cls, A)
         
         return A.subs({X:_Primed(X) for X in A.atoms(q,p,alpha,alphaD)})
@@ -128,7 +132,7 @@ class _DerivativeSymbol(Base):
     def diff_var(self):
         return self._custom_args[0]
 
-####
+###
 
 class StateFunction(sp.Function):
     """
@@ -166,7 +170,7 @@ class W():
         global _sub_cache
         vars = []
         for sub in _sub_cache:
-            vars.extend([q(sub), p(sub)])
+            vars.extend([q(sub), p(sub), alpha(sub), alphaD(sub)])
         
         obj : StateFunction = StateFunction(t(), *vars)
         obj.show_vars = show_vars

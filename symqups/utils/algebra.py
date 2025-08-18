@@ -1,14 +1,60 @@
 import sympy as sp
+import random
 from sympy.core.function import UndefinedFunction
 
 from ..objects.base import Base
+from ..objects.cache import _sub_cache
 from ..objects import scalars
+from ..objects.operators import qOp, pOp, annihilateOp, createOp, Operator
 from .multiprocessing import _mp_helper
-from ._internal_routines import _operation_routine
 
-__all__ = ["collect_by_derivative"]
+def get_random_poly(objects, coeffs=[1], max_pow=3, dice_throw=10):
+    """
+    Make a random polynomial in 'objects'.
+    """
+    return sp.Add(*[sp.Mul(*[random.choice(coeffs)*random.choice(objects)**random.randint(0, max_pow)
+                             for _ in range(dice_throw)])
+                    for _ in range(dice_throw)])
 
-def derivative_not_in_num(A : sp.Expr):
+def define(expr : sp.Expr) -> sp.Expr:
+    """
+    Given a composite expression `expr`, call the `.define` method
+    where applicable.
+    """
+    expr = sp.sympify(expr)
+    expr_defined = expr.subs({A: A.define() for A in expr.atoms(Base)})
+    return sp.expand(expr_defined)
+
+def qp2a(expr : sp.Expr) -> sp.Expr:
+    def get_subs_expr(A : scalars.Scalar | Operator):
+        if isinstance(A, scalars.Scalar):
+            a, ad = scalars.alpha(A.sub), scalars.alphaD(A.sub)
+        else:
+            a, ad = annihilateOp(A.sub), createOp(A.sub)
+            
+        mu = scalars.mu
+        mu_conj = sp.conjugate(mu)
+        hbar = scalars.hbar
+        
+        if isinstance(A, (scalars.q, qOp)):
+            out = mu*a + mu_conj*ad
+        else:
+            out = sp.I*mu*mu_conj*(mu*ad - mu_conj*a)
+            
+        out *= sp.sqrt(2*hbar) / (mu**2 + mu_conj**2)
+        
+        return out
+        
+    sub_dict = {}
+    for sub in _sub_cache:
+        sub_dict[scalars.q(sub)] = get_subs_expr(scalars.q(sub))
+        sub_dict[scalars.p(sub)] = get_subs_expr(scalars.p(sub))
+        sub_dict[qOp(sub)] = get_subs_expr(qOp(sub))
+        sub_dict[pOp(sub)] = get_subs_expr(pOp(sub))
+        
+    return sp.expand(expr.subs(sub_dict))
+
+def derivative_not_in_num(A : sp.Expr) -> sp.Expr:
     """
     Rewrite the expression such that the phase-space coordinates and derivatives with respect
     to them are not written on the numerator.
@@ -80,13 +126,3 @@ def collect_by_derivative(A : sp.Expr,
     return sp.collect(A, [dq_m_dp_n(m, n) 
                           for m in range(max_order) 
                           for n in range(max_order - m)])
-    
-def define(expr):
-    """
-    Given a composite expression `expr`, call the `.define` method
-    where applicable.
-    """
-    expr : sp.Expr = sp.sympify(expr)
-
-    return expr.subs({A: A.define() for A in expr.atoms(Base)})
-    

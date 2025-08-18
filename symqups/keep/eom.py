@@ -8,17 +8,6 @@ from ..objects.operators import densityOp, Dagger
 from ..utils.algebra import collect_by_derivative, derivative_not_in_num
 
 __all__ = ["LindbladMasterEquation"]
-
-class _AddOnlyExpr(sp.Expr):
-    def __pow__(self, other):
-        raise NotImplementedError()
-    __rpow__ = __pow__
-    __mul__ = __pow__
-    __rmul__ = __pow__
-    __sub__ = __pow__
-    __rsub__ = __pow__
-    __truediv__ = __pow__
-    __rtruediv__ = __pow__
     
 class _LindbladDissipator(_AddOnlyExpr):
     def __new__(cls, rate = 1, operator_1 = 1, operator_2 = None):

@@ -1,5 +1,5 @@
 import sympy as sp
-from typing import Tuple, Callable
+import abc
 
 class Base(sp.Symbol):
     """
@@ -41,3 +41,33 @@ class Base(sp.Symbol):
     
     def define(self):
         return self
+    
+###
+
+# For grouping
+
+class PhaseSpaceObject(sp.Basic):
+                        # complicance with sympy functionalities.
+    pass
+
+class alphaTypePSO(PhaseSpaceObject):
+    pass
+
+class qpTypePSO(PhaseSpaceObject):
+    pass
+
+class _AddOnlyExpr(sp.Expr):
+    def __pow__(self, other):
+        raise NotImplementedError()
+    __rpow__ = __pow__
+    __mul__ = __pow__
+    __rmul__ = __pow__
+    __sub__ = __pow__
+    __rsub__ = __pow__
+    __truediv__ = __pow__
+    __rtruediv__ = __pow__
+    
+class _ReadOnlyExpr(_AddOnlyExpr):
+    def __add__(self, other):
+        raise NotImplementedError()
+    __radd__ = __add__

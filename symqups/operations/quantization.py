@@ -1,68 +1,118 @@
 import sympy as sp
 
-from ..objects import scalars
+from .. import s
+from ..objects.base import qpTypePSO, alphaTypePSO, PhaseSpaceObject
+from ..objects.scalars import alpha, alphaD
 from ..objects.cache import _sub_cache
-from ..objects.operators import Operator, qOp, pOp, annihilateOp, createOp
+from ..objects.operators import Operator, annihilateOp, createOp
+from ..utils._internal import _operation_routine, _invalid_input
 from ..utils.multiprocessing import _mp_helper
+from ..utils.algebra import qp2a
+
+def _prepare_for_quantization(expr : sp.Expr) -> sp.Expr:
+    expr = sp.expand(sp.sympify(expr))
+    
+    if expr.has(Operator):
+        raise TypeError("Input can not be Operator objects.")
+    
+    if expr.has(qpTypePSO):
+        expr = qp2a(expr)
+    
+    return sp.expand(expr)
+
+def naive_quantize(expr : sp.Expr):
+    expr = _prepare_for_quantization(expr)
+    
+    naive_quantization_dict = {}
+    for sub in _sub_cache:
+        naive_quantization_dict[alpha(sub)] = annihilateOp(sub)
+        naive_quantization_dict[alphaD(sub)] = createOp(sub)
+    expr_naive_quantized = expr.subs(naive_quantization_dict)
+
+    """
+    Though 'alpha' is printed first before 'alphaD' in outputs, when 
+    we do the sub, the resulting expression is normal-ordered, corresponding
+    to s = 1. This applies in the multipartite case: all `alphaD` are 
+    situated to the left of all `alpha`.
+    """
+    
+    return sp.expand(expr_naive_quantized)
 
 def s_quantize(expr : sp.Expr):
     '''
     Return the totally-symmetric (Weyl) ordering of the
-    input expression containing `Operator'.
+    input expression, most generally a polynomial in 
+    (q,p) or (alpha, alphaD).
     '''
-    expr = sp.expand(sp.sympify(expr))
     
-    has_qp = expr.has(scalars.q, scalars.p)
-    has_alpha = expr.has(scalars.alpha, scalars.alphaD)
-    if has_qp and has_alpha:
-        msg = "Input expresion contains both (q,p) and (alpha). "
-        msg += "Please choose either one. "
-        raise TypeError(msg)
-    elif has_qp:
-        mode = "qp"
-    elif has_alpha:
-        mode = "alpha"
-    else: # nothing to quantize
-        return expr 
+    def s_ordered(sub, m, n):
+        """
+        Compute the s-ordering of the quantization of
+        `alphaD(sub)**m * alpha(sub)**n`. Since we 
+        can do whatever ordering when we quantize the
+        expression, we choose normal ordering as the
+        initial operator ordering, i.e. we initially
+        have `createOp(sub)**m * annihilateOp(sub)**n`.
+        Eq. (5.12) of https://doi.org/10.1103/PhysRev.177.1857
+        can then be used to obtain its s-ordering.
+        """
+        
+        if (m==0) and (n==0):
+            return 1
+        
+        out = 0
+        for k in range(min(m, n) + 1):
+            out += (sp.factorial(k)
+                    * sp.binomial(n, k)
+                    * sp.binomial(m, k)
+                    * ((1-s.val)/2)**k
+                    * createOp(sub)**(m-k) * annihilateOp(sub)**(n-k)
+            )
+        return out
     
-    naive_quantization_dict = {}
-    for sub in _sub_cache:
-        naive_quantization_dict[scalars.q(sub)] = qOp(sub)
-        naive_quantization_dict[scalars.p(sub)] = pOp(sub)
-        naive_quantization_dict[scalars.alpha(sub)] = annihilateOp(sub)
-        naive_quantization_dict[scalars.alphaD(sub)] = createOp(sub)
-    expr_naive_quantized = expr.subs(naive_quantization_dict)
+    def do_monomial(A):
+        out = 1
+        
+        if isinstance(A, sp.Mul):
+            decompose_A = A.args
+        elif isinstance(A, (sp.Pow, alphaTypePSO)):
+            decompose_A = [A]
+        else:
+            raise TypeError(f"Invalid type encountered: {type(A).__name__}")
+        
+        exp_ad = {sub : 0 for sub in _sub_cache}
+        exp_a = {sub : 0 for sub in _sub_cache}
+        for A_ in decompose_A:
+            if not(A_.has(PhaseSpaceObject)):
+                out *= A_
+            elif isinstance(A_, alphaD):
+                exp_ad[A_.sub] = 1
+            elif A_.has(alphaD):
+                exp_ad[A_.args[0].sub] = A_.args[1]
+            elif isinstance(A_, alpha):
+                exp_a[A_.sub] = 1
+            elif A_.has(alpha):
+                exp_a[A_.args[0].sub] = A_.args[1]
+            else:
+                _invalid_input(A, "do_monomial' in 's_quantize")
+        
+        for sub in _sub_cache:
+            out *= s_ordered(sub, exp_ad[sub], exp_a[sub])
+            
+        return sp.expand(out)
     
-    """
-    Though 'alpha' is printed first before 'alphaD' in outputs, when 
-    we do the sub, the resulting expression is normal-ordered. 
-    """
-    
-    return expr_naive_quantized
-
-class WeylTransform():
-    
-    def __new__(cls, expr : sp.Expr):
-        expr = sp.sympify(expr)
-        expr = expr.expand()
-        
-        _screen_type(expr, Operator, "WeylTransform")
-
-        if not(expr.has(scalars.q, scalars.p, scalars.W)):
-            return expr
-       
-        if isinstance(expr, (scalars.q, scalars.p, scalars.WignerFunction)):
-            return expr.weyl_transform()
-        
-        if isinstance(expr, sp.Add):
-            return _mp_helper(expr.args, WeylTransform)
-        
-        if isinstance(expr, sp.Pow):
-            base : scalars.q | scalars.p = expr.args[0]
-            exponent = expr.args[1]
-            return base.weyl_transform() ** exponent
-        
-        if isinstance(expr, sp.Mul):
-            return
-        
-        _invalid_input()
+    expr = _prepare_for_quantization(expr)
+    return _operation_routine(expr,
+                              "s_quantize",
+                              (Operator),
+                              (PhaseSpaceObject,),
+                              expr,
+                              (
+                                  (sp.Add,),
+                                  lambda A: sp.Add(*_mp_helper(A.args, s_quantize))
+                              ),
+                              (
+                                  (sp.Mul, sp.Pow, PhaseSpaceObject),
+                                  do_monomial
+                              )
+    )

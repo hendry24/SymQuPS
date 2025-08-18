@@ -4,6 +4,8 @@ from ..objects.operators import Operator
 from .star_product import Star
 from ..utils.multiprocessing import _mp_helper
 
+
+
 class WignerTransform():
     """
     The Wigner transform.
