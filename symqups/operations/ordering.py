@@ -2,13 +2,90 @@ import sympy as sp
 
 from .. import s
 from ..objects.base import qpTypePSO, alphaTypePSO, PhaseSpaceObject
-from ..objects.scalars import alpha, alphaD
+from ..objects.scalars import alpha, alphaD, Scalar
 from ..objects.cache import _sub_cache
 from ..objects.operators import Operator, annihilateOp, createOp
 from ..utils._internal import _operation_routine, _invalid_input
 from ..utils.multiprocessing import _mp_helper
 from ..utils.algebra import qp2a
 
+def _normal_order_term_if_possible(expr : sp.Expr):
+    """
+    expr is a single term
+    """
+    
+    if expr.has(sp.Function):
+        return expr
+    
+    def treat(A : sp.Expr):
+        A = qp2a(sp.sympify(A))
+        non_operator = 1
+        collect_ad = {sub : 1 for sub in _sub_cache}
+        collect_a = {sub : 1 for sub in _sub_cache}
+        for A_ in A.args:
+            if isinstance(A_, createOp):
+                collect_ad[A_.sub] *= A_
+            elif A_.has(createOp): # Pow
+                collect_ad[A_.args[0].sub] *= A_
+            elif isinstance(A_, annihilateOp):
+                collect_a[A_.sub] *= A_
+            elif A_.has(annihilateOp):
+                collect_a[A_.args[0].sub] *= A_
+            else:
+                non_operator *= A_
+        
+        return sp.Mul(non_operator, *collect_ad.values(), *collect_a.values())
+    
+    expr = qp2a(sp.sympify(expr))
+    return _operation_routine(expr,
+                              "_normal_ordering",
+                              (Scalar, sp.Add),
+                              (Operator,),
+                              expr,
+                              (((sp.Pow, Operator),
+                                expr), 
+                               ((sp.Mul,),
+                                treat)
+                               )
+                              )
+
+class sOrdering(sp.Expr):
+    
+    def __new__(cls, expr : sp.Expr):
+        expr = qp2a(sp.sympify(expr))
+        
+        def treat_mul(A : sp.Expr):
+            non_operator = 1
+            operator = 1
+            for A_ in A.args:
+                if A_.has(Operator):
+                    operator *= A_
+                else:
+                    non_operator *= A_
+            return non_operator * super().__new__(cls, operator)
+        
+        def make(A : sp.Expr):
+            return super().__new__(cls, A)
+                
+        return _operation_routine(expr,
+                                  "sOrder",
+                                  (Scalar,),
+                                  (Operator,),
+                                  expr,
+                                  (((Operator, sp.Function, sp.Pow), 
+                                    make),
+                                   ((sp.Mul,),
+                                    treat_mul)
+                                   ((sp.Add,),
+                                    lambda A: _mp_helper(A.args, sOrdering)))
+        )
+        
+    def _latex(self, printer):
+        return r"\left\{ %s \right\}_{s=%s}" % (sp.latex(self.args[0]),
+                                              sp.latex(s.val))
+        
+    
+        
 def s_ordered(sub, m, n):
     """
     Compute the s-ordering of the quantization of
