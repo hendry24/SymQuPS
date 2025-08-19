@@ -103,7 +103,7 @@ def collect_by_derivative(A : sp.Expr,
         The same quantity with its terms collected. 
     """
 
-    A = A.expand()
+    A = sp.expand(A)
 
     if not(A.atoms(sp.Function)):
         return A

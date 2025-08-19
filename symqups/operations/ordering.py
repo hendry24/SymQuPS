@@ -18,7 +18,6 @@ def _normal_order_term_if_possible(expr : sp.Expr):
         return expr
     
     def treat(A : sp.Expr):
-        A = qp2a(sp.sympify(A))
         non_operator = 1
         collect_ad = {sub : 1 for sub in _sub_cache}
         collect_a = {sub : 1 for sub in _sub_cache}
@@ -42,18 +41,21 @@ def _normal_order_term_if_possible(expr : sp.Expr):
                               (Scalar, sp.Add),
                               (Operator,),
                               expr,
-                              (((sp.Pow, Operator),
-                                expr), 
+                              ((sp.Pow, Operator),
+                                lambda A: A), 
                                ((sp.Mul,),
                                 treat)
-                               )
                               )
 
 class sOrdering(sp.Expr):
     
     def __new__(cls, expr : sp.Expr):
-        expr = qp2a(sp.sympify(expr))
-        
+        def make(A : sp.Expr):
+            A = _normal_order_term_if_possible(A)
+            return super(sOrdering, cls).__new__(cls, A)
+                    # need to specify since we do this
+                    # inside another function. 
+
         def treat_mul(A : sp.Expr):
             non_operator = 1
             operator = 1
@@ -62,29 +64,32 @@ class sOrdering(sp.Expr):
                     operator *= A_
                 else:
                     non_operator *= A_
-            return non_operator * super().__new__(cls, operator)
-        
-        def make(A : sp.Expr):
-            return super().__new__(cls, A)
-                
+            return non_operator * make(operator)
+     
+        expr = qp2a(sp.sympify(expr))               
         return _operation_routine(expr,
                                   "sOrder",
                                   (Scalar,),
                                   (Operator,),
                                   expr,
-                                  (((Operator, sp.Function, sp.Pow), 
+                                  ((Operator, sp.Function, sp.Pow), 
                                     make),
-                                   ((sp.Mul,),
-                                    treat_mul)
-                                   ((sp.Add,),
-                                    lambda A: _mp_helper(A.args, sOrdering)))
+                                  ((sp.Mul,),
+                                    treat_mul),
+                                  ((sp.Add,),
+                                    lambda A: _mp_helper(A.args, sOrdering))
         )
         
     def _latex(self, printer):
         return r"\left\{ %s \right\}_{s=%s}" % (sp.latex(self.args[0]),
                                               sp.latex(s.val))
         
-    
+    def expand(self, t = 1, **hints):
+        """
+        Expand the expression in terms of t-ordered expressions.
+        By default, `t=1` corresponds to normal-ordering.
+        """
+        expr = super().expand(**hints)
         
 def s_ordered(sub, m, n):
     """

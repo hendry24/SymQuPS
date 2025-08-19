@@ -125,10 +125,7 @@ class Star(sp.Expr):
 
     *args
         The factors of the star-product, ordered from first to last. Since the algorithm
-        utilizes the Bopp shift, only one operand may be "un-Bopp-shift-able", i.e. which contains:
-        (1) `sympy.Function`'s in the phase-space variables, or
-        (2) `sympy.Pow`'s that have the phase-space variables in the exponents, or
-        (3) `sympy.Pow`'s that are the phase-space variables raised to some non-positive-integer exponent.
+        utilizes the Bopp shift, only one operand be a non-polynomial.
 
     References
     ----------
@@ -163,12 +160,7 @@ class Star(sp.Expr):
         if unboppable_args:
             msg = "One or more pairs of consecutive inputs cannot be properly "
             msg += "Bopp-shifted to work with the package. "
-            msg += "Expressions that contain: "
-            msg += "(1) 'Function's in q or p, or "
-            msg += "(2) 'Pow's that have q or p in the exponents, or "
-            msg += "(3) 'Pow's that are q or p raised to some non-positive-integer exponent, "
-            msg += "are problematic when Bopp-shifted. The package has did the best it could to "
-            msg += "evaluate the expression."
+            msg += "In the current version, non-polynomial inputs are unboppable."
             pprint(msg)
             return super().__new__(cls, *unboppable_args)
         else:
@@ -190,24 +182,8 @@ def _star_base(A : sp.Expr, B : sp.Expr) \
         (B.has(PhaseSpaceObject))):
         return A*B
 
-    def cannot_Bopp_pow(X):
-        """
-        Pow is not Function, so it needs a special treatment. Here we prevent
-        Bopp shift if the expression contains Pow objects that:
-            - Has q or p in the exponents.
-            - Is a non-positive-integer power of q or p. 
-        """
-        pow_in_X = X.find(sp.Pow)
-        pow_in_X_with_pso = [x for x in pow_in_X if x.has(PhaseSpaceObject)]
-        for x in pow_in_X_with_pso:
-            exp = x.args[1]
-            if not(isinstance(exp, sp.Integer) and exp >= 0):
-                return True
-        return False
-
-    cannot_Bopp_A, cannot_Bopp_B = \
-        [any([x.atoms(PhaseSpaceObject) for x in X.find(sp.Function)])
-         or cannot_Bopp_pow(X) for X in [A,B]]
+    cannot_Bopp_A = A.is_polynomial(scalars.Scalar)
+    cannot_Bopp_B = B.is_polynomial(scalars.Scalar)
 
     if cannot_Bopp_A and cannot_Bopp_B:
         raise _CannotBoppFlag()
