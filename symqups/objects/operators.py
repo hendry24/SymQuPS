@@ -96,6 +96,4 @@ class densityOp(HermitianOp):
     def __new__(cls, sub=None):
         return super().__new__(cls, sub)
     
-class rho():
-    def __new__(cls):
-        return densityOp()
+rho = densityOp()

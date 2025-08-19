@@ -161,6 +161,15 @@ class Star(sp.Expr):
                     unboppable_args.append(arg)
         
         if unboppable_args:
+            msg = "One or more pairs of consecutive inputs cannot be properly "
+            msg += "Bopp-shifted to work with the package. "
+            msg += "Expressions that contain: "
+            msg += "(1) 'Function's in q or p, or "
+            msg += "(2) 'Pow's that have q or p in the exponents, or "
+            msg += "(3) 'Pow's that are q or p raised to some non-positive-integer exponent, "
+            msg += "are problematic when Bopp-shifted. The package has did the best it could to "
+            msg += "evaluate the expression."
+            pprint(msg)
             return super().__new__(cls, *unboppable_args)
         else:
             return out
@@ -201,15 +210,6 @@ def _star_base(A : sp.Expr, B : sp.Expr) \
          or cannot_Bopp_pow(X) for X in [A,B]]
 
     if cannot_Bopp_A and cannot_Bopp_B:
-        msg = "One or more pairs of consecutive inputs cannot be properly "
-        msg += "Bopp-shifted to work with the package. "
-        msg += "Expressions that contain: "
-        msg += "(1) 'Function's in q or p, or "
-        msg += "(2) 'Pow's that have q or p in the exponents, or "
-        msg += "(3) 'Pow's that are q or p raised to some non-positive-integer exponent, "
-        msg += "are problematic when Bopp-shifted. The package has did the best it could to "
-        msg += "evaluate the expression."
-        pprint(msg)
         raise _CannotBoppFlag()
     
     if A.has(qpTypePSO):

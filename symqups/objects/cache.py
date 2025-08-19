@@ -6,5 +6,10 @@ class _Set(set):
     
     def _update(self, *args, **kwargs):
         super().update(*args, **kwargs)
+        
+        from . import scalars
+        from .scalars import StateFunction, t, alpha, alphaD
+        scalars.W = StateFunction(t(), *[cls(sub) for sub in self for cls in (alpha, alphaD)])
+        
 global _sub_cache
 _sub_cache = _Set([])

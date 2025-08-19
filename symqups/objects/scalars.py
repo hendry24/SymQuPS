@@ -24,7 +24,13 @@ class Scalar(Base):
         sub = _treat_sub(sub, cls.has_sub)
         
         global _sub_cache
-        _sub_cache._update([sub])
+        if cls.has_sub and (sub not in _sub_cache):
+            """
+            NOTE:
+            The second conditional is crucial to avoid
+            infinite recursion in _sub_cache._update.
+            """
+            _sub_cache._update([sub])
 
         return super().__new__(cls, sub)
         
@@ -160,25 +166,14 @@ class StateFunction(sp.Function):
             return str(self).replace("StateFunction", r"W_s")
         return r"W_s"
     
-class W():
-    """
-    The 'StateFunction' constructor. Constructs 'StateFunction' using cached 'q' and 'p' as 
-    variables. This is the recommended way to create the object since a user might miss 
-    some variables with manual construction, leading to incorrect evaluations.
-    """
-    def __new__(cls, show_vars=False):
-        global _sub_cache
-        vars = []
-        for sub in _sub_cache:
-            vars.extend([q(sub), p(sub), alpha(sub), alphaD(sub)])
-        
-        obj : StateFunction = StateFunction(t(), *vars)
-        obj.show_vars = show_vars
-        
-        """
-        Instantiating two StateFunction objects would return the SAME
-        function thanks to SymPy's caching. As such, the fact that
-        the latest instantiation always overrides show_vars is not a problem.
-        """
-        
-        return obj
+W = StateFunction(t())
+
+"""
+In the previous version, W retrieves _sub_cache to use as its arguments
+at instantiation. However, this is problematic when W is instantiated
+before other objects it is supposed to interact with, for example in
+`Star(alpha(1), W(), alpha(2))`. Here W() only sees the sub '1' when
+it is constructed. A better construction would to let the variable
+W be updated (i.e. reassigned) each time _sub_cache is updated. See
+cache._sub_cache.update.
+"""
