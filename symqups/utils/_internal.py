@@ -1,6 +1,9 @@
 import sympy as sp
-from sympy.core.function import UndefinedFunction
 from typing import Callable, Tuple
+
+from ..objects.cache import _sub_cache
+from ..objects.operators import annihilateOp, createOp, Operator
+from .algebra import qp2a
 
 def _treat_sub(sub, has_sub):
     """
@@ -54,3 +57,46 @@ def _operation_routine(expr : sp.Expr,
             return then_return(expr)
         
     _invalid_input(expr, name)
+
+def _extract_alpha_type_operator_monomial_breaker(expr : sp.Expr):
+    expr = qp2a(sp.sympify(expr))
+    monomial_breaker = 1
+    valid_monomial = 1
+    
+    _screen_type(expr, sp.Add, "_extract_alpha_type_operator_monomial_breaker")
+    
+    if not(isinstance(expr, sp.Mul)):
+        if expr.is_polynomial(createOp, annihilateOp):
+            valid_monomial *= expr
+            return monomial_breaker, valid_monomial
+        else:
+            monomial_breaker *= expr
+            return monomial_breaker, valid_monomial
+    
+    for arg in expr.args:
+        if arg.is_polynomial():
+            valid_monomial *= arg
+        else:
+            monomial_breaker *= arg
+    
+    return monomial_breaker, valid_monomial
+
+def _collect_alpha_type_oper_from_monomial(expr : sp.Expr):
+    expr = qp2a(sp.sympify(expr))
+    assert expr.is_polynomial(annihilateOp, createOp)
+    non_operator = 1
+    collect_ad = {sub : 1 for sub in _sub_cache}
+    collect_a = {sub : 1 for sub in _sub_cache}
+    for A_ in expr.args:
+        if isinstance(A_, createOp):
+            collect_ad[A_.sub] *= A_
+        elif A_.has(createOp): # Pow
+            collect_ad[A_.args[0].sub] *= A_
+        elif isinstance(A_, annihilateOp):
+            collect_a[A_.sub] *= A_
+        elif A_.has(annihilateOp):
+            collect_a[A_.args[0].sub] *= A_
+        else:
+            non_operator *= A_
+            
+    return non_operator, collect_ad, collect_a
