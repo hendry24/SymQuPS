@@ -6,8 +6,7 @@ from . import scalars
 # since we want its value to follow changes at runtime.
 from .base import Base, qpTypePSO, alphaTypePSO
 from .cache import _sub_cache
-from ..utils._internal._basic_routines import _treat_sub, _operation_routine
-from ..utils.multiprocessing import _mp_helper
+from ..utils._internal._basic_routines import _treat_sub
 
 class Operator(Base):
     
@@ -34,26 +33,6 @@ class Operator(Base):
     
     def wigner_transform(self):
         raise NotImplementedError()
-
-class Dagger():
-    """
-    Hermitian conjugate of `A`.
-    """
-    def __new__(cls, expr : sp.Expr | Operator):
-        return _operation_routine(expr,
-                                  "Dagger",
-                                  (),
-                                  (Operator,),
-                                  lambda A: A.conjugate(),
-                                  (Operator,
-                                  lambda A:  A.dagger()),
-                                  (sp.Add, 
-                                   lambda A: sp.Add(*_mp_helper(A.args, Dagger))), 
-                                  (sp.Pow,
-                                   lambda A: Dagger(A.args[0]) ** A.args[1]),
-                                  (sp.Mul,
-                                   lambda A: sp.Mul(*list(reversed(_mp_helper(A.args, Dagger)))))
-                                  )
     
 class HermitianOp(Operator):
     @typing.final

@@ -1,5 +1,4 @@
 import sympy as sp
-import abc
 
 class Base(sp.Symbol):
     """

@@ -83,7 +83,7 @@ class sOrdering(sp.Expr):
         assert non_operator == 1
         return collect_ad, collect_a
         
-    def define(self):
+    def explicit(self):
         if not(self.args[0].is_polynomial(Operator)):
             return self
         
@@ -111,7 +111,7 @@ class sOrdering(sp.Expr):
             case default:
                 return self
 
-    def express(self, t = 1, define=True, **hints):
+    def express(self, t = 1, explicit=True, **hints):
         """
         Expand the expression in terms of t-ordered expressions.
         By default, `t=1` corresponds to normal-ordering. If `define`,
@@ -130,13 +130,22 @@ class sOrdering(sp.Expr):
             out = 0
             for k in range(min(m,n) + 1):
                 yy = sOrdering(ad**(m-k) * a**(n-k), s=t)
-                if (define 
+                if (explicit 
                     and isinstance(yy, sOrdering)
                     and self.args[1] in (-1, 0, 1)):
-                    yy = yy.define()
+                    yy = yy.explicit()
                     
                 out += (sp.factorial(k) * sp.binomial(m,k) * sp.binomial(n,k)
                         * ((t-self.args[1])/2)**k * yy)
             return out
         
         return sp.Mul(*[expand_s_ordered_unipartite_string(sub) for sub in _sub_cache])
+    
+def normal_order(expr : sp.Expr):
+    return sOrdering(expr, s=1).explicit()
+
+def antinormal_order(expr : sp.Expr):
+    return sOrdering(expr, s=-1).explicit()
+
+def weyl_order(expr : sp.Expr):
+    return sOrdering(expr, s=0).explicit()

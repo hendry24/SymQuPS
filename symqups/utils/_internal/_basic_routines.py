@@ -1,5 +1,5 @@
 import sympy as sp
-from typing import Callable, Tuple
+from typing import Callable, Dict, Union, Sequence
 
 def _treat_sub(sub, has_sub):
     """
@@ -33,9 +33,10 @@ def _invalid_input(inpt : object, name : str):
 def _operation_routine(expr : sp.Expr,
                        name : str,
                        forbidden_types : tuple[type],
-                       if_expr_does_not_have : tuple[type],
-                       return_if_expr_does_not_have : Callable[[sp.Expr], sp.Expr],
-                       *return_if_expr_is : tuple[Tuple[tuple[type], Callable[[sp.Expr], sp.Expr]]]):
+                       return_if_expr_does_not_have : Dict[Union[type, Sequence[type]], 
+                                                           Union[Callable, object]],
+                       return_if_expr_is : Dict[Union[type, Sequence[type]], 
+                                                Union[Callable, object]]):
     
     """
     Routine that is used repeatedly in some functionalities.
@@ -45,11 +46,26 @@ def _operation_routine(expr : sp.Expr,
     
     _screen_type(expr, forbidden_types, name)
     
-    if not(expr.has(*if_expr_does_not_have)):
-        return return_if_expr_does_not_have(expr)
+    for if_does_not_have, then_return in return_if_expr_does_not_have.items():
+        if not(isinstance(if_does_not_have, Sequence)):
+            if_does_not_have = [if_does_not_have]
+
+        if callable(then_return):
+            out = then_return(expr)
+        else:
+            out = then_return
+            
+        if not(expr.has(*if_does_not_have)):
+            return out
     
-    for if_expr_is, then_return in return_if_expr_is:
-        if isinstance(expr, if_expr_is):
-            return then_return(expr)
+    for if_is, then_return in return_if_expr_is.itmes():
+        
+        if callable(then_return):
+            out = then_return(expr)
+        else:
+            out = then_return
+            
+        if isinstance(expr, if_is):
+            return out
         
     _invalid_input(expr, name)
