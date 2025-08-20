@@ -60,26 +60,32 @@ def _operation_routine(expr : sp.Expr,
 
 def _extract_alpha_type_operator_monomial_breaker(expr : sp.Expr):
     expr = qp2a(sp.sympify(expr))
-    monomial_breaker = 1
-    valid_monomial = 1
     
     _screen_type(expr, sp.Add, "_extract_alpha_type_operator_monomial_breaker")
     
     if not(isinstance(expr, sp.Mul)):
-        if expr.is_polynomial(createOp, annihilateOp):
-            valid_monomial *= expr
-            return monomial_breaker, valid_monomial
-        else:
-            monomial_breaker *= expr
-            return monomial_breaker, valid_monomial
+        return [expr]
     
+    out = []
+    factor = sp.Number(1)
     for arg in expr.args:
-        if arg.is_polynomial():
-            valid_monomial *= arg
+        if arg.is_polynomial(createOp) == factor.is_polynomial(annihilateOp):
+            factor *= arg
         else:
-            monomial_breaker *= arg
-    
-    return monomial_breaker, valid_monomial
+            if factor != 1:
+                out.append(factor)
+            factor = arg
+    """
+    The polynomiality may change at the last argument. If so, then 'factor'
+    contains the last argument when the loop ends which has not been added
+    to 'out' yet. Otherwise, 'factor' has not been appended to 'out' since
+    the last ddetected polynomial change. So in any case, at the end of
+    the loop, 'factor' contains the leftover arguments not appended yet to 'out',
+    but it would never be unity. 
+    """
+    out.append(factor)
+        
+    return out
 
 def _collect_alpha_type_oper_from_monomial(expr : sp.Expr):
     expr = qp2a(sp.sympify(expr))
