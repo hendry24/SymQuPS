@@ -6,6 +6,7 @@ from ..objects.base import Base
 from ..objects.cache import _sub_cache
 from ..objects import scalars
 from ..objects.operators import qOp, pOp, annihilateOp, createOp, Operator
+from ..operations.operator_ordering import sOrdering
 from .multiprocessing import _mp_helper
 
 def get_random_poly(objects, coeffs=[1], max_pow=3, dice_throw=10):
@@ -16,6 +17,7 @@ def get_random_poly(objects, coeffs=[1], max_pow=3, dice_throw=10):
                              for _ in range(dice_throw)])
                     for _ in range(dice_throw)])
 
+_class_with_define = [Base, sOrdering]
 def define(expr : sp.Expr) -> sp.Expr:
     """
     Given a composite expression `expr`, call the `.define` method

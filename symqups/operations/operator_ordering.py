@@ -2,8 +2,7 @@ import sympy as sp
 from itertools import permutations
 
 from .. import s as ClahillGlauberS
-from ..objects.base import qpTypePSO, alphaTypePSO, PhaseSpaceObject
-from ..objects.scalars import alpha, alphaD, Scalar
+from ..objects.scalars import Scalar
 from ..objects.cache import _sub_cache
 from ..objects.operators import Operator, annihilateOp, createOp
 from ..utils._internal._basic_routines import _operation_routine
@@ -112,11 +111,12 @@ class sOrdering(sp.Expr):
             case default:
                 return self
 
-    def express(self, t = 1, define=False, **hints):
+    def express(self, t = 1, define=True, **hints):
         """
         Expand the expression in terms of t-ordered expressions.
         By default, `t=1` corresponds to normal-ordering. If `define`,
         then the expanded t-ordered expressiosn are defined when possible. 
+        By default, express the object in terms of normal-ordered products.
         """
         
         if not(self.args[0].is_polynomial(Operator)):
