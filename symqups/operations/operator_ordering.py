@@ -25,7 +25,7 @@ def _make_normal_ordered(col_ad : dict,
 
 class sOrdering(sp.Expr):
     
-    def __new__(cls, expr : sp.Expr, s : sp.Number | None = None):
+    def __new__(cls, expr : sp.Expr, s : sp.Number | None = None, tidy : bool = False):
         expr = qp2a(sp.sympify(expr)) 
         
         s = sp.sympify(s)
@@ -48,6 +48,10 @@ class sOrdering(sp.Expr):
             return A
         
         def treat_mul(A : sp.Expr):
+            if not(tidy):
+                leftovers, bracket_arg = _separate_operator(A)
+                return leftovers * make(bracket_arg)
+            
             if A.is_polynomial():
                 non_operator, collect_ad, collect_a = _collect_alpha_type_oper_from_monomial(A)
                 out = non_operator
@@ -60,19 +64,27 @@ class sOrdering(sp.Expr):
                         out *= make(ad**m * a**n)
                 return out
             else:
-                A_nonop, A_op = _separate_operator(A)
-                if A_op == 1:
-                    return A_nonop
-                A_op_by_polynomiality = _separate_by_oper_polynomiality(A_op, (createOp, annihilateOp))
-                reordered_A_op = 1
-                for factor in A_op_by_polynomiality:
+                leftovers, bracket_arg = _separate_operator(A)
+                bracket_arg_by_polynomiality = _separate_by_oper_polynomiality(bracket_arg, 
+                                                                               (createOp, annihilateOp))
+                tidied_bracket_arg = 1
+                for factor in bracket_arg_by_polynomiality:
                     if factor.is_polynomial():
                         non_operator, collect_ad, collect_a = _collect_alpha_type_oper_from_monomial(factor)
                         assert non_operator == 1
-                        reordered_A_op *= _make_normal_ordered(collect_ad, collect_a)
+                        tidied_bracket_arg *= _make_normal_ordered(collect_ad, collect_a)
                     else:
-                        reordered_A_op *= factor
-                return A_nonop * make(reordered_A_op)
+                        # If the nonpolynomial 'factor' does not share 'sub' with 
+                        # the other factors, then we can savely separate its brackets
+                        # or even write it out without brackets whence possible.
+                        factor_sub = [atom.sub for atom in factor.atoms(Operator)]
+                        bracket_arg_sub = [atom.sub for atom in bracket_arg.atoms(Operator)]
+                        factor_is_separable = []
+                        if True:
+                            tidied_bracket_arg *= factor
+                        else:
+                            leftovers *= treat_foo(factor) # works as needed here.
+                return leftovers * make(tidied_bracket_arg)
      
         def treat_add(A : sp.Expr):
             return sp.Add(*_mp_helper(A.args, sOrdering))

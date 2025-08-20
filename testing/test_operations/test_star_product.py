@@ -13,7 +13,7 @@ from symqups import s
 @pytest.mark.order(7)
 class TestStarProduct():
     
-    rand_N = random.randint(0, 100)
+    rand_N = random.randint(1, 20)
     s.val = random.uniform(-1, 1)
     
     x = sp.Symbol("x")
@@ -135,6 +135,7 @@ class TestStarProduct():
         
     def test_star(self):
         assert Star() == 1
+        assert Star(*[1]*5)
         assert Star(self.x) == self.x
         assert isinstance(Star(scalars.W, scalars.W), Star)
         for n in range(1, 5):

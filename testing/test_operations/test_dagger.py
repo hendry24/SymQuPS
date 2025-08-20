@@ -8,6 +8,8 @@ from symqups.utils.algebra import get_random_poly
 @pytest.mark.fast
 @pytest.mark.order(6)
 def test_dagger():
+    assert dagger(1) == 1
+    
     for herm_op in [qOp(), pOp(), densityOp()]:
         assert dagger(herm_op) == herm_op
 
@@ -18,5 +20,6 @@ def test_dagger():
 
     rand_poly = get_random_poly(objects = (1, sp.Symbol("x"), qOp(), annihilateOp(),
                                             createOp(), annihilateOp()),
-                                coeffs = list(range(10)) + sp.symbols([]))
+                                coeffs = list(range(10)) + sp.symbols([]),
+                                dice_throw = 3)
     assert (dagger(dagger(rand_poly)) - rand_poly).expand() == 0

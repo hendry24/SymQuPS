@@ -14,8 +14,8 @@ def _separate_operator(expr: sp.Expr):
     else:
         args = [expr]
     
-    non_operator = 1
-    operator = 1
+    non_operator = sp.Number(1)
+    operator = sp.Number(1)
     for arg in args:
         if arg.has(Operator):
             operator *= arg
@@ -71,9 +71,9 @@ def _collect_alpha_type_oper_from_monomial(expr : sp.Expr):
     else:
         args = [expr]
     
-    non_operator = 1
-    collect_ad = {sub : [createOp(sub), 0] for sub in _sub_cache}
-    collect_a = {sub : [annihilateOp(sub), 0] for sub in _sub_cache}
+    non_operator = sp.Number(1)
+    collect_ad = {sub : [createOp(sub), sp.Number(0)] for sub in _sub_cache}
+    collect_a = {sub : [annihilateOp(sub), sp.Number(0)] for sub in _sub_cache}
     for A_ in args:
         if isinstance(A_, createOp):
             collect_ad[A_.sub][1] += 1
