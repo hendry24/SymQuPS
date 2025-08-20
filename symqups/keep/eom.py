@@ -2,7 +2,7 @@ import sympy as sp
 import sympy.physics.quantum as spq
 from functools import cached_property
 
-from ..transforms.wigner_transform import WignerTransform
+# from ..transforms.wigner_transform import WignerTransform
 from ..objects import scalars
 from ..objects.operators import densityOp, Dagger
 from ..utils.algebra import collect_by_derivative, derivative_not_in_num

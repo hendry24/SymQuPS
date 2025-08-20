@@ -8,10 +8,20 @@ from ..objects.operators import Operator, annihilateOp, createOp
 from ..utils._internal._basic_routines import _operation_routine
 from ..utils._internal._operator_handling import (_separate_operator,
                                                   _separate_by_oper_polynomiality,
-                                                  _collect_alpha_type_oper_from_monomial,
-                                                  _normal_order_alpha_type_oper_monomial)
+                                                  _collect_alpha_type_oper_from_monomial)
 from ..utils.multiprocessing import _mp_helper
 from ..utils.algebra import qp2a
+
+def _make_normal_ordered(col_ad : dict, 
+                         col_a : dict):
+    mul_ad = 1
+    mul_a = 1
+    for sub in _sub_cache:
+        ad, m = col_ad[sub]
+        mul_ad *= ad*m
+        a, n = col_a[sub]
+        mul_a *= a*n
+    return sp.Mul(mul_ad, mul_a)
 
 class sOrdering(sp.Expr):
     
@@ -57,7 +67,9 @@ class sOrdering(sp.Expr):
                 reordered_A_op = 1
                 for factor in A_op_by_polynomiality:
                     if factor.is_polynomial():
-                        reordered_A_op *= _normal_order_alpha_type_oper_monomial(factor)
+                        non_operator, collect_ad, collect_a = _collect_alpha_type_oper_from_monomial(factor)
+                        assert non_operator == 1
+                        reordered_A_op *= _make_normal_ordered(collect_ad, collect_a)
                     else:
                         reordered_A_op *= factor
                 return A_nonop * make(reordered_A_op)
@@ -65,14 +77,13 @@ class sOrdering(sp.Expr):
         return _operation_routine(expr,
                                   "sOrder",
                                   (Scalar,),
-                                  (Operator,),
-                                  lambda A: expr,
-                                  ((Operator,), lambda A: A),
-                                  ((sp.Pow), treat_pow),
-                                  ((sp.Function,), treat_foo),
-                                  ((sp.Mul,), treat_mul),
-                                  ((sp.Add,), lambda A: _mp_helper(A.args, sOrdering))
-        )
+                                  {Operator : expr},
+                                  {Operator : expr,
+                                   sp.Pow : treat_pow,
+                                   sp.Function : treat_foo,
+                                   sp.Mul : treat_mul,
+                                   sp.Add : lambda A: _mp_helper(A.args, sOrdering)}
+                                  )
         
     def _latex(self, printer):
         return r"\left\{ %s \right\}_{s=%s}" % (sp.latex(self.args[0]),
@@ -106,8 +117,7 @@ class sOrdering(sp.Expr):
                         out *= sp.cancel(out_single_sub / sp.factorial(len(to_permutate)))
                 return out
             case 1:
-                return sp.Mul(*[a**b for a,b in collect_ad.values()], 
-                              *[a**b for a,b in collect_a.values()])
+                return _make_normal_ordered(collect_ad, collect_a)
             case default:
                 return self
 

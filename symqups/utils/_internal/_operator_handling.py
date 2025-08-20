@@ -7,7 +7,7 @@ from ...objects.cache import _sub_cache
 def _separate_operator(expr: sp.Expr):
     expr = sp.sympify(expr)
     
-    _screen_type(expr, sp.Add, "_separate_alpha_type_operator")
+    _screen_type(expr, sp.Add, "_separate_operator")
     
     if isinstance(expr, sp.Mul):
         args = expr.args
@@ -17,7 +17,7 @@ def _separate_operator(expr: sp.Expr):
     non_operator = 1
     operator = 1
     for arg in args:
-        if expr.has(Operator):
+        if arg.has(Operator):
             operator *= arg
         else:
             non_operator *= arg
@@ -79,10 +79,3 @@ def _collect_alpha_type_oper_from_monomial(expr : sp.Expr):
             non_operator *= A_
             
     return non_operator, collect_ad, collect_a
-
-def _normal_order_alpha_type_oper_monomial(expr : sp.Expr):
-    expr = qp2a(sp.sympify(expr))
-    non_operator, collect_ad, collect_a = _collect_alpha_type_oper_from_monomial(expr)
-    return sp.Mul(non_operator, 
-                  *[a**b for a, b in collect_ad.values()], 
-                  *[a**b for a, b in collect_a.values()])

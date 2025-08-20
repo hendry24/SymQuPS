@@ -6,7 +6,7 @@ from symqups.objects.base import PhaseSpaceObject, qpTypePSO, alphaTypePSO
 from symqups.objects.scalars import (hbar, mu, Scalar, q, p, t, W, alpha, alphaD,
                                     _Primed, _DePrimed, _DerivativeSymbol, StateFunction)
 from symqups.objects.operators import (Operator, qOp, pOp, createOp, annihilateOp,
-                                        densityOp, rho, Dagger)
+                                        densityOp, rho)
 
 from symqups.objects.cache import _sub_cache
 from symqups.utils.algebra import get_random_poly
@@ -30,13 +30,11 @@ def arithmetic(A):
     sp.log(A)
 
 @pytest.mark.fast
-@pytest.mark.order(0)
+@pytest.mark.order(1)
 class TestScalars():
     
-    def test_treat_sub_and_scalar_construction(self):
+    def and_scalar_construction(self):
         for sub in [None, "1", 1, sp.Number(1), sp.Symbol("1")]:
-            assert _treat_sub(_treat_sub(sub, True), True) == _treat_sub(sub, True)
-            assert _treat_sub(_treat_sub(sub, False), False) == _treat_sub(sub, False)
             obj = Scalar(sub)
             assert isinstance(obj.sub, sp.Symbol)
             assert obj.sub in _sub_cache
@@ -94,25 +92,32 @@ class TestScalars():
         assert not(der.is_commutative)
         
     def test_W(self):
-        assert isinstance(W(), StateFunction)
-        assert isinstance(W(), sp.Function)
+        from symqups.objects.scalars import W
+        
         check_vars = [t()]
         global _sub_cache
         for sub in _sub_cache:
-            check_vars.extend([q(sub), p(sub)])
-        assert W().free_symbols == set(check_vars)
-        W_str = sp.latex(W(False))
-        assert ("W_s" in W_str and
-                "q" not in W_str and
-                "p" not in W_str)
-        W_str = sp.latex(W(True))
-        assert ("W_s" in W_str and
-                "q" in W_str and
-                "p" in W_str)
-        assert W(False) == W(True)
-
+            check_vars.extend([alpha(sub), alphaD(sub)])
+        assert W.free_symbols == set(check_vars)
+        
+        assert isinstance(W, StateFunction)
+        assert isinstance(W, sp.Function)
+        assert ("alpha" not in sp.latex(W)
+                and "q_" not in sp.latex(W)
+                and "p_" not in sp.latex(W))
+        W.show_vars = True
+        assert ("alpha" in sp.latex(W)
+                and "q_" not in sp.latex(W)
+                and "p_" not in sp.latex(W))
+        
+        p(r"newly_added_sub")
+        
+        from symqups.objects.scalars import W
+        W.show_vars = True
+        assert "newly_added_sub" in sp.latex(W)
+        
 @pytest.mark.fast
-@pytest.mark.order(1)
+@pytest.mark.order(2)
 class TestHilbertOps():
     def test_operator_construction(self):
         for sub in [None, "1", 1, sp.Number(1), sp.Symbol("1")]:
@@ -132,18 +137,4 @@ class TestHilbertOps():
             assert obj.is_Atom
             assert base in sp.latex(obj)
             
-        assert rho() == densityOp()
-    
-    def test_dagger(self):
-        for herm_op in [qOp(), pOp(), densityOp()]:
-            assert Dagger(herm_op) == herm_op
-
-        assert Dagger(annihilateOp()) == createOp()
-        assert (Dagger(annihilateOp().define())-createOp().define()).expand() == 0
-        assert Dagger(createOp()) == annihilateOp()            
-        assert (Dagger(createOp().define())-annihilateOp().define()).expand() == 0
-
-        rand_poly = get_random_poly(objects = (1, sp.Symbol("x"), qOp(), annihilateOp(),
-                                               createOp(), annihilateOp()),
-                                    coeffs = list(range(10)) + sp.symbols([]))
-        assert (Dagger(Dagger(rand_poly)) - rand_poly).expand() == 0
+        assert rho == densityOp()

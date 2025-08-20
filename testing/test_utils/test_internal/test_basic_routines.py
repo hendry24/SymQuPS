@@ -8,6 +8,7 @@ from symqups.utils._internal._basic_routines import (
     _operation_routine
 )
 
+@pytest.mark.fast
 @pytest.mark.order(0)
 class TestBasicRoutines:
     def test_treat_sub(self):

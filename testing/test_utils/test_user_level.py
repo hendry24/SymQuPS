@@ -11,10 +11,10 @@ def mp_helper_foo(x):
         return x+2
 
 @pytest.mark.fast
-@pytest.mark.order(2)
+@pytest.mark.order(3)
 def test_mp_helper():
     inpt = [1, sp.Symbol("x"), Scalar(),
-            Operator(), W()]
+            Operator(), W]
     
     global MP_CONFIG
     enable_default = MP_CONFIG["enable"]
@@ -28,7 +28,7 @@ def test_mp_helper():
     MP_CONFIG["enable"] = enable_default
 
 @pytest.mark.full
-@pytest.mark.order(3)
+@pytest.mark.order(4)
 class TestAlgebra():
     def test_define_qp2a(self):
         sub = random.randint(0, 100)

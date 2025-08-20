@@ -48,24 +48,16 @@ def _operation_routine(expr : sp.Expr,
     
     for if_does_not_have, then_return in return_if_expr_does_not_have.items():
         if not(isinstance(if_does_not_have, Sequence)):
-            if_does_not_have = [if_does_not_have]
-
-        if callable(then_return):
-            out = then_return(expr)
-        else:
-            out = then_return
-            
+            if_does_not_have = [if_does_not_have]            
         if not(expr.has(*if_does_not_have)):
-            return out
+            if callable(then_return):
+                return then_return(expr)
+            return then_return
     
-    for if_is, then_return in return_if_expr_is.itmes():
-        
-        if callable(then_return):
-            out = then_return(expr)
-        else:
-            out = then_return
-            
+    for if_is, then_return in return_if_expr_is.items():
         if isinstance(expr, if_is):
-            return out
+            if callable(then_return):
+                return then_return(expr)
+            return then_return
         
     _invalid_input(expr, name)

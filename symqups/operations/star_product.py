@@ -4,7 +4,6 @@ from pprint import pprint
 from ..objects.base import PhaseSpaceObject, qpTypePSO
 from ..objects import scalars
 from ..objects.scalars import q, p, alpha, alphaD, _DerivativeSymbol, _Primed, _DePrimed
-from ..objects.cache import _sub_cache
 from ..utils.multiprocessing import _mp_helper
 from ..utils._internal._basic_routines import _invalid_input
 from ..utils.algebra import qp2a
@@ -152,7 +151,8 @@ class Star(sp.Expr):
             try:
                 out = _star_base(out, arg)
             except _CannotBoppFlag:
-                unboppable_args.append(out)
+                if out != 1:
+                    unboppable_args.append(out)
                 out = arg
                 if k == (len(args)-1):
                     unboppable_args.append(arg)
@@ -182,8 +182,8 @@ def _star_base(A : sp.Expr, B : sp.Expr) \
         (B.has(PhaseSpaceObject))):
         return A*B
 
-    cannot_Bopp_A = A.is_polynomial(scalars.Scalar)
-    cannot_Bopp_B = B.is_polynomial(scalars.Scalar)
+    cannot_Bopp_A = not(A.is_polynomial(scalars.Scalar))
+    cannot_Bopp_B = not(B.is_polynomial(scalars.Scalar))
 
     if cannot_Bopp_A and cannot_Bopp_B:
         raise _CannotBoppFlag()

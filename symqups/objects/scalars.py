@@ -2,7 +2,7 @@ import sympy as sp
 
 from .base import Base, qpTypePSO, alphaTypePSO, PhaseSpaceObject
 from .cache import _sub_cache
-from ..utils._internal._basic_routines import _treat_sub, _screen_type
+from ..utils._internal._basic_routines import _treat_sub
 
 __all__ = ["q", "p", "alpha", "alphaD", "W"]
 

@@ -3,12 +3,14 @@ import random
 import sympy as sp
 
 from symqups.objects.base import PhaseSpaceObject, qpTypePSO, alphaTypePSO
-from symqups.objects.scalars import q, p,_Primed, _DerivativeSymbol, alpha, alphaD, hbar, mu, W
+from symqups.objects.scalars import q, p,_Primed, _DerivativeSymbol, alpha, alphaD, hbar, mu
+from symqups.objects import scalars
 from symqups.operations.star_product import Bopp, _first_index_and_diff_order, _replace_diff, _star_base, Star
-from symqups.utils.algebra import qp2a, define
+from symqups.utils.algebra import qp2a
 from symqups import s
 
-@pytest.mark.order(4)
+@pytest.mark.fast
+@pytest.mark.order(7)
 class TestStarProduct():
     
     rand_N = random.randint(0, 100)
@@ -62,12 +64,8 @@ class TestStarProduct():
         assert not(Bopp(1).has(_DerivativeSymbol, PhaseSpaceObject))
         assert not(Bopp(self.x).has(_DerivativeSymbol, PhaseSpaceObject))
         
-        try:
-            Bopp(sp.Derivative(W, self.qq))
-            raise TypeError("The expression should not be Bopp-able.")
-        except:
-            pass
-            
+        assert isinstance(Bopp(sp.Derivative(scalars.W, self.a)), Bopp)
+                    
     def test_fido(self):
         
         def FIDO(x):
@@ -92,7 +90,7 @@ class TestStarProduct():
         assert FIDO(sp.Mul(*random_symbols)) == (self.rand_N, self.qq_prime, 1)
         
     def test_replace_diff(self):
-        WW = _Primed(W())
+        WW = _Primed(scalars.W)
         
         for primed in [self.qq_prime, self.pp_prime, self.a_prime, self.ad_prime]:
             assert _replace_diff(sp.Integer(1)) == 1
@@ -113,7 +111,7 @@ class TestStarProduct():
             except:
                 pass    
         for bad_A, bad_B in [[sp.sqrt(self.qq), sp.sqrt(self.pp)],
-                             [sp.Function("foo_A")(self.qq, self.pp), W()],
+                             [sp.Function("foo_A")(self.qq, self.pp), scalars.W],
                              [self.qq**0.2, self.pp**1.0000]]:
             must_raise_error(bad_A, bad_B)
         
@@ -138,11 +136,7 @@ class TestStarProduct():
     def test_star(self):
         assert Star() == 1
         assert Star(self.x) == self.x
-        try:
-            assert Star(W, W)
-            raise TypeError("An error should be raised.")
-        except:
-            pass
+        assert isinstance(Star(scalars.W, scalars.W), Star)
         for n in range(1, 5):
             res = Star(*[self.a]*n)
             assert res.has(alphaTypePSO) and not(res.has(qpTypePSO))
