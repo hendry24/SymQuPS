@@ -61,12 +61,20 @@ def _separate_by_oper_polynomiality(expr : sp.Expr, polynomials_in = (createOp, 
 
 def _collect_alpha_type_oper_from_monomial(expr : sp.Expr):
     expr = qp2a(sp.sympify(expr))
+    _screen_type(expr, sp.Add, "_collect_alpha_type_oper_from_monomial")
+    
     if not(expr.is_polynomial(annihilateOp, createOp)):
         raise ValueError("This function does not accept non-polynomials.")
+    
+    if isinstance(expr, sp.Mul):
+        args = expr.args
+    else:
+        args = [expr]
+    
     non_operator = 1
     collect_ad = {sub : [createOp(sub), 0] for sub in _sub_cache}
     collect_a = {sub : [annihilateOp(sub), 0] for sub in _sub_cache}
-    for A_ in expr.args:
+    for A_ in args:
         if isinstance(A_, createOp):
             collect_ad[A_.sub][1] += 1
         elif A_.has(createOp): # Pow

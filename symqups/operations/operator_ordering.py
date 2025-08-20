@@ -18,9 +18,9 @@ def _make_normal_ordered(col_ad : dict,
     mul_a = 1
     for sub in _sub_cache:
         ad, m = col_ad[sub]
-        mul_ad *= ad*m
+        mul_ad *= ad**m
         a, n = col_a[sub]
-        mul_a *= a*n
+        mul_a *= a**n
     return sp.Mul(mul_ad, mul_a)
 
 class sOrdering(sp.Expr):
@@ -74,15 +74,18 @@ class sOrdering(sp.Expr):
                         reordered_A_op *= factor
                 return A_nonop * make(reordered_A_op)
      
+        def treat_add(A : sp.Expr):
+            return sp.Add(*_mp_helper(A.args, sOrdering))
+            
         return _operation_routine(expr,
                                   "sOrder",
                                   (Scalar,),
                                   {Operator : expr},
-                                  {Operator : expr,
+                                  {(Operator, sOrdering) : expr,
                                    sp.Pow : treat_pow,
                                    sp.Function : treat_foo,
                                    sp.Mul : treat_mul,
-                                   sp.Add : lambda A: _mp_helper(A.args, sOrdering)}
+                                   sp.Add : treat_add}
                                   )
         
     def _latex(self, printer):

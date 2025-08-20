@@ -45,6 +45,8 @@ class TestOperatorHandling:
         except:
             pass
         
+        assert (_separate_by_oper_polynomiality(a_1)
+                == [a_1])
         assert (_separate_by_oper_polynomiality(a_1**2*ad_2)
                 == [a_1**2*ad_2])
         assert (_separate_by_oper_polynomiality(a_1**2*ad_2*sp.exp(x))
@@ -72,6 +74,16 @@ class TestOperatorHandling:
             raise RuntimeError("Test failed.")
         except:
             pass
+        
+        assert _collect_alpha_type_oper_from_monomial(x)[0] == x
+        
+        col_ad = _collect_alpha_type_oper_from_monomial(ad_1)[1]
+        assert isinstance(col_ad, dict)
+        assert col_ad[ad_1.sub] == [ad_1, 1]
+        
+        col_a = _collect_alpha_type_oper_from_monomial(a_1)[2]
+        assert isinstance(col_a, dict)
+        assert col_a[a_1.sub] == [a_1, 1]
         
         expr = 2*x*sp.exp(x) * a_2**2 * a_1 * a_2 * a_1 * ad_2**3 * a_2**1
         non_op, col_ad, col_a = _collect_alpha_type_oper_from_monomial(expr)

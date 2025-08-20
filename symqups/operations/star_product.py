@@ -288,8 +288,7 @@ def _first_index_and_diff_order(A : sp.Expr) \
                 
     raise TypeError(r"Invalid input: \n\n {%s}" % sp.latex(A))
 
-def _replace_diff(A : sp.Expr) \
-    -> sp.Expr:
+def _replace_diff(A : sp.Expr) -> sp.Expr:
     """
     Recursively replace the differential operator symbols,
     with the appropriate `sympy.Derivative` objects. Here _Primed 
