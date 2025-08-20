@@ -6,7 +6,7 @@ from . import scalars
 # since we want its value to follow changes at runtime.
 from .base import Base, qpTypePSO, alphaTypePSO
 from .cache import _sub_cache
-from ..utils._internal import _treat_sub, _operation_routine
+from ..utils._internal._basic_routines import _treat_sub, _operation_routine
 from ..utils.multiprocessing import _mp_helper
 
 class Operator(Base):

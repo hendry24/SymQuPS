@@ -6,7 +6,7 @@ from ..objects import scalars
 from ..objects.scalars import q, p, alpha, alphaD, _DerivativeSymbol, _Primed, _DePrimed
 from ..objects.cache import _sub_cache
 from ..utils.multiprocessing import _mp_helper
-from ..utils._internal import _invalid_input
+from ..utils._internal._basic_routines import _invalid_input
 from ..utils.algebra import qp2a
 from .. import s
 

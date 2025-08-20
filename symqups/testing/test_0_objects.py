@@ -10,7 +10,7 @@ from symqups.objects.operators import (Operator, qOp, pOp, createOp, annihilateO
 
 from symqups.objects.cache import _sub_cache
 from symqups.utils.algebra import get_random_poly
-from symqups.utils._internal import _treat_sub
+from symqups.utils._internal._basic_routines import _treat_sub
 
 def arithmetic(A):
     A+2
