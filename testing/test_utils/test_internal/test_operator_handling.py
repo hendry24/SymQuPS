@@ -5,7 +5,8 @@ from symqups.objects.operators import Operator, createOp, annihilateOp
 from symqups.utils._internal._operator_handling import (
     _separate_operator,
     _separate_by_oper_polynomiality,
-    _collect_alpha_type_oper_from_monomial
+    _collect_alpha_type_oper_from_monomial_by_sub,
+    _collect_non_polynomial_by_sub
 )
 from symqups.objects import cache
 
@@ -54,7 +55,7 @@ class TestOperatorHandling:
         assert (_separate_by_oper_polynomiality(a_1*x*sp.exp(ad_2)*ad_2**3 * a_1**0.3 * 2**ad_2)
                 == [a_1*x, sp.exp(ad_2), ad_2**3, a_1**0.3*2**ad_2])
         
-    def test_collect_alpha_type_oper_from_monomial(self):
+    def test_collect_alpha_type_oper_from_monomial_by_sub(self):
         cache._sub_cache.clear()
         
         a_1 = annihilateOp(1)
@@ -75,18 +76,18 @@ class TestOperatorHandling:
         except:
             pass
         
-        assert _collect_alpha_type_oper_from_monomial(x)[0] == x
+        assert _collect_alpha_type_oper_from_monomial_by_sub(x)[0] == x
         
-        col_ad = _collect_alpha_type_oper_from_monomial(ad_1)[1]
+        col_ad = _collect_alpha_type_oper_from_monomial_by_sub(ad_1)[1]
         assert isinstance(col_ad, dict)
         assert col_ad[ad_1.sub] == [ad_1, 1]
         
-        col_a = _collect_alpha_type_oper_from_monomial(a_1)[2]
+        col_a = _collect_alpha_type_oper_from_monomial_by_sub(a_1)[2]
         assert isinstance(col_a, dict)
         assert col_a[a_1.sub] == [a_1, 1]
         
         expr = 2*x*sp.exp(x) * a_2**2 * a_1 * a_2 * a_1 * ad_2**3 * a_2**1
-        non_op, col_ad, col_a = _collect_alpha_type_oper_from_monomial(expr)
+        non_op, col_ad, col_a = _collect_alpha_type_oper_from_monomial_by_sub(expr)
         
         assert non_op == 2*x*sp.exp(x)
         assert col_a.pop(a_1.sub) == [a_1, 2]
@@ -95,4 +96,21 @@ class TestOperatorHandling:
         assert col_ad.pop(ad_2.sub) == [ad_2, 3]
         assert not(col_ad)
         assert not(col_a)
+    
+    def test_collect_non_polynomial_by_sub(self):
         
+        foo = _collect_non_polynomial_by_sub
+        
+        assert foo(1) == 1
+        
+        a = [annihilateOp(i) for i in range(4)]
+        ad = [annihilateOp(i) for i in range(4)]
+        
+        try:
+            _collect_alpha_type_oper_from_monomial_by_sub(a[0]+ad[0])
+            raise RuntimeError("Test failed.")
+        except:
+            pass
+        
+        assert foo(a[0]) == [a[0]]
+        assert foo(a[0]*a[1]) == list(sp.ordered([a[0], a[1]]))

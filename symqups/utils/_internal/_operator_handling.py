@@ -59,7 +59,7 @@ def _separate_by_oper_polynomiality(expr : sp.Expr, polynomials_in = (createOp, 
         
     return out
 
-def _collect_alpha_type_oper_from_monomial(expr : sp.Expr):
+def _collect_alpha_type_oper_from_monomial_by_sub(expr : sp.Expr):
     expr = qp2a(sp.sympify(expr))
     _screen_type(expr, sp.Add, "_collect_alpha_type_oper_from_monomial")
     

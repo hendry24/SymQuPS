@@ -8,7 +8,7 @@ from ..objects.operators import Operator, annihilateOp, createOp
 from ..utils._internal._basic_routines import _operation_routine
 from ..utils._internal._operator_handling import (_separate_operator,
                                                   _separate_by_oper_polynomiality,
-                                                  _collect_alpha_type_oper_from_monomial)
+                                                  _collect_alpha_type_oper_from_monomial_by_sub)
 from ..utils.multiprocessing import _mp_helper
 from ..utils.algebra import qp2a
 
@@ -53,7 +53,7 @@ class sOrdering(sp.Expr):
                 return leftovers * make(bracket_arg)
             
             if A.is_polynomial():
-                non_operator, collect_ad, collect_a = _collect_alpha_type_oper_from_monomial(A)
+                non_operator, collect_ad, collect_a = _collect_alpha_type_oper_from_monomial_by_sub(A)
                 out = non_operator
                 for sub in _sub_cache:
                     ad, m = collect_ad[sub]
@@ -70,7 +70,8 @@ class sOrdering(sp.Expr):
                 tidied_bracket_arg = 1
                 for factor in bracket_arg_by_polynomiality:
                     if factor.is_polynomial():
-                        non_operator, collect_ad, collect_a = _collect_alpha_type_oper_from_monomial(factor)
+                        non_operator, collect_ad, collect_a = \
+                            _collect_alpha_type_oper_from_monomial_by_sub(factor)
                         assert non_operator == 1
                         tidied_bracket_arg *= _make_normal_ordered(collect_ad, collect_a)
                     else:
@@ -105,7 +106,8 @@ class sOrdering(sp.Expr):
                                               sp.latex(self.args[1]))
 
     def _collect_oper(self):
-        non_operator, collect_ad, collect_a = _collect_alpha_type_oper_from_monomial(self.args[0])
+        non_operator, collect_ad, collect_a = \
+            _collect_alpha_type_oper_from_monomial_by_sub(self.args[0])
         assert non_operator == 1
         return collect_ad, collect_a
         
