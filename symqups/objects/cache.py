@@ -1,15 +1,39 @@
-class _Set(set):
-    def update(self, *args, **kwargs):
-        s = "This object should not be modified by the user. "
-        s += "Call the '_update' method to force-update the object."
-        raise AttributeError(s)
+import sympy as sp
+from typing import Sequence
+
+class _AutoSortedUniqueList(list):
+    def __init__(self, *args):
+        if args:
+            raise ValueError("Must be empty on initialization.")
+        super().__init__(*args)
     
-    def _update(self, *args, **kwargs):
-        super().update(*args, **kwargs)
+    def _append(self, item):
+        
+        if item in self:
+            return 
+
+        super().append(item)
+        self.sort(key=sp.default_sort_key)
         
         from . import scalars
         from .scalars import StateFunction, t, alpha, alphaD
-        scalars.W = StateFunction(t(), *[cls(sub) for sub in self for cls in (alpha, alphaD)])
-        
+        scalars.W = StateFunction(t(), 
+                                  *[cls(sub) for sub in self for cls in (alpha, alphaD)])
+    
+    def append(self, item):
+        raise NotImplementedError
+    
+    def extend(self, iterable):
+        raise NotImplementedError
+
+    def insert(self, index, item):
+        raise NotImplementedError
+
+    def __setitem__(self, index, value):
+        raise NotImplementedError
+
+    def __iadd__(self, other):
+        raise NotImplementedError
+          
 global _sub_cache
-_sub_cache = _Set([])
+_sub_cache = _AutoSortedUniqueList()

@@ -19,8 +19,8 @@ class Operator(Base):
     def __new__(cls, sub = None):
         sub = _treat_sub(sub, cls.has_sub)
         
-        global _sub_cache
-        _sub_cache._update([sub])
+        if cls.has_sub:
+            _sub_cache._append(sub)
         
         return super().__new__(cls, sub)
         
@@ -75,4 +75,5 @@ class densityOp(HermitianOp):
     def __new__(cls, sub=None):
         return super().__new__(cls, sub)
     
+global rho
 rho = densityOp()

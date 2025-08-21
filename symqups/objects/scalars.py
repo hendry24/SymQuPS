@@ -23,14 +23,8 @@ class Scalar(Base):
     def __new__(cls, sub = None):
         sub = _treat_sub(sub, cls.has_sub)
         
-        global _sub_cache
-        if cls.has_sub and (sub not in _sub_cache):
-            """
-            NOTE:
-            The second conditional is crucial to avoid
-            infinite recursion in _sub_cache._update.
-            """
-            _sub_cache._update([sub])
+        if cls.has_sub:
+            _sub_cache._append(sub)
 
         return super().__new__(cls, sub)
         
@@ -166,6 +160,7 @@ class StateFunction(sp.Function):
             return str(self).replace("StateFunction", r"W_s")
         return r"W_s"
     
+global W
 W = StateFunction(t())
 
 """

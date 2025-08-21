@@ -87,3 +87,61 @@ def _collect_alpha_type_oper_from_monomial(expr : sp.Expr):
             non_operator *= A_
             
     return non_operator, collect_ad, collect_a
+
+def _collect_non_polynomial_by_sub(expr : sp.Expr):
+    """
+    'expr' is a Mul whose 'args' all 'has' 'Operator'.
+    """
+    if not(isinstance(expr, sp.Mul)):
+        return [expr]
+    
+    non_op, oper = _separate_operator(expr)
+    
+    out = [non_op]
+    sub_idx = {sub : None for sub in _sub_cache}
+    for factor in oper.args:
+        
+        subs_in_factor = list(sp.ordered({oper.sub for oper in factor.atoms(Operator)}))
+                                    # NOTE: must use a set to avoid repeated subs
+                                    # and turn into a sequence since it is used multiple times.
+        
+        if all([sub is None for sub in subs_in_factor]):
+            """
+            The given argument can go into its own slot in 'out'
+            since there is no sub shared with other items
+            already in the output (those with specified value in 'sub_idx').
+            """
+            for sub in subs_in_factor:
+                sub_idx[sub] = len(out)
+            out.append(factor)
+        
+        else:
+            """
+            If there is a specified sub in 'factor', then the factor
+            shares at least one sub with an already existing item
+            in 'out'. As such, we find the first shared sub and
+            multiply 'factor' into that slot. While we are at it,
+            we can collect 'sub's whose value in 'sub_idx' is still
+            'None' to assign their values to be the same as the
+            specified 'sub', telling the algorithm that future
+            factors with these 'sub's already have a shared slot in
+            'out'. 
+            
+            Additionally, since there may be more than one
+            specified 'sub' in 'factor', we can use a flag such that
+            further enconters with specified 'sub's are ignored by
+            the algorithm.
+            """
+            sub_already_with_slot_in_out = None
+            subs_with_unspecified_idx = []
+            for sub in subs_in_factor:
+                if sub_idx[sub] is None:
+                    subs_with_unspecified_idx.append(sub)
+                elif sub_already_with_slot_in_out is None:
+                    sub_already_with_slot_in_out = sub
+                    out[sub_idx[sub_already_with_slot_in_out]] *= factor        
+                    
+            for ssub in subs_with_unspecified_idx:
+                sub_idx[ssub] = sub_idx[sub_already_with_slot_in_out]
+                
+    return out
