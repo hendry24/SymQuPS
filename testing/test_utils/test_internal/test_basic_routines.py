@@ -20,14 +20,14 @@ class TestBasicRoutines:
         assert _treat_sub(sp.Symbol("x"), True) == sp.Symbol("x")
         
     def test_screen_type(self):
-        x_pass = sp.Symbol("x")
-        x_raise = "x"
+        x_pass = sp.Add(sp.Symbol("x"), 2)
+        x_raise = sp.Symbol("x")
         try:
-            _screen_type(x_raise, str, "")
+            _screen_type(x_raise, sp.Symbol, "")
             raise RuntimeError("Test failed.")
         except:
             pass
-        _screen_type(x_pass, str, "test")
+        _screen_type(x_pass, (sp.Symbol, sp.Number), "test")
         
     def test_invalid_type(self):
         try:

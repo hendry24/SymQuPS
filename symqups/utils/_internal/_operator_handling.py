@@ -1,8 +1,42 @@
 import sympy as sp
+from typing import Sequence
+
 from ._basic_routines import _screen_type
 from..algebra import qp2a
 from ...objects.operators import Operator, createOp, annihilateOp
 from ...objects.cache import _sub_cache
+
+# NOTE: WIP
+# def _decouple(expr : sp.Expr):
+#     """
+#     Decouple expressions when the noncommuting symbols actually belong
+#     to different 'sub's.
+#     """
+    
+#     if not(expr.has(Operator)):
+#         return expr
+    
+#     # Power of Mul
+#     def query(A : sp.Expr):
+#         return (isinstance(A, sp.Pow) 
+#                 and isinstance(A.args[0], sp.Mul) 
+#                 and A.args[0].has(Operator))
+#     def value(A : sp.Pow):
+#         base = A.args[0]
+#         base_separated_by_subs = _separate_term_oper_by_sub()
+#         exponent = A.args[1]
+#         _separate_term_oper_by_sub(base)
+#         return sp.Mul(*[factor**exponent for factor in base_factors])
+#     expr = expr.replace(query, value)
+    
+#     # Functions whose 
+#     functions = []
+#     # expr = expr.replace(lambda A: isinstance(A, sp.exp) and isinstance())
+    
+#     return expr
+
+def _get_oper_sub(expr:sp.Expr):
+    return [atom.sub for atom in expr.atoms(Operator)]
 
 def _separate_operator(expr: sp.Expr):
     expr = sp.sympify(expr)
@@ -16,6 +50,7 @@ def _separate_operator(expr: sp.Expr):
     
     non_operator = sp.Number(1)
     operator = sp.Number(1)
+    
     for arg in args:
         if arg.has(Operator):
             operator *= arg
@@ -27,13 +62,16 @@ def _separate_operator(expr: sp.Expr):
     
     return non_operator, operator
 
-def _separate_by_oper_polynomiality(expr : sp.Expr, polynomials_in = (createOp, annihilateOp)):
+def _separate_term_by_polynomiality(expr : sp.Expr, polynomials_in = (createOp, annihilateOp)):
     """
     Subsequent elements of the output has alternating polynomiality in the 'polynomials_in'.
     """
     expr = sp.sympify(expr)
     
-    _screen_type(expr, sp.Add, "_extract_alpha_type_operator_monomial_breaker")
+    if not(isinstance(polynomials_in, Sequence)):
+        polynomials_in = [polynomials_in]
+    
+    _screen_type(expr, sp.Add, "_separate_term_oper_by_polynomiality")
     
     if not(isinstance(expr, sp.Mul)):
         return [expr]
@@ -61,7 +99,7 @@ def _separate_by_oper_polynomiality(expr : sp.Expr, polynomials_in = (createOp, 
 
 def _collect_alpha_type_oper_from_monomial_by_sub(expr : sp.Expr):
     expr = qp2a(sp.sympify(expr))
-    _screen_type(expr, sp.Add, "_collect_alpha_type_oper_from_monomial")
+    _screen_type(expr, sp.Add, "_collect_alpha_type_oper_from_monomial_by_sub")
     
     if not(expr.is_polynomial(annihilateOp, createOp)):
         raise ValueError("This function does not accept non-polynomials.")
@@ -88,16 +126,24 @@ def _collect_alpha_type_oper_from_monomial_by_sub(expr : sp.Expr):
             
     return non_operator, collect_ad, collect_a
 
-def _collect_non_polynomial_by_sub(expr : sp.Expr):
+def _separate_term_oper_by_sub(expr : sp.Expr):
     """
-    'expr' is a Mul whose 'args' all 'has' 'Operator'.
+    Separate one term into a list of subexpressions, each 
+    corresponding to one "sub group". 
+    
+    A sub group consists of one sub if the expression does 
+    not have coupled quantities, and more than one sub otherwise.
+    A coupled quantity looks something like `exp(a_1*a_2)`. Expressions
+    such as `exp(a_1+a_2)` is also considered 
     """
+    _screen_type(expr, sp.Add, "_separate_term_oper_by_sub")
+    
     if not(isinstance(expr, sp.Mul)):
         return [expr]
     
     non_op, oper = _separate_operator(expr)
     
-    out = [non_op]
+    out = [] if non_op==1 else [non_op]
     sub_idx = {sub : None for sub in _sub_cache}
     for factor in oper.args:
         
@@ -105,7 +151,7 @@ def _collect_non_polynomial_by_sub(expr : sp.Expr):
                                     # NOTE: must use a set to avoid repeated subs
                                     # and turn into a sequence since it is used multiple times.
         
-        if all([sub is None for sub in subs_in_factor]):
+        if all([sub_idx[sub] is None for sub in subs_in_factor]):
             """
             The given argument can go into its own slot in 'out'
             since there is no sub shared with other items

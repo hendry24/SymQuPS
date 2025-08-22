@@ -13,13 +13,13 @@ def _treat_sub(sub, has_sub):
         return sub
     return sp.Symbol(sp.latex(sub))
 
-def _screen_type(expr : sp.Expr, forbidden_type : object, name : str):
+def _screen_type(expr : sp.Expr, forbidden_types : object, name : str):
     """
     Raise an error if the input 'expr' to some callable 'name' 
     contains an object of 'forbidden_type'.
     """
-    if expr.has(forbidden_type):
-        msg = f"'{name}' does not accept '{forbidden_type}'"
+    if isinstance(expr, forbidden_types):
+        msg = f"'{name}' does not accept {forbidden_types}"
         raise TypeError(msg)
 
 def _invalid_input(inpt : object, name : str):

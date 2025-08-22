@@ -4,9 +4,9 @@ import sympy as sp
 from symqups.objects.operators import Operator, createOp, annihilateOp
 from symqups.utils._internal._operator_handling import (
     _separate_operator,
-    _separate_by_oper_polynomiality,
-    _collect_alpha_type_oper_from_monomial_by_sub,
-    _collect_non_polynomial_by_sub
+    _separate_term_by_polynomiality,
+    _separate_term_oper_by_sub,
+    _collect_alpha_type_oper_from_monomial_by_sub
 )
 from symqups.objects import cache
 
@@ -20,7 +20,7 @@ class TestOperatorHandling:
         foo = sp.Function("f")(x, op_1)
         
         try:
-            _separate_by_oper_polynomiality(x+2)
+            _separate_term_by_polynomiality(x+2)
             raise RuntimeError("Test failed.")
         except:
             pass
@@ -35,24 +35,24 @@ class TestOperatorHandling:
         assert (_separate_operator(op_1*foo*op_2**2*x**3*2) 
                 == (2*x**3, op_1*foo*op_2**2))
         
-    def test_separate_by_oper_polynomiality(self):
+    def test_separate_term_by_polynomiality(self):
         a_1 = annihilateOp(1)
         ad_2 = createOp(2)
         x = sp.Symbol("x")
         
         try:
-            _separate_by_oper_polynomiality(a_1+1)
+            _separate_term_by_polynomiality(a_1+1)
             raise RuntimeError("Test failed.")
         except:
             pass
         
-        assert (_separate_by_oper_polynomiality(a_1)
+        assert (_separate_term_by_polynomiality(a_1)
                 == [a_1])
-        assert (_separate_by_oper_polynomiality(a_1**2*ad_2)
+        assert (_separate_term_by_polynomiality(a_1**2*ad_2)
                 == [a_1**2*ad_2])
-        assert (_separate_by_oper_polynomiality(a_1**2*ad_2*sp.exp(x))
+        assert (_separate_term_by_polynomiality(a_1**2*ad_2*sp.exp(x))
                 == [a_1**2*ad_2*sp.exp(x)])
-        assert (_separate_by_oper_polynomiality(a_1*x*sp.exp(ad_2)*ad_2**3 * a_1**0.3 * 2**ad_2)
+        assert (_separate_term_by_polynomiality(a_1*x*sp.exp(ad_2)*ad_2**3 * a_1**0.3 * 2**ad_2)
                 == [a_1*x, sp.exp(ad_2), ad_2**3, a_1**0.3*2**ad_2])
         
     def test_collect_alpha_type_oper_from_monomial_by_sub(self):
@@ -65,13 +65,13 @@ class TestOperatorHandling:
         x = sp.Symbol("x")
         
         try:
-            _separate_by_oper_polynomiality(a_1+1)
+            _separate_term_by_polynomiality(a_1+1)
             raise RuntimeError("Test failed.")
         except:
             pass
         
         try:
-            _separate_by_oper_polynomiality(sp.exp(ad_2))
+            _separate_term_by_polynomiality(sp.exp(ad_2))
             raise RuntimeError("Test failed.")
         except:
             pass
@@ -97,14 +97,15 @@ class TestOperatorHandling:
         assert not(col_ad)
         assert not(col_a)
     
-    def test_collect_non_polynomial_by_sub(self):
+    def test_separate_term_oper_by_sub(self):
         
-        foo = _collect_non_polynomial_by_sub
+        foo = _separate_term_oper_by_sub
         
-        assert foo(1) == 1
+        assert foo(1) == [1]
         
         a = [annihilateOp(i) for i in range(4)]
         ad = [annihilateOp(i) for i in range(4)]
+        x = sp.Symbol("x")
         
         try:
             _collect_alpha_type_oper_from_monomial_by_sub(a[0]+ad[0])
@@ -114,3 +115,7 @@ class TestOperatorHandling:
         
         assert foo(a[0]) == [a[0]]
         assert foo(a[0]*a[1]) == list(sp.ordered([a[0], a[1]]))
+        assert foo(a[0]*sp.exp(a[0]*a[1])*a[1]) == [a[0]*sp.exp(a[0]*a[1])*a[1]]
+        assert (foo(2*x * a[0] * ad[1]*2**a[1] * sp.log(a[2]+a[3]**2)*a[3]**3 * a[1])
+                == [2*x, a[0], ad[1]*2**a[1]*a[1], sp.log(a[2]+a[3]**2)*a[3]**3])
+                # May raise an error if sympy's ordering is not its current canon. 
