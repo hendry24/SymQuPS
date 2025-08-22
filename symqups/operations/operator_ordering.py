@@ -53,11 +53,24 @@ class sOrdering(sp.Expr):
                 leftovers, bracket_arg = _separate_operator(A)
                 return leftovers * make(bracket_arg)
             
+            # NOTE: We don't care about operator ordering inside
+            # the braces, so might as well return it pretty.
+            #
+            # Here, factors belonging to different 'sub's go in their
+            # own braces. If there are "coupled factors", such as exp(a_1*a_2),
+            # then the factors corresponding to the "coupled 'sub's" are
+            # enclosed by the same braces. The expression inside the braces
+            # are normal-ordered to the "greatest extent possible". For example,
+            # if there are non-polynomials stuck in the middle, then the
+            # polynomials to the left and right are normal-ordered. 
+            
             def treat_monomial(A):
                 non_operator, collect_ad, collect_a = \
                     _collect_alpha_type_oper_from_monomial_by_sub(A)
                 out = non_operator
                 for sub in _sub_cache:
+                    # No need for sMul since we are working with single 'sub's
+                    # here.
                     ad, m = collect_ad[sub]
                     a, n = collect_a[sub]
                     if (m==0) or (n==0):
@@ -65,13 +78,14 @@ class sOrdering(sp.Expr):
                     else:
                         out *= make(ad**m * a**n)
                 return out
-                
+            
             if A.is_polynomial():
                 return treat_monomial(A)
             else:
                 non_op, bracket_arg = _separate_operator(A)
-                treated_bracket_arg = sp.Number(1)
                 
+                out = non_op
+    
                 bracket_arg_by_sub = _separate_term_oper_by_sub(bracket_arg)
                 # There should be non-operators here thanks to the above.
                 """
@@ -81,7 +95,7 @@ class sOrdering(sp.Expr):
                 """
                 for arg_sub in bracket_arg_by_sub:
                     if arg_sub.is_polynomial(Operator):
-                        treated_bracket_arg *= treat_monomial(arg_sub)
+                        out *= treat_monomial(arg_sub)
                         continue
                     
                     tidied_arg_sub = sp.Number(1)
@@ -90,12 +104,12 @@ class sOrdering(sp.Expr):
                         if arg_sub_polynomiality.is_polynomial(Operator):
                             _, col_ad, col_a \
                                 = _collect_alpha_type_oper_from_monomial_by_sub(arg_sub_polynomiality)
-                            tidied_arg_sub *= _make_normal_ordered(col_ad, col_a)
+                            tidied_arg_sub = sp.Mul(tidied_arg_sub, _make_normal_ordered(col_ad, col_a))
                         else:
-                            tidied_arg_sub *= arg_sub_polynomiality
-                    treated_bracket_arg *= make(tidied_arg_sub)
+                            tidied_arg_sub = sp.Mul(tidied_arg_sub, arg_sub_polynomiality)
+                    out *= make(tidied_arg_sub)
                     
-                return non_op * treated_bracket_arg
+                return out
                             
         def treat_add(A : sp.Expr):
             return sp.Add(*_mp_helper(A.args, sOrdering))
@@ -148,7 +162,7 @@ class sOrdering(sp.Expr):
             case default:
                 return self
 
-    def express(self, t = 1, explicit=True, **hints):
+    def express(self, t = 1, explicit=True):
         """
         Expand the expression in terms of t-ordered expressions.
         By default, `t=1` corresponds to normal-ordering. If `define`,
@@ -186,3 +200,11 @@ def antinormal_order(expr : sp.Expr):
 
 def weyl_order(expr : sp.Expr):
     return sOrdering(expr, s=0).explicit()
+
+def explicit(expr: sp.Expr):
+    return expr.replace(lambda A: isinstance(A, sOrdering),
+                        lambda A: A.explicit())
+    
+def express(expr : sp.Expr, t=1, explicit=True):
+    return expr.replace(lambda A: isinstance(A, sOrdering),
+                        lambda A: A.express(t=t, explicit=explicit))

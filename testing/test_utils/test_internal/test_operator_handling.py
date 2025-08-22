@@ -53,7 +53,7 @@ class TestOperatorHandling:
         assert (_separate_term_by_polynomiality(a_1**2*ad_2*sp.exp(x))
                 == [a_1**2*ad_2*sp.exp(x)])
         assert (_separate_term_by_polynomiality(a_1*x*sp.exp(ad_2)*ad_2**3 * a_1**0.3 * 2**ad_2)
-                == [a_1*x, sp.exp(ad_2), ad_2**3, a_1**0.3*2**ad_2])
+                == [x, a_1**1.3, sp.exp(ad_2), ad_2**3, 2**ad_2])
         
     def test_collect_alpha_type_oper_from_monomial_by_sub(self):
         cache._sub_cache.clear()

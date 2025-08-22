@@ -44,55 +44,83 @@ class CahillGlauberSParameter(CantSympify, _ReadOnlyExpr, Base):
     
 s = CahillGlauberSParameter()
 
-del CahillGlauberSParameter, Base, _ReadOnlyExpr, CantSympify
-
-###
-
-_original_Mul_flatten = sp.Mul.flatten
-
-class sMul(sp.Mul):
-    """
-    `sympy`'s original Mul.
-    """
-    pass
-sMul.flatten = _original_Mul_flatten
-
-del _original_Mul_flatten
+del CantSympify, Base, _ReadOnlyExpr, CahillGlauberSParameter
 
 ###
 
 from .utils._internal._operator_handling import _get_oper_sub
 from .objects.cache import _sub_cache
+from .objects.operators import Operator
 
 def _patched_Mul_flatten(seq, 
                          _get_oper_sub = _get_oper_sub,
-                         _sub_cache = _sub_cache):  
-                        # We save the references here so that
-                        # their names can be deleted and not clutter
-                        # the import. 
-    c_part, nc_part, order_symbol = sMul.flatten(seq)
-    
-    # nc_part contains our operators
-    
-    nc_part_sub_lst = [_get_oper_sub(A) for A in nc_part]
-    
-    used_nc_part_idx = []
-    reordered_nc_part = [] # since two arguments may be the same object.
-    for sub in _sub_cache:
+                         _sub_cache = _sub_cache,
+                         _original_Mul_flatten = sp.Mul.flatten,
+                         Operator = Operator): 
+                        # Specifying default arguments saves the names
+                        # into the function.
+    c_part, nc_part, order_symbol = _original_Mul_flatten(seq)
+    # This automatically flattens Mul input into another Mul.
+    # `nc_part`` contains our operators
         
-        for j, arg_sub in enumerate(nc_part_sub_lst):
+    # A universal Operator expression
+    # is indicated by having at least one Operator with `has_sub=False`, 
+    # We cannot reorder universally noncommuting expressions. 
+
+    def _is_universal(A : sp.Expr) -> bool:
+        return not(all(atom.has_sub for atom in A.atoms(Operator)))
+
+    reordered_nc_part = []
+    reorderable_nc = []
+
+    def _treat_reorderable_nc():
+        nc_sub_lst = [_get_oper_sub(nc) for nc in reorderable_nc]
+
+        used_nc_idx = []
+        for sub in _sub_cache:
+            # Since _sub_cache (as well as Scalar) is ordered according to
+            # sympy's canon, we try to do the same for Operator, the ordering
+            # of which sympy does not automatically do due to the noncommuting
+            # nature.
+            
+            for j, nc_sub in enumerate(nc_sub_lst):
+                
+                if (sub in nc_sub) and (j not in used_nc_idx):
+                    
+                    reordered_nc_part.append(reorderable_nc[j])
+                    used_nc_idx.append(j)
+                    
+        assert len(used_nc_idx) == len(reorderable_nc)
+
+    for nc in nc_part:
+        if not(_is_universal(nc)):
+            # As long as 'nc' is not universal (i.e., reorderable),
+            # we can keep appending to reorderable_nc.
+            reorderable_nc.append(nc)
+        else:
+            # A universal 'nc' must stay
+            # to the right of all 'nc' to its left. As such, we can now
+            # cut off the 'reorderable_nc' collection and reorder what's inside,
+            # and empty the list afterwards. Then, we can add our universal 'nc'
+            # of the current iteration.
+            _treat_reorderable_nc()
+            reorderable_nc = []
+            reordered_nc_part.append(nc)
     
-            if ((not(arg_sub) or (sub in arg_sub))
-                and j not in used_nc_part_idx):
-    
-                reordered_nc_part.append(nc_part[j])
-                used_nc_part_idx.append(j)
+    # There may be leftover 'nc' from the loop if the last one is not universal. 
+    _treat_reorderable_nc() 
+                
+    # We run it thorugh the original Mul.flatten again to let sympy clean
+    # up the arguments, like merging adjacent factors into a Pow. The first
+    # call does not do this because the two may be separated by another
+    # object initially. 
+    _, reordered_nc_part, _ = _original_Mul_flatten(reordered_nc_part)
     
     return c_part, reordered_nc_part, order_symbol
 
 sp.Mul.flatten = _patched_Mul_flatten
 
-del _patched_Mul_flatten, _get_oper_sub, _sub_cache, sp
+del _get_oper_sub, _sub_cache, Operator, _patched_Mul_flatten
 
 ###
 
