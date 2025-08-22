@@ -1,10 +1,10 @@
 import sympy as sp
 from typing import Sequence
 
-from ._basic_routines import _screen_type
-from..algebra import qp2a
-from ...objects.operators import Operator, createOp, annihilateOp
-from ...objects.cache import _sub_cache
+from .basic_routines import screen_type
+from .cache import sub_cache
+
+from ..objects.operators import Operator, createOp, annihilateOp
 
 # NOTE: WIP
 # def _decouple(expr : sp.Expr):
@@ -35,13 +35,13 @@ from ...objects.cache import _sub_cache
     
 #     return expr
 
-def _get_oper_sub(expr:sp.Expr):
+def get_oper_sub(expr:sp.Expr):
     return [atom.sub for atom in expr.atoms(Operator)]
 
-def _separate_operator(expr: sp.Expr):
+def separate_operator(expr: sp.Expr):
     expr = sp.sympify(expr)
     
-    _screen_type(expr, sp.Add, "_separate_operator")
+    screen_type(expr, sp.Add, "_separate_operator")
     
     if isinstance(expr, sp.Mul):
         args = expr.args
@@ -62,7 +62,7 @@ def _separate_operator(expr: sp.Expr):
     
     return non_operator, operator
 
-def _separate_term_by_polynomiality(expr : sp.Expr, polynomials_in = (createOp, annihilateOp)):
+def separate_term_by_polynomiality(expr : sp.Expr, polynomials_in = (createOp, annihilateOp)):
     """
     Subsequent elements of the output has alternating polynomiality in the 'polynomials_in'.
     """
@@ -71,7 +71,7 @@ def _separate_term_by_polynomiality(expr : sp.Expr, polynomials_in = (createOp, 
     if not(isinstance(polynomials_in, Sequence)):
         polynomials_in = [polynomials_in]
     
-    _screen_type(expr, sp.Add, "_separate_term_oper_by_polynomiality")
+    screen_type(expr, sp.Add, "_separate_term_oper_by_polynomiality")
     
     if not(isinstance(expr, sp.Mul)):
         return [expr]
@@ -97,9 +97,10 @@ def _separate_term_by_polynomiality(expr : sp.Expr, polynomials_in = (createOp, 
         
     return out
 
-def _collect_alpha_type_oper_from_monomial_by_sub(expr : sp.Expr):
-    expr = qp2a(sp.sympify(expr))
-    _screen_type(expr, sp.Add, "_collect_alpha_type_oper_from_monomial_by_sub")
+def collect_alpha_type_oper_from_monomial_by_sub(expr : sp.Expr):
+    expr = sp.sympify(expr)
+    
+    screen_type(expr, sp.Add, "_collect_alpha_type_oper_from_monomial_by_sub")
     
     if not(expr.is_polynomial(annihilateOp, createOp)):
         raise ValueError("This function does not accept non-polynomials.")
@@ -110,8 +111,8 @@ def _collect_alpha_type_oper_from_monomial_by_sub(expr : sp.Expr):
         args = [expr]
     
     non_operator = sp.Number(1)
-    collect_ad = {sub : [createOp(sub), sp.Number(0)] for sub in _sub_cache}
-    collect_a = {sub : [annihilateOp(sub), sp.Number(0)] for sub in _sub_cache}
+    collect_ad = {sub : [createOp(sub), sp.Number(0)] for sub in sub_cache}
+    collect_a = {sub : [annihilateOp(sub), sp.Number(0)] for sub in sub_cache}
     for A_ in args:
         if isinstance(A_, createOp):
             collect_ad[A_.sub][1] += 1
@@ -126,7 +127,7 @@ def _collect_alpha_type_oper_from_monomial_by_sub(expr : sp.Expr):
             
     return non_operator, collect_ad, collect_a
 
-def _separate_term_oper_by_sub(expr : sp.Expr):
+def separate_term_oper_by_sub(expr : sp.Expr):
     """
     Separate one term into a list of subexpressions, each 
     corresponding to one "sub group". 
@@ -136,15 +137,15 @@ def _separate_term_oper_by_sub(expr : sp.Expr):
     A coupled quantity looks something like `exp(a_1*a_2)`. Expressions
     such as `exp(a_1+a_2)` is also considered 
     """
-    _screen_type(expr, sp.Add, "_separate_term_oper_by_sub")
+    screen_type(expr, sp.Add, "_separate_term_oper_by_sub")
     
     if not(isinstance(expr, sp.Mul)):
         return [expr]
     
-    non_op, oper = _separate_operator(expr)
+    non_op, oper = separate_operator(expr)
     
     out = [] if non_op==1 else [non_op]
-    sub_idx = {sub : None for sub in _sub_cache}
+    sub_idx = {sub : None for sub in sub_cache}
     for factor in oper.args:
         
         subs_in_factor = list(sp.ordered({oper.sub for oper in factor.atoms(Operator)}))

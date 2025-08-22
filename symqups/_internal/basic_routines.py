@@ -1,7 +1,7 @@
 import sympy as sp
 from typing import Callable, Dict, Union, Sequence
 
-def _treat_sub(sub, has_sub):
+def treat_sub(sub, has_sub):
     """
     Treat the input subscript to always be a 'sympy.Symbol'.
     """
@@ -13,7 +13,7 @@ def _treat_sub(sub, has_sub):
         return sub
     return sp.Symbol(sp.latex(sub))
 
-def _screen_type(expr : sp.Expr, forbidden_types : object, name : str):
+def screen_type(expr : sp.Expr, forbidden_types : object, name : str):
     """
     Raise an error if the input 'expr' to some callable 'name' 
     contains an object of 'forbidden_type'.
@@ -22,7 +22,7 @@ def _screen_type(expr : sp.Expr, forbidden_types : object, name : str):
         msg = f"'{name}' does not accept {forbidden_types}"
         raise TypeError(msg)
 
-def _invalid_input(inpt : object, name : str):
+def invalid_input(inpt : object, name : str):
     """
     Raise an error for invalid 'inpt' to some callable 'name'.
     """
@@ -30,7 +30,7 @@ def _invalid_input(inpt : object, name : str):
     msg += r"%s" % sp.latex(inpt)
     raise ValueError(msg)
 
-def _operation_routine(expr : sp.Expr,
+def operation_routine(expr : sp.Expr,
                        name : str,
                        forbidden_types : tuple[type],
                        return_if_expr_does_not_have : Dict[Union[type, Sequence[type]], 
@@ -44,7 +44,7 @@ def _operation_routine(expr : sp.Expr,
     
     expr = sp.expand(sp.sympify(expr))
     
-    _screen_type(expr, forbidden_types, name)
+    screen_type(expr, forbidden_types, name)
     
     for if_does_not_have, then_return in return_if_expr_does_not_have.items():
         if not(isinstance(if_does_not_have, Sequence)):
@@ -60,4 +60,4 @@ def _operation_routine(expr : sp.Expr,
                 return then_return(expr)
             return then_return
         
-    _invalid_input(expr, name)
+    invalid_input(expr, name)

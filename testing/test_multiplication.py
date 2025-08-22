@@ -6,7 +6,7 @@ from symqups.objects.scalars import Scalar
 from symqups import sMul
 
 @pytest.mark.fast
-@pytest.mark.order(0)
+@pytest.mark.order(4)
 def test_Mul():
     sc_1 = Scalar(1)
     sc_2 = Scalar(2)

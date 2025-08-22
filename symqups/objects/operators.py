@@ -5,8 +5,11 @@ from . import scalars
 # Avoid, e.g., "from scalars import hbar" 
 # since we want its value to follow changes at runtime.
 from .base import Base, qpTypePSO, alphaTypePSO
-from .cache import _sub_cache
-from ..utils._internal._basic_routines import _treat_sub
+from .._internal.cache import sub_cache
+from .._internal.basic_routines import treat_sub
+
+# NOTE: 'import .._internal.operator_handling' will result
+# in circular imports. 
 
 class Operator(Base):
     
@@ -17,10 +20,10 @@ class Operator(Base):
         return r"%s_{%s}" % (cls.base, sub), {"commutative":False}
     
     def __new__(cls, sub = None):
-        sub = _treat_sub(sub, cls.has_sub)
+        sub = treat_sub(sub, cls.has_sub)
         
         if cls.has_sub:
-            _sub_cache._append(sub)
+            sub_cache._append(sub)
         
         return super().__new__(cls, sub)
         

@@ -3,13 +3,13 @@ from itertools import permutations
 
 from .. import s as ClahillGlauberS
 from ..objects.scalars import Scalar
-from ..objects.cache import _sub_cache
+from .._internal.cache import _sub_cache
 from ..objects.operators import Operator, annihilateOp, createOp
-from ..utils._internal._basic_routines import _operation_routine
-from ..utils._internal._operator_handling import (_separate_operator,
-                                                  _collect_alpha_type_oper_from_monomial_by_sub,
-                                                  _separate_term_by_polynomiality,
-                                                  _separate_term_oper_by_sub)
+from .._internal.basic_routines import operation_routine
+from .._internal.operator_handling import (separate_operator,
+                                            collect_alpha_type_oper_from_monomial_by_sub,
+                                            separate_term_by_polynomiality,
+                                            separate_term_oper_by_sub)
 from ..utils.multiprocessing import _mp_helper
 from ..utils.algebra import qp2a
 
@@ -50,7 +50,7 @@ class sOrdering(sp.Expr):
         
         def treat_mul(A : sp.Expr):
             if lazy:
-                leftovers, bracket_arg = _separate_operator(A)
+                leftovers, bracket_arg = separate_operator(A)
                 return leftovers * make(bracket_arg)
             
             # NOTE: We don't care about operator ordering inside
@@ -66,7 +66,7 @@ class sOrdering(sp.Expr):
             
             def treat_monomial(A):
                 non_operator, collect_ad, collect_a = \
-                    _collect_alpha_type_oper_from_monomial_by_sub(A)
+                    collect_alpha_type_oper_from_monomial_by_sub(A)
                 out = non_operator
                 for sub in _sub_cache:
                     # No need for sMul since we are working with single 'sub's
@@ -82,11 +82,11 @@ class sOrdering(sp.Expr):
             if A.is_polynomial():
                 return treat_monomial(A)
             else:
-                non_op, bracket_arg = _separate_operator(A)
+                non_op, bracket_arg = separate_operator(A)
                 
                 out = non_op
     
-                bracket_arg_by_sub = _separate_term_oper_by_sub(bracket_arg)
+                bracket_arg_by_sub = separate_term_oper_by_sub(bracket_arg)
                 # There should be non-operators here thanks to the above.
                 """
                 Each item in the list contains one 'sub' if it is a polynomial or
@@ -99,11 +99,11 @@ class sOrdering(sp.Expr):
                         continue
                     
                     tidied_arg_sub = sp.Number(1)
-                    arg_sub_by_polynomiality = _separate_term_by_polynomiality(arg_sub, (Operator))
+                    arg_sub_by_polynomiality = separate_term_by_polynomiality(arg_sub, (Operator))
                     for arg_sub_polynomiality in arg_sub_by_polynomiality:
                         if arg_sub_polynomiality.is_polynomial(Operator):
                             _, col_ad, col_a \
-                                = _collect_alpha_type_oper_from_monomial_by_sub(arg_sub_polynomiality)
+                                = collect_alpha_type_oper_from_monomial_by_sub(arg_sub_polynomiality)
                             tidied_arg_sub = sp.Mul(tidied_arg_sub, _make_normal_ordered(col_ad, col_a))
                         else:
                             tidied_arg_sub = sp.Mul(tidied_arg_sub, arg_sub_polynomiality)
@@ -114,7 +114,7 @@ class sOrdering(sp.Expr):
         def treat_add(A : sp.Expr):
             return sp.Add(*_mp_helper(A.args, sOrdering))
             
-        return _operation_routine(expr,
+        return operation_routine(expr,
                                   "sOrder",
                                   (Scalar,),
                                   {Operator : expr},
@@ -131,7 +131,7 @@ class sOrdering(sp.Expr):
 
     def _collect_oper(self):
         non_operator, collect_ad, collect_a = \
-            _collect_alpha_type_oper_from_monomial_by_sub(self.args[0])
+            collect_alpha_type_oper_from_monomial_by_sub(self.args[0])
         assert non_operator == 1
         return collect_ad, collect_a
         

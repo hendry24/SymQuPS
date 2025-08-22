@@ -1,8 +1,8 @@
 import sympy as sp
 
 from .base import Base, qpTypePSO, alphaTypePSO, PhaseSpaceObject
-from .cache import _sub_cache
-from ..utils._internal._basic_routines import _treat_sub
+from .._internal.cache import sub_cache
+from .._internal.basic_routines import treat_sub
 
 __all__ = ["q", "p", "alpha", "alphaD", "W"]
 
@@ -21,10 +21,10 @@ class Scalar(Base):
         return name, {"real" : cls.is_real}
         
     def __new__(cls, sub = None):
-        sub = _treat_sub(sub, cls.has_sub)
+        sub = treat_sub(sub, cls.has_sub)
         
         if cls.has_sub:
-            _sub_cache._append(sub)
+            sub_cache._append(sub)
 
         return super().__new__(cls, sub)
         
@@ -150,7 +150,6 @@ class StateFunction(sp.Function):
             - `s = 0` : Wigner function
             - `s = 1` : Glauber P function
             - `s = -1` : Husimi Q function
-    
     """
 
     show_vars = False

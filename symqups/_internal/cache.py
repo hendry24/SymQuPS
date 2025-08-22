@@ -1,5 +1,4 @@
 import sympy as sp
-from typing import Sequence
 
 class _AutoSortedUniqueList(list):
     def __init__(self, *args):
@@ -15,14 +14,14 @@ class _AutoSortedUniqueList(list):
         super().append(item)
         self.sort(key=sp.default_sort_key)
         
-        from . import scalars
-        from .scalars import StateFunction, t, alpha, alphaD
+        from ..objects import scalars
+        from ..objects.scalars import StateFunction, t, alpha, alphaD
         scalars.W = StateFunction(t(), 
                                   *[cls(sub) for sub in self for cls in (alpha, alphaD)])
-    
+        
     def append(self, item):
         raise NotImplementedError
-    
+        
     def extend(self, iterable):
         raise NotImplementedError
 
@@ -35,5 +34,5 @@ class _AutoSortedUniqueList(list):
     def __iadd__(self, other):
         raise NotImplementedError
           
-global _sub_cache
-_sub_cache = _AutoSortedUniqueList()
+global sub_cache
+sub_cache = _AutoSortedUniqueList()

@@ -1,7 +1,7 @@
 import sympy as sp
 
 from ..objects.operators import Operator
-from ..utils._internal._basic_routines import _operation_routine
+from .._internal.basic_routines import operation_routine
 from ..utils.multiprocessing import _mp_helper
 
 def dagger(expr : sp.Expr | Operator):
@@ -15,12 +15,12 @@ def dagger(expr : sp.Expr | Operator):
     def treat_mul(A : sp.Expr):
         return sp.Mul(*list(reversed(_mp_helper(A.args, dagger))))
     
-    return _operation_routine(expr,
-                                "Dagger",
-                                (),
-                                {Operator : lambda A: sp.conjugate(A)},
-                                {Operator : lambda A: A.dagger(),
-                                 sp.Add : treat_add,
-                                 sp.Pow : treat_pow,
-                                 sp.Mul : treat_mul}
-                                )
+    return operation_routine(expr,
+                            "Dagger",
+                            (),
+                            {Operator : lambda A: sp.conjugate(A)},
+                            {Operator : lambda A: A.dagger(),
+                                sp.Add : treat_add,
+                                sp.Pow : treat_pow,
+                                sp.Mul : treat_mul}
+                            )
