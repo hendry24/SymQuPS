@@ -1,37 +1,37 @@
 import pytest
 import sympy as sp
 
-from symqups.utils._internal._basic_routines import (
-    _treat_sub,
-    _screen_type,
-    _invalid_input,
-    _operation_routine
+from symqups._internal.basic_routines import (
+    treat_sub,
+    screen_type,
+    invalid_input,
+    operation_routine
 )
 
 @pytest.mark.fast
 @pytest.mark.order(0)
 class TestBasicRoutines:
     def test_treat_sub(self):
-        assert _treat_sub(None, True) == sp.Symbol(r"")
+        assert treat_sub(None, True) == sp.Symbol(r"")
         for sub in ["a", 1, 1+1j, sp.Symbol("x")]:
             for ssub in (sub, sp.sympify(sub)):
-                assert isinstance(_treat_sub(ssub, True), sp.Symbol)
-            assert _treat_sub(sub, False) == sp.Symbol(r"")
-        assert _treat_sub(sp.Symbol("x"), True) == sp.Symbol("x")
+                assert isinstance(treat_sub(ssub, True), sp.Symbol)
+            assert treat_sub(sub, False) == sp.Symbol(r"")
+        assert treat_sub(sp.Symbol("x"), True) == sp.Symbol("x")
         
     def test_screen_type(self):
         x_pass = sp.Add(sp.Symbol("x"), 2)
         x_raise = sp.Symbol("x")
         try:
-            _screen_type(x_raise, sp.Symbol, "")
+            screen_type(x_raise, sp.Symbol, "")
             raise RuntimeError("Test failed.")
         except:
             pass
-        _screen_type(x_pass, (sp.Symbol, sp.Number), "test")
+        screen_type(x_pass, (sp.Symbol, sp.Number), "test")
         
     def test_invalid_type(self):
         try:
-            _invalid_input("test", "test")
+            invalid_input("test", "test")
             raise RuntimeError("Test failed.")
         except:
             pass
@@ -39,7 +39,7 @@ class TestBasicRoutines:
     def test_operation_routine(self):
         
         def _foo(inpt):
-            return _operation_routine(inpt,
+            return operation_routine(inpt,
                                      "test",
                                      (sp.Function,),
                                      {sp.Symbol : "no symbol"},

@@ -3,7 +3,7 @@ import random
 from sympy.core.function import UndefinedFunction
 
 from ..objects.base import Base
-from ..objects.cache import _sub_cache
+from .._internal.cache import sub_cache
 from ..objects import scalars
 from ..objects.operators import qOp, pOp, annihilateOp, createOp, Operator
 from .multiprocessing import _mp_helper
@@ -46,7 +46,7 @@ def qp2a(expr : sp.Expr) -> sp.Expr:
         return out
         
     sub_dict = {}
-    for sub in _sub_cache:
+    for sub in sub_cache:
         sub_dict[scalars.q(sub)] = get_subs_expr(scalars.q(sub))
         sub_dict[scalars.p(sub)] = get_subs_expr(scalars.p(sub))
         sub_dict[qOp(sub)] = get_subs_expr(qOp(sub))

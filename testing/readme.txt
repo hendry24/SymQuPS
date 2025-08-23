@@ -1,13 +1,13 @@
 TEST ORDER
 ==========
 
-[0] test_utils.test_internal.test_basic_routines
+[0] test_internal.test_basic_routines
 
 [1, 2] test_objects.test_all
 
-[3] test_utils.test_internal.test_operator_handling
+[3] test_internal.test_operator_handling
 
-[4] test_multiplication
+[4] test_internal.test_mul
 
 [3, 4] test_utils.test_user_level
 

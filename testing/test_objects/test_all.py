@@ -8,9 +8,9 @@ from symqups.objects.scalars import (hbar, mu, Scalar, q, p, t, W, alpha, alphaD
 from symqups.objects.operators import (Operator, qOp, pOp, createOp, annihilateOp,
                                         densityOp, rho)
 
-from symqups.objects.cache import _sub_cache
+from symqups._internal.cache import sub_cache
 from symqups.utils.algebra import get_random_poly
-from symqups.utils._internal._basic_routines import _treat_sub
+from symqups._internal.basic_routines import treat_sub
 
 def arithmetic(A):
     A+2
@@ -37,7 +37,7 @@ class TestScalars():
         for sub in [None, "1", 1, sp.Number(1), sp.Symbol("1")]:
             obj = Scalar(sub)
             assert isinstance(obj.sub, sp.Symbol)
-            assert obj.sub in _sub_cache
+            assert obj.sub in sub_cache
             assert dill.loads(dill.dumps(obj)) == obj
         
         arithmetic(obj)
@@ -52,7 +52,7 @@ class TestScalars():
             assert isinstance(obj, PhaseSpaceObject)
             assert isinstance(obj, qpTypePSO)
             
-        assert not(_treat_sub("xxx", True) == t("xxx").sub)
+        assert not(treat_sub("xxx", True) == t("xxx").sub)
     
     def test_alpha(self):
 
@@ -92,11 +92,8 @@ class TestScalars():
         assert not(der.is_commutative)
         
     def test_W(self):
-        from symqups.objects.scalars import W
-        
         check_vars = [t()]
-        global _sub_cache
-        for sub in _sub_cache:
+        for sub in sub_cache:
             check_vars.extend([alpha(sub), alphaD(sub)])
         assert W.free_symbols == set(check_vars)
         
@@ -112,7 +109,6 @@ class TestScalars():
         
         p(r"newly_added_sub")
         
-        from symqups.objects.scalars import W
         W.show_vars = True
         assert "newly_added_sub" in sp.latex(W)
         

@@ -3,26 +3,16 @@ from itertools import permutations
 
 from .. import s as ClahillGlauberS
 from ..objects.scalars import Scalar
-from .._internal.cache import _sub_cache
+from .._internal.cache import sub_cache
 from ..objects.operators import Operator, annihilateOp, createOp
 from .._internal.basic_routines import operation_routine
 from .._internal.operator_handling import (separate_operator,
+                                           get_oper_sub,
                                             collect_alpha_type_oper_from_monomial_by_sub,
                                             separate_term_by_polynomiality,
                                             separate_term_oper_by_sub)
 from ..utils.multiprocessing import _mp_helper
 from ..utils.algebra import qp2a
-
-def _make_normal_ordered(col_ad : dict, 
-                         col_a : dict):
-    mul_ad = 1
-    mul_a = 1
-    for sub in _sub_cache:
-        ad, m = col_ad[sub]
-        mul_ad *= ad**m
-        a, n = col_a[sub]
-        mul_a *= a**n
-    return sp.Mul(mul_ad, mul_a)
 
 class sOrdering(sp.Expr):
     
@@ -53,7 +43,7 @@ class sOrdering(sp.Expr):
                 leftovers, bracket_arg = separate_operator(A)
                 return leftovers * make(bracket_arg)
             
-            # NOTE: We don't care about operator ordering inside
+            # We don't care about operator ordering inside
             # the braces, so might as well return it pretty.
             #
             # Here, factors belonging to different 'sub's go in their
@@ -62,61 +52,64 @@ class sOrdering(sp.Expr):
             # enclosed by the same braces. The expression inside the braces
             # are normal-ordered to the "greatest extent possible". For example,
             # if there are non-polynomials stuck in the middle, then the
-            # polynomials to the left and right are normal-ordered. 
+            # polynomials to the left and right are normal-ordered.
             
-            def treat_monomial(A):
-                non_operator, collect_ad, collect_a = \
-                    collect_alpha_type_oper_from_monomial_by_sub(A)
-                out = non_operator
-                for sub in _sub_cache:
-                    # No need for sMul since we are working with single 'sub's
-                    # here.
-                    ad, m = collect_ad[sub]
-                    a, n = collect_a[sub]
+            bracket_arg_by_sub = separate_term_oper_by_sub(A)
+                                # If 'A' is a monomial, then this only has one entry.
+            
+            out = bracket_arg_by_sub.pop(0) # gets all non-Operator subexpresions.
+            
+            for arg in bracket_arg_by_sub:
+                
+                if arg.is_polynomial(): 
+                    
+                    # contains only one sub because there are no coupled expressions.
+                    
+                    _, collect_ad, collect_a = collect_alpha_type_oper_from_monomial_by_sub(arg)
+                    
+                    arg_sub_lst = list(get_oper_sub(arg))
+                    assert len(arg_sub_lst) == 1
+                    
+                    arg_sub = arg_sub_lst[0]
+                    
+                    ad, m = collect_ad[arg_sub]
+                    a, n = collect_a[arg_sub]
+                    
                     if (m==0) or (n==0):
                         out *= ad**m * a**n
                     else:
                         out *= make(ad**m * a**n)
-                return out
-            
-            if A.is_polynomial():
-                return treat_monomial(A)
-            else:
-                non_op, bracket_arg = separate_operator(A)
-                
-                out = non_op
-    
-                bracket_arg_by_sub = separate_term_oper_by_sub(bracket_arg)
-                # There should be non-operators here thanks to the above.
-                """
-                Each item in the list contains one 'sub' if it is a polynomial or
-                more if it is not. Different 'sub' groups do not commute with each other, 
-                so each can have a separate ordering bracket.
-                """
-                for arg_sub in bracket_arg_by_sub:
-                    if arg_sub.is_polynomial(Operator):
-                        out *= treat_monomial(arg_sub)
-                        continue
                     
-                    tidied_arg_sub = sp.Number(1)
-                    arg_sub_by_polynomiality = separate_term_by_polynomiality(arg_sub, (Operator))
-                    for arg_sub_polynomiality in arg_sub_by_polynomiality:
-                        if arg_sub_polynomiality.is_polynomial(Operator):
-                            _, col_ad, col_a \
-                                = collect_alpha_type_oper_from_monomial_by_sub(arg_sub_polynomiality)
-                            tidied_arg_sub = sp.Mul(tidied_arg_sub, _make_normal_ordered(col_ad, col_a))
+                else:
+                    arg_by_polynomiality = separate_term_by_polynomiality(arg,
+                                                                          (Operator,))
+                    collect_polynomial = sp.Number(1)
+                    collect_nonpolynomial = sp.Number(1)
+                    for argg in arg_by_polynomiality:
+                        if argg.is_polynomial():
+                            collect_polynomial *= argg
                         else:
-                            tidied_arg_sub = sp.Mul(tidied_arg_sub, arg_sub_polynomiality)
-                    out *= make(tidied_arg_sub)
+                            collect_nonpolynomial *= argg
                     
-                return out
+                    _, collect_ad, collect_a = \
+                        collect_alpha_type_oper_from_monomial_by_sub(collect_polynomial)
+                        
+                    collect_polynomial_normal_ordered = sp.Number(1)
+                    for sub in get_oper_sub(arg):
+                        collect_polynomial_normal_ordered *= \
+                            sp.Pow(*collect_ad[sub]) * sp.Pow(*collect_a[sub])
+                        
+                    out *= make(collect_polynomial_normal_ordered * collect_nonpolynomial)
+                    
+            return out
                             
         def treat_add(A : sp.Expr):
             return sp.Add(*_mp_helper(A.args, sOrdering))
             
         return operation_routine(expr,
                                   "sOrder",
-                                  (Scalar,),
+                                  [],
+                                  [Scalar,],
                                   {Operator : expr},
                                   {(Operator, sOrdering) : expr,
                                    sp.Pow : treat_pow,
@@ -190,7 +183,7 @@ class sOrdering(sp.Expr):
                         * ((t-self.args[1])/2)**k * yy)
             return out
         
-        return sp.Mul(*[expand_s_ordered_unipartite_string(sub) for sub in _sub_cache])
+        return sp.Mul(*[expand_s_ordered_unipartite_string(sub) for sub in sub_cache])
 
 def normal_order(expr : sp.Expr):
     return sOrdering(expr, s=1).explicit()

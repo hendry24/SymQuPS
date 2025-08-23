@@ -3,7 +3,6 @@ import sympy as sp
 
 from symqups.objects.operators import Operator
 from symqups.objects.scalars import Scalar
-from symqups import sMul
 
 @pytest.mark.fast
 @pytest.mark.order(4)
@@ -24,5 +23,5 @@ def test_Mul():
     # We cannot directly check whether the value represented
     # by sMul is equal to that of Mul
     
-    assert sc_1*sc_2 == sMul(sc_1, sc_2)
-    assert op_1*op_2 == sMul(sp.ordered([op_1, op_2]))
+    assert sc_1*sc_2 == sp.Mul(sc_1, sc_2)
+    assert op_1*op_2 == sp.Mul(sp.ordered([op_1, op_2]))

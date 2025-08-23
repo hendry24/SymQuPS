@@ -6,13 +6,13 @@ from .cache import sub_cache
 
 from ..objects.operators import Operator, createOp, annihilateOp
 
-# NOTE: WIP
-# def _decouple(expr : sp.Expr):
+# def decouple(expr : sp.Expr):
 #     """
 #     Decouple expressions when the noncommuting symbols actually belong
 #     to different 'sub's.
 #     """
-    
+#     # NOTE: WIP
+        
 #     if not(expr.has(Operator)):
 #         return expr
     
@@ -23,10 +23,10 @@ from ..objects.operators import Operator, createOp, annihilateOp
 #                 and A.args[0].has(Operator))
 #     def value(A : sp.Pow):
 #         base = A.args[0]
-#         base_separated_by_subs = _separate_term_oper_by_sub()
+#         base_separated_by_subs = separate_term_oper_by_sub()
 #         exponent = A.args[1]
-#         _separate_term_oper_by_sub(base)
-#         return sp.Mul(*[factor**exponent for factor in base_factors])
+#         separate_term_oper_by_sub(base)
+#         return sp.Mul(*[factor**exponent for factor in base_separated_by_subs])
 #     expr = expr.replace(query, value)
     
 #     # Functions whose 
@@ -36,7 +36,13 @@ from ..objects.operators import Operator, createOp, annihilateOp
 #     return expr
 
 def get_oper_sub(expr:sp.Expr):
-    return [atom.sub for atom in expr.atoms(Operator)]
+    return {atom.sub for atom in expr.atoms(Operator)}
+            # Must use a set to avoid repeated 'sub's.
+
+def is_universal(expr : sp.Expr) -> bool:
+    if not(expr.has(Operator)):
+        raise ValueError("Input does not contain any 'Operator'.")
+    return not(all(atom.has_sub for atom in expr.atoms(Operator)))
 
 def separate_operator(expr: sp.Expr):
     expr = sp.sympify(expr)
@@ -136,59 +142,100 @@ def separate_term_oper_by_sub(expr : sp.Expr):
     not have coupled quantities, and more than one sub otherwise.
     A coupled quantity looks something like `exp(a_1*a_2)`. Expressions
     such as `exp(a_1+a_2)` is also considered 
+    
+    Returns a list of 'expr.args' separated by 'sub' while maintaining 
+    the order. That is, `Mul(*out)` returns the original expression.
+    Scalars are multiplied into the first entry.
+    
+    NOTE: This assumes that no universally-noncommuting operators (e.g., rho) 
+    are present, which is usually the case in applications.
     """
     screen_type(expr, sp.Add, "_separate_term_oper_by_sub")
+    
+    if is_universal(expr):
+        raise ValueError("Input is universally noncommuting.")
     
     if not(isinstance(expr, sp.Mul)):
         return [expr]
     
     non_op, oper = separate_operator(expr)
     
-    out = [] if non_op==1 else [non_op]
-    sub_idx = {sub : None for sub in sub_cache}
-    for factor in oper.args:
-        
-        subs_in_factor = list(sp.ordered({oper.sub for oper in factor.atoms(Operator)}))
-                                    # NOTE: must use a set to avoid repeated subs
-                                    # and turn into a sequence since it is used multiple times.
-        
-        if all([sub_idx[sub] is None for sub in subs_in_factor]):
-            """
-            The given argument can go into its own slot in 'out'
-            since there is no sub shared with other items
-            already in the output (those with specified value in 'sub_idx').
-            """
-            for sub in subs_in_factor:
-                sub_idx[sub] = len(out)
-            out.append(factor)
-        
+    # The monkey-patched Mul is ordered by 'sub' groups. As such, an encounter
+    # with an operator belonging to a different 'sub' group means to move
+    # to the next entry in the output.
+
+    out = [non_op, oper.args[0]]
+    sub_group = get_oper_sub(oper.args[0])
+    for factor in oper.args[1:]:
+        subs_in_factor = list(get_oper_sub(factor))
+                
+        other_subs = []
+        in_the_sub_group = False
+        for factor_sub in subs_in_factor:
+            if factor_sub in sub_group:
+                in_the_sub_group = True
+            else:
+                other_subs.append(factor_sub)
+
+        if in_the_sub_group:
+            out[-1] *= factor
+            sub_group.update(other_subs)
         else:
-            """
-            If there is a specified sub in 'factor', then the factor
-            shares at least one sub with an already existing item
-            in 'out'. As such, we find the first shared sub and
-            multiply 'factor' into that slot. While we are at it,
-            we can collect 'sub's whose value in 'sub_idx' is still
-            'None' to assign their values to be the same as the
-            specified 'sub', telling the algorithm that future
-            factors with these 'sub's already have a shared slot in
-            'out'. 
+            # current factor belongs in the next 'sub_group'
+            # and 'other_subs' contains all of the factor's 'sub's.
+            sub_group = set(other_subs)
+            out.append(factor)
+    
+    ####################
+    # NOTE: Deprecated implementation. New one above is simpler given the monkey patch
+    # to Mul. See '.mul.patched_Mul_flattern'.
+    
+    # out = [non_op]
+    # sub_idx = {sub : None for sub in sub_cache}
+    # for factor in oper.args:
+        
+    #     subs_in_factor = list(sp.ordered(get_oper_sub(factor)))
+    #                                 # Turn into a sequence since it is used multiple times.
             
-            Additionally, since there may be more than one
-            specified 'sub' in 'factor', we can use a flag such that
-            further enconters with specified 'sub's are ignored by
-            the algorithm.
-            """
-            sub_already_with_slot_in_out = None
-            subs_with_unspecified_idx = []
-            for sub in subs_in_factor:
-                if sub_idx[sub] is None:
-                    subs_with_unspecified_idx.append(sub)
-                elif sub_already_with_slot_in_out is None:
-                    sub_already_with_slot_in_out = sub
-                    out[sub_idx[sub_already_with_slot_in_out]] *= factor        
+    #     if all(sub_idx[sub] is None for sub in subs_in_factor):
+    #         """
+    #         The given argument can go into its own slot in 'out'
+    #         since there is no sub shared with other items
+    #         already in the output (those with specified value in 'sub_idx').
+    #         """
+    #         for sub in subs_in_factor:
+    #             sub_idx[sub] = len(out)
+    #         out.append(factor)
+        
+    #     else:
+    #         """
+    #         If there is a specified sub in 'factor', then the factor
+    #         shares at least one sub with an already existing item
+    #         in 'out'. As such, we find the first shared sub and
+    #         multiply 'factor' into that slot. While we are at it,
+    #         we can collect 'sub's whose value in 'sub_idx' is still
+    #         'None' to assign their values to be the same as the
+    #         specified 'sub', telling the algorithm that future
+    #         factors with these 'sub's already have a shared slot in
+    #         'out'. 
+            
+    #         Additionally, since there may be more than one
+    #         specified 'sub' in 'factor', we can use a flag such that
+    #         further enconters with specified 'sub's are ignored by
+    #         the algorithm.
+    #         """
+    #         sub_already_with_slot_in_out = None
+    #         subs_with_unspecified_idx = []
+    #         for sub in subs_in_factor:
+    #             if sub_idx[sub] is None:
+    #                 subs_with_unspecified_idx.append(sub)
+    #             elif sub_already_with_slot_in_out is None:
+    #                 sub_already_with_slot_in_out = sub
+    #                 out[sub_idx[sub_already_with_slot_in_out]] *= factor        
                     
-            for ssub in subs_with_unspecified_idx:
-                sub_idx[ssub] = sub_idx[sub_already_with_slot_in_out]
+    #         for ssub in subs_with_unspecified_idx:
+    #             sub_idx[ssub] = sub_idx[sub_already_with_slot_in_out]
+    
+    ###################
                 
     return out

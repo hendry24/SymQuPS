@@ -13,14 +13,25 @@ def treat_sub(sub, has_sub):
         return sub
     return sp.Symbol(sp.latex(sub))
 
-def screen_type(expr : sp.Expr, forbidden_types : object, name : str):
+def screen_type(expr : sp.Expr, forbidden_types : type | Sequence, name : str):
     """
     Raise an error if the input 'expr' to some callable 'name' 
-    contains an object of 'forbidden_type'.
+    **is** an object of 'forbidden_type'.
     """
     if isinstance(expr, forbidden_types):
-        msg = f"'{name}' does not accept {forbidden_types}"
+        msg = f"'{name}' does not accept {forbidden_types}."
         raise TypeError(msg)
+    
+def deep_screen_type(expr : sp.Expr, forbidden_types : type | Sequence, name : str):
+    """
+    Raise an error if the input 'expr' to some callable 'name' 
+    **contains** an object of 'forbidden_type'.
+    """
+    if not(isinstance(forbidden_types, tuple)):
+        forbidden_types = [forbidden_types]
+        
+    if expr.has(forbidden_types):
+        msg = f"'{name} does not accept expressions that contain {forbidden_types}."
 
 def invalid_input(inpt : object, name : str):
     """
@@ -32,7 +43,8 @@ def invalid_input(inpt : object, name : str):
 
 def operation_routine(expr : sp.Expr,
                        name : str,
-                       forbidden_types : tuple[type],
+                       screen_types : Sequence[type],
+                       deep_screen_types : Sequence[type],
                        return_if_expr_does_not_have : Dict[Union[type, Sequence[type]], 
                                                            Union[Callable, object]],
                        return_if_expr_is : Dict[Union[type, Sequence[type]], 
@@ -44,7 +56,8 @@ def operation_routine(expr : sp.Expr,
     
     expr = sp.expand(sp.sympify(expr))
     
-    screen_type(expr, forbidden_types, name)
+    screen_type(expr, screen_types, name)
+    deep_screen_type(expr, deep_screen_types, name)
     
     for if_does_not_have, then_return in return_if_expr_does_not_have.items():
         if not(isinstance(if_does_not_have, Sequence)):

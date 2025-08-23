@@ -5,7 +5,7 @@ from ..objects.base import PhaseSpaceObject, qpTypePSO
 from ..objects import scalars
 from ..objects.scalars import q, p, alpha, alphaD, _DerivativeSymbol, _Primed, _DePrimed
 from ..utils.multiprocessing import _mp_helper
-from ..utils._internal._basic_routines import _invalid_input
+from .._internal.basic_routines import invalid_input
 from ..utils.algebra import qp2a
 from .. import s
 
@@ -97,7 +97,7 @@ class Bopp(sp.Expr):
             elif isinstance(A, p):
                 subs_dict[A] = A - sgn*sp.I*hbar/2*dxx(q(A.sub)) + (s.val*hbar/2)*(mu**2)*dxx(p(A.sub))
             else:
-                 _invalid_input(A, "Bopp")
+                 invalid_input(A, "Bopp")
                         
         return sp.expand(expr.subs(subs_dict))
     

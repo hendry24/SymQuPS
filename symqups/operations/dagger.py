@@ -17,7 +17,8 @@ def dagger(expr : sp.Expr | Operator):
     
     return operation_routine(expr,
                             "Dagger",
-                            (),
+                            [],
+                            [],
                             {Operator : lambda A: sp.conjugate(A)},
                             {Operator : lambda A: A.dagger(),
                                 sp.Add : treat_add,

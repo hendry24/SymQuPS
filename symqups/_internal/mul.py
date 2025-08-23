@@ -6,7 +6,7 @@ original_Mul_flatten = sp.Mul.flatten
 def patched_Mul_flatten(seq): 
     from .operator_handling import get_oper_sub
     from .cache import sub_cache
-    from ..objects.operators import Operator
+    from .operator_handling import is_universal
 
     c_part, nc_part, order_symbol = original_Mul_flatten(seq)
     # This automatically flattens Mul input into another Mul.
@@ -15,9 +15,6 @@ def patched_Mul_flatten(seq):
     # A universal Operator expression
     # is indicated by having at least one Operator with `has_sub=False`, 
     # We cannot reorder universally noncommuting expressions. 
-
-    def is_universal(A : sp.Expr) -> bool:
-        return not(all(atom.has_sub for atom in A.atoms(Operator)))
 
     reordered_nc_part = []
     reorderable_nc = []

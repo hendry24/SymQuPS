@@ -1,10 +1,9 @@
 import os
-import sympy as sp
 from multiprocessing import Pool
 import dill
 from functools import partial
 
-from typing import TypedDict
+from typing import TypedDict, Sequence
 
 ############################################################
 
@@ -35,7 +34,6 @@ class _mp_dict(TypedDict):
         else:
             super().__setitem__(key, value)
 
-
 ############################################################
 
 MP_CONFIG = _mp_dict()
@@ -45,28 +43,28 @@ MP_CONFIG["min_num_args"] = 2
 # Skip multiprocessing if the number of elements is spall,
 # in which case a single core execution is enough.
 
-def _mp_helper(A_args : sp.Expr, foo : callable):
+def _mp_helper(inpt_lst : Sequence, foo : callable):
     """
-    Apply `foo` to the arguments `A_args` of `A`, using multiprocessing
+    Apply `foo` to a sequence of inputs, using multiprocessing
     if possible.
     """
     global _mp_is_running
     
     use_mp = (not(_mp_is_running) and 
             MP_CONFIG["enable"] and 
-            (len(A_args) >= MP_CONFIG["min_num_args"]))
+            (len(inpt_lst) >= MP_CONFIG["min_num_args"]))
     
     if use_mp:
         _mp_is_running = True
         with Pool(MP_CONFIG["num_cpus"]) as pool:
-            res = pool.map(partial(_pool_helper, foo=foo),
-                            [dill.dumps(X_) for X_ in A_args])
+            res_byte_lst = pool.map(partial(_pool_helper, foo=foo),
+                                    [dill.dumps(inpt) for inpt in inpt_lst])
         _mp_is_running = False
-        return [dill.loads(X_bytes) for X_bytes in res]
+        return [dill.loads(res_bytes) for res_bytes in res_byte_lst]
     else:
-        return [foo(_A_) for _A_ in A_args]
+        return [foo(inpt) for inpt in inpt_lst]
     
-def _pool_helper(_A_bytes : bytes, foo : callable):
+def _pool_helper(inpt_bytes : bytes, foo : callable):
     """
     The package usage involves `sympy.Function`, which the
     package `pickle`, used by `multiprocessing`, cannot pickle.
@@ -78,4 +76,4 @@ def _pool_helper(_A_bytes : bytes, foo : callable):
     again when sent back to the main process. 
     """
     
-    return dill.dumps(foo(dill.loads(_A_bytes)))
+    return dill.dumps(foo(dill.loads(inpt_bytes)))

@@ -3,7 +3,7 @@ import sympy as sp
 from .. import s
 from ..objects.base import qpTypePSO, alphaTypePSO, PhaseSpaceObject
 from ..objects.scalars import alpha, alphaD
-from ..objects.cache import _sub_cache
+from .._internal.cache import _sub_cache
 from ..objects.operators import Operator, annihilateOp, createOp
 from ..utils._internal._basic_routines import _operation_routine, _invalid_input
 from ..utils.multiprocessing import _mp_helper
