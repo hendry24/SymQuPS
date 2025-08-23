@@ -7,9 +7,24 @@ def patched_Mul_flatten(seq):
     from .operator_handling import get_oper_sub
     from .cache import sub_cache
     from .operator_handling import is_universal
+    from ..objects.operators import Operator
 
+    # This patch reorders the noncommuting 'Operator' objects according
+    # to sympy's canonical ordering of 'sub_cache', resulting in
+    # prettier outputs in multipartite cases.
+    #
+    # Other noncommuting object classes within the package are '_Primed'
+    # and _DerivativeSymbol. These, however, do not need the reordering
+    # treatment as they are used internally by the package. Since these
+    # and 'Operator' belong to different formulations, they should never
+    # be in the same expression. Here we reorder only 
+    # expressions where Operator appears, since they are the one whose 
+    # ordering we care about.
+    
+    if all(not(item.has(Operator)) for item in seq):
+        return original_Mul_flatten(seq)
+    
     c_part, nc_part, order_symbol = original_Mul_flatten(seq)
-    # This automatically flattens Mul input into another Mul.
     # `nc_part`` contains our operators
         
     # A universal Operator expression

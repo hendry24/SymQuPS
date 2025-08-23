@@ -13,16 +13,17 @@ def treat_sub(sub, has_sub):
         return sub
     return sp.Symbol(sp.latex(sub))
 
-def screen_type(expr : sp.Expr, forbidden_types : type | Sequence, name : str):
+def screen_type(expr : sp.Expr, forbidden_types : type | Sequence[type], name : str):
     """
     Raise an error if the input 'expr' to some callable 'name' 
     **is** an object of 'forbidden_type'.
     """
+    forbidden_types = tuple(forbidden_types)
     if isinstance(expr, forbidden_types):
         msg = f"'{name}' does not accept {forbidden_types}."
         raise TypeError(msg)
     
-def deep_screen_type(expr : sp.Expr, forbidden_types : type | Sequence, name : str):
+def deep_screen_type(expr : sp.Expr, forbidden_types : type | Sequence[type], name : str):
     """
     Raise an error if the input 'expr' to some callable 'name' 
     **contains** an object of 'forbidden_type'.
@@ -30,7 +31,7 @@ def deep_screen_type(expr : sp.Expr, forbidden_types : type | Sequence, name : s
     if not(isinstance(forbidden_types, tuple)):
         forbidden_types = [forbidden_types]
         
-    if expr.has(forbidden_types):
+    if expr.has(*forbidden_types):
         msg = f"'{name} does not accept expressions that contain {forbidden_types}."
 
 def invalid_input(inpt : object, name : str):

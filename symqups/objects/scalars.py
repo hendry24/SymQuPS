@@ -103,7 +103,7 @@ class _Primed(Base):
         if isinstance(A, PhaseSpaceObject):
             return super().__new__(cls, A)
         
-        return A.subs({X:_Primed(X) for X in A.atoms(q,p,alpha,alphaD)})
+        return A.subs({X:_Primed(X) for X in A.atoms(PhaseSpaceObject)})
     
     @property
     def base(self):

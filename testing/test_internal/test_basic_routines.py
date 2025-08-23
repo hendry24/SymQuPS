@@ -4,6 +4,7 @@ import sympy as sp
 from symqups._internal.basic_routines import (
     treat_sub,
     screen_type,
+    deep_screen_type,
     invalid_input,
     operation_routine
 )
@@ -29,6 +30,18 @@ class TestBasicRoutines:
             pass
         screen_type(x_pass, (sp.Symbol, sp.Number), "test")
         
+    def test_deep_screen_type(self):
+        x_raise_1 = sp.Symbol("x")
+        x_raise_2 = sp.Add(sp.Symbol("x"), 2)
+        x_pass = sp.Number(1)
+        for xx in [x_raise_1, x_raise_2]:
+            try:
+                deep_screen_type(xx, sp.Symbol, "")
+                raise RuntimeError("Test failed.")
+            except:
+                pass
+        screen_type(x_pass, (sp.Symbol, sp.Function), "test")
+        
     def test_invalid_type(self):
         try:
             invalid_input("test", "test")
@@ -41,7 +54,8 @@ class TestBasicRoutines:
         def _foo(inpt):
             return operation_routine(inpt,
                                      "test",
-                                     (sp.Function,),
+                                     [sp.Function,],
+                                     [sp.Function,],
                                      {sp.Symbol : "no symbol"},
                                      {sp.Pow : "pow",
                                       (sp.Mul, sp.Add) : lambda A: "mul or add"}
@@ -49,6 +63,12 @@ class TestBasicRoutines:
         
         try:
             _foo(sp.Function(r"raise_error"))
+            raise RuntimeError("Test failed.")
+        except:
+            pass
+        
+        try:
+            _foo(sp.Add(sp.Function(r"raise_error_as_well"), sp.Number(2)))
             raise RuntimeError("Test failed.")
         except:
             pass
