@@ -1,10 +1,10 @@
 from symqups import s
-from test_object_manipulation import arithmetic
+from test_object_manipulation import arithmetic_test
 
 def test_s_parameter():
-    arithmetic(s.val)
+    arithmetic_test(s.val)
     try:
-        arithmetic(s)
+        arithmetic_test(s)
         raise RuntimeError("Test failed.")
     except:
         pass

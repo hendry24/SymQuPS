@@ -170,10 +170,10 @@ class StateFunction(sp.Expr):
 global W
 W = StateFunction(t())
 
-# In the previous version, W retrieves _sub_cache to use as its arguments
+# In the previous version, W retrieves 'sub_cache' to use as its arguments
 # at instantiation. However, this is problematic when W is instantiated
 # before other objects it is supposed to interact with, for example in
 # `Star(alpha(1), W(), alpha(2))`. Here W() only sees the sub '1' when
 # it is constructed. A better construction would to let the variable
-# W be updated (i.e. reassigned) each time _sub_cache is updated. See
-# cache._sub_cache.update.
+# W be updated each time 'sub_cache' is updated. See
+# `cache.sub_cache.update`.

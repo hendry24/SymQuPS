@@ -151,10 +151,10 @@ class sOrdering(sp.Expr):
                               *[a**b for a,b in collect_ad.values()])
             case 0:
                 out = 1
-                for sub in _sub_cache:
+                for sub in sub_cache:
                     ad, m = collect_ad[sub]
                     a, n = collect_a[sub]
-                    to_permutate = [ad for _ in range(m)] + [a for _ in range(n)]
+                    to_permutate = [ad]*m + [a]*n
                     out_single_sub = 0
                     for permutation in permutations(to_permutate, len(to_permutate)):
                         out_single_sub += sp.Mul(*permutation)
@@ -162,7 +162,8 @@ class sOrdering(sp.Expr):
                         out *= sp.cancel(out_single_sub / sp.factorial(len(to_permutate)))
                 return out
             case 1:
-                return _make_normal_ordered(collect_ad, collect_a)
+                return sp.Mul(*[a**b for a,b in collect_ad.values()], 
+                              *[a**b for a,b in collect_a.values()])
             case default:
                 return self
 

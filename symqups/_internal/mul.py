@@ -39,8 +39,8 @@ def patched_Mul_flatten(seq):
 
         used_nc_idx = []
         for sub in sub_cache:
-            # Since _sub_cache (as well as Scalar) is ordered according to
-            # sympy's canon, we try to do the same for Operator, the ordering
+            # Since 'sub_cache' (as well as 'Scalar') is ordered according to
+            # sympy's canon, we try to do the same for 'Operator', the ordering
             # of which sympy does not automatically do due to the noncommuting
             # nature.
             

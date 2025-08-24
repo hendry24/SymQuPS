@@ -2,6 +2,7 @@ import pytest
 import dill
 import random
 from copy import deepcopy
+from utils import arithmetic_test
 
 import sympy as sp
 sMul = deepcopy(sp.Mul)
@@ -13,23 +14,12 @@ from symqups.objects.operators import (Operator, qOp, pOp, createOp, annihilateO
                                         densityOp, rho)
 from symqups.operations.dagger import dagger
 from symqups.utils.algebra import get_random_poly, define, qp2a
-
-
-def arithmetic(A):
-    assert A+2 == 2+A
-    assert 2+A == A+2
-    assert A-2 == sp.expand(-(2-A))
-    assert A*2 == 2*A
-    assert A/2 == (1/(2/A)).doit()
-    assert sp.expand(A**(-2)) == 1/(A**2)
-    assert A**(0) == 1
-    assert sp.sqrt(A)
     
 @pytest.mark.fast
 def test_core_arithmetic():
     for A in [Scalar(), Operator(), 
               _Primed(alpha()), _DerivativeSymbol(_Primed(alpha()))]:
-        arithmetic(A)
+        arithmetic_test(A)
 
 @pytest.mark.fast
 def test_compound_expressions_with_objects():
