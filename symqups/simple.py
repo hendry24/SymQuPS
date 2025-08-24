@@ -6,15 +6,13 @@ from . import s
 
 ###
 
-from .objects.scalars import q, p, alpha, alphaD
+from .objects.scalars import q, p, alpha, alphaD, W
 q = q()
 p = p()
 a = alpha()
 ad = alphaD()
 
 del alpha, alphaD
-
-from .objects.scalars import W # must be imported after the above.
 
 ###
 

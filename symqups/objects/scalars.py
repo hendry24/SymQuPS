@@ -2,7 +2,7 @@ import sympy as sp
 
 from .base import Base, qpTypePSO, alphaTypePSO, PhaseSpaceObject
 from .._internal.cache import sub_cache
-from .._internal.basic_routines import treat_sub
+from .._internal.basic_routines import treat_sub, invalid_input
 
 __all__ = ["q", "p", "alpha", "alphaD", "W"]
 
@@ -109,10 +109,9 @@ class _Primed(Base):
     def base(self):
         return self._custom_args[0]
     
-class _DePrimed():
-    def __new__(cls, A : sp.Expr):
-        subs_dict = {X : X.base for X in A.atoms(_Primed)}
-        return A.subs(subs_dict)
+def _deprime(expr : sp.Expr):
+    subs_dict = {X : X.base for X in expr.atoms(_Primed)}
+    return expr.subs(subs_dict)
 
 ###
 
@@ -134,7 +133,7 @@ class _DerivativeSymbol(Base):
 
 ###
 
-class StateFunction(sp.Function):
+class StateFunction(sp.Expr):
     """
     The state function object.
     
@@ -151,23 +150,30 @@ class StateFunction(sp.Function):
             - `s = 1` : Glauber P function
             - `s = -1` : Husimi Q function
     """
-
-    show_vars = False
+    
+    @property
+    def args(self):
+        return self._args
+    
+    def _set_args(self, value):
+        if not(all(isinstance(x, (t, alpha, alphaD))
+                   for x in value)):
+            invalid_input(value, "StateFunction.args")
+        
+        self._args = value
+    
+    ###
     
     def _latex(self, printer):
-        if self.show_vars:
-            return str(self).replace("StateFunction", r"W_s")
         return r"W_s"
     
 global W
 W = StateFunction(t())
 
-"""
-In the previous version, W retrieves _sub_cache to use as its arguments
-at instantiation. However, this is problematic when W is instantiated
-before other objects it is supposed to interact with, for example in
-`Star(alpha(1), W(), alpha(2))`. Here W() only sees the sub '1' when
-it is constructed. A better construction would to let the variable
-W be updated (i.e. reassigned) each time _sub_cache is updated. See
-cache._sub_cache.update.
-"""
+# In the previous version, W retrieves _sub_cache to use as its arguments
+# at instantiation. However, this is problematic when W is instantiated
+# before other objects it is supposed to interact with, for example in
+# `Star(alpha(1), W(), alpha(2))`. Here W() only sees the sub '1' when
+# it is constructed. A better construction would to let the variable
+# W be updated (i.e. reassigned) each time _sub_cache is updated. See
+# cache._sub_cache.update.

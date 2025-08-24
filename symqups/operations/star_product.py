@@ -3,7 +3,7 @@ from pprint import pprint
 
 from ..objects.base import PhaseSpaceObject, qpTypePSO
 from ..objects import scalars
-from ..objects.scalars import q, p, alpha, alphaD, _DerivativeSymbol, _Primed, _DePrimed
+from ..objects.scalars import q, p, alpha, alphaD, _DerivativeSymbol, _Primed, _deprime
 from ..utils.multiprocessing import _mp_helper
 from .._internal.basic_routines import invalid_input
 from ..utils.algebra import qp2a
@@ -205,16 +205,14 @@ def _star_base(A : sp.Expr, B : sp.Expr) \
         X = sp.expand(A * B)
 
     # Expanding is necessary to ensure that all arguments of X contain no Add objects.
+    #
+    # The ★-product evaluation routine called after Bopp shifting, whence
+    # the primed objects are no longer needed. This function loops through
+    # the arguments of the input `X` (generally an `Add` object) and replaces 
+    # the primed objects by the appropriate, functional Objects, i.e., the unprimed
+    # variables and `sympy.Derivative`. For the derivative objects, this is recursively 
+    # done by `_replace_diff`. This function then replaces q' and p' by q and p, respectively.
     
-    """
-    The ★-product evaluation routine called after Bopp shifting, whence
-    the primed objects are no longer needed. This function loops through
-    the arguments of the input `X` (generally an `Add` object) and replaces 
-    the primed objects by the appropriate, functional Objects, i.e., the unprimed
-    variables and `sympy.Derivative`. For the derivative objects, this is recursively 
-    done by `_replace_diff`. This function then replaces q' and p' by q and p, respectively.
-    """
-
     if isinstance(X, sp.Add):
         X_args = X.args
     else:
@@ -222,7 +220,7 @@ def _star_base(A : sp.Expr, B : sp.Expr) \
     
     out = sp.Add(*_mp_helper(X_args, _replace_diff))
                 
-    return _DePrimed(out).doit().expand()
+    return _deprime(out).doit().expand()
 
 def _first_index_and_diff_order(A : sp.Expr) \
     -> None | tuple[int, scalars.q|scalars.p, int|sp.Number]:
@@ -256,14 +254,13 @@ def _first_index_and_diff_order(A : sp.Expr) \
         `A`, i.e., the exponent of `_DerivativeSymbol` encountered.
     """
 
-    """
-    Everything to the right of the first "derivative operator" symbol
-    must be ordered in .args since we have specified the noncommutativity
-    of the primed symbols. It does not matter if the unprimed symbols get
-    stuck in the middle since the operator does not work on them. What is 
-    important is that x' and p' are correctly placed with respect to the
-    derivative operators.
-    """
+    # Everything to the right of the first "derivative operator" symbol
+    # must be ordered in .args since we have specified the noncommutativity
+    # of the primed symbols. It does not matter if the unprimed symbols get
+    # stuck in the middle since the operator does not work on them. What is 
+    # important is that x' and p' are correctly placed with respect to the
+    # derivative operators.
+    
     A = A.expand()
     if isinstance(A, sp.Add):
         raise TypeError("Input must not be 'Add'.")
@@ -311,11 +308,10 @@ def _replace_diff(A : sp.Expr) -> sp.Expr:
         return sp.Mul(*prefactor,
                         sp.Derivative(_replace_diff(A_leftover),
                                       *[diff_var]*diff_order))
-        """
-        With this code, we can afford to replace any power of the first
-        dqq or dpp we encounter, instead of replacing only the base
-        and letting the rest of the factors be dealt with in the next recursion
-        node, making the recursion more efficient. 
-        """
+        
+        # With this code, we can afford to replace any power of the first
+        # dqq or dpp we encounter, instead of replacing only the base
+        # and letting the rest of the factors be dealt with in the next recursion
+        # node, making the recursion more efficient. 
     
     return A

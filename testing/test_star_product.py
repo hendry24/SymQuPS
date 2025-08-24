@@ -10,7 +10,6 @@ from symqups.utils.algebra import qp2a
 from symqups import s
 
 @pytest.mark.fast
-@pytest.mark.order(7)
 class TestStarProduct():
     
     rand_N = random.randint(1, 20)

@@ -3,7 +3,9 @@ TEST ORDER
 
 [0] test_internal.test_basic_routines
 
-[1, 2] test_objects.test_all
+[1] test_objects.test_all
+
+[2] test_internal.test_mul
 
 [3] test_internal.test_operator_handling
 

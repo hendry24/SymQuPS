@@ -1,0 +1,93 @@
+import pytest
+import dill
+import sympy as sp
+
+# TESTED FUNCTIONALITIES
+# ======================
+
+from symqups.objects.base import PhaseSpaceObject, qpTypePSO, alphaTypePSO
+from symqups.objects.scalars import (Scalar, t, q, p, alpha, alphaD, StateFunction, W,
+                                     _Primed, _DerivativeSymbol)
+from symqups.objects.operators import Operator, qOp, pOp, createOp, annihilateOp, densityOp, rho
+from symqups._internal.cache import sub_cache
+
+###
+
+@pytest.mark.fast
+class TestObjectInstantiation:
+    def test_Scalar(self):
+        for sub in [None, "1", 1, sp.Number(1), sp.Symbol("1")]:
+            obj = Scalar(sub)
+            assert isinstance(obj.sub, sp.Symbol)
+            assert obj.sub in sub_cache
+            assert dill.loads(dill.dumps(obj)) == obj
+        
+        for base, obj in zip(["t", "q", "p"], 
+                             [t(), q(), p()]):
+            assert isinstance(obj, Scalar)
+            assert base in sp.latex(obj)
+            assert obj.is_Atom
+        
+        for obj in [q(), p()]:
+            assert isinstance(obj, PhaseSpaceObject)
+            assert isinstance(obj, qpTypePSO)
+            
+        for obj in [alpha(), alphaD()]:
+            assert obj.is_Atom
+            assert isinstance(obj, PhaseSpaceObject)
+            assert isinstance(obj, alphaTypePSO)
+            assert r"\alpha" in sp.latex(obj) 
+            
+    def test_Primed(self):
+        assert not(isinstance(_Primed(Scalar()), _Primed))
+        for obj in [alpha(), alphaD(), q(), p()]:
+            assert isinstance(_Primed(obj), _Primed)
+            assert _Primed(obj).base == obj
+        assert (_Primed(2*alpha()*sp.Symbol("x"))
+                == 2*sp.Symbol("x")*_Primed(alpha()))
+            
+    def test_DerivativeSymbol(self):
+        try:
+            _DerivativeSymbol(alpha())
+            raise RuntimeError("Test failed.")
+        except:
+            pass
+        
+        assert _DerivativeSymbol(_Primed(alpha())).diff_var == _Primed(alpha())
+        
+    def test_W(self):
+        
+        sub_cache.clear()
+        check_vars = [t()]
+        for sub in [1,2,3]:
+            check_vars.extend([alpha(sub), alphaD(sub)])
+            q(sub), p(sub)
+        
+        assert set(sp.ordered(W.args)) == set(sp.ordered(check_vars))
+        
+        assert isinstance(W, StateFunction)
+        assert isinstance(W, sp.Expr)
+        assert ("alpha" in sp.latex(W.args)
+                and "q_" not in sp.latex(W.args)
+                and "p_" not in sp.latex(W.args))
+                
+        q(r"newly_added_sub")
+        assert "newly_added_sub" in sp.latex(W.args)
+        
+    def test_Operator(self):
+        for sub in [None, "1", 1, sp.Number(1), sp.Symbol("1")]:
+            obj = Operator(sub)
+            assert isinstance(obj.sub, sp.Symbol)
+            assert dill.loads(dill.dumps(obj)) == obj
+                
+        for base, obj in zip([r"\hat{q}", r"\hat{p}", 
+                              r"\hat{a}", r"\hat{a}^{\dagger}",
+                              r"\rho"], 
+                             [qOp(), pOp(), 
+                              annihilateOp(), createOp(),
+                              densityOp()]):
+            assert isinstance(obj, Operator)
+            assert obj.is_Atom
+            assert base in sp.latex(obj)
+            
+        assert rho == densityOp()

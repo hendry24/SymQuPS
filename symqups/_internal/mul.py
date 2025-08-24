@@ -75,6 +75,6 @@ def patched_Mul_flatten(seq):
     # up the arguments, like merging adjacent factors into a Pow. The first
     # call does not do this because the two may be separated by another
     # object initially. 
-    _, reordered_nc_part, _ = original_Mul_flatten(reordered_nc_part)
+    _, reordered_nc_part_reflattened, _ = original_Mul_flatten(reordered_nc_part)
     
-    return c_part, reordered_nc_part, order_symbol
+    return c_part, reordered_nc_part_reflattened, order_symbol

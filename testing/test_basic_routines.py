@@ -1,6 +1,9 @@
 import pytest
 import sympy as sp
 
+# TESTED FUNCTIONALITIES
+# ======================
+
 from symqups._internal.basic_routines import (
     treat_sub,
     screen_type,
@@ -10,7 +13,6 @@ from symqups._internal.basic_routines import (
 )
 
 @pytest.mark.fast
-@pytest.mark.order(0)
 class TestBasicRoutines:
     def test_treat_sub(self):
         assert treat_sub(None, True) == sp.Symbol(r"")

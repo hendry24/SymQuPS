@@ -7,6 +7,7 @@ from .._internal.cache import sub_cache
 from ..objects.operators import Operator, annihilateOp, createOp
 from .._internal.basic_routines import operation_routine
 from .._internal.operator_handling import (separate_operator,
+                                           is_universal,
                                            get_oper_sub,
                                             collect_alpha_type_oper_from_monomial_by_sub,
                                             separate_term_by_polynomiality,
@@ -19,6 +20,14 @@ class sOrdering(sp.Expr):
     def __new__(cls, expr : sp.Expr, s : sp.Number | None = None, lazy : bool = False):
         expr = qp2a(sp.sympify(expr)) 
         
+        # We assume that the input does not contain any universally-noncommuting
+        # operators like 'densityOp'.
+        if is_universal(expr):
+            msg = "No universal operators should be put into s-ordering. "
+            msg += "Input may contain 'densityOp' which never goes in "
+            msg += "the ordering braces."
+            raise ValueError(msg)
+        
         s = sp.sympify(s)
         if s is None:
             s = ClahillGlauberS.val
@@ -27,6 +36,9 @@ class sOrdering(sp.Expr):
             return super(sOrdering, cls).__new__(cls, A, s)
                     # need to specify since we do this
                     # inside another function. 
+
+        def treat_add(A : sp.Expr):
+            return sp.Add(*_mp_helper(A.args, sOrdering))
                     
         def treat_pow(A : sp.Expr):
             if A.is_polynomial(Operator):
@@ -34,7 +46,8 @@ class sOrdering(sp.Expr):
             return make(A)
             
         def treat_foo(A : sp.Expr):
-            if A.has(createOp) and A.has(annihilateOp):
+            if any(A.has(annihilateOp(sub)) and A.has(createOp(sub))
+                   for sub in sub_cache):
                 return make(A)
             return A
         
@@ -65,7 +78,8 @@ class sOrdering(sp.Expr):
                     
                     # contains only one sub because there are no coupled expressions.
                     
-                    _, collect_ad, collect_a = collect_alpha_type_oper_from_monomial_by_sub(arg)
+                    _, collect_ad, collect_a = \
+                        collect_alpha_type_oper_from_monomial_by_sub(arg)
                     
                     arg_sub_lst = list(get_oper_sub(arg))
                     assert len(arg_sub_lst) == 1
@@ -102,14 +116,11 @@ class sOrdering(sp.Expr):
                     out *= make(collect_polynomial_normal_ordered * collect_nonpolynomial)
                     
             return out
-                            
-        def treat_add(A : sp.Expr):
-            return sp.Add(*_mp_helper(A.args, sOrdering))
-            
+                                        
         return operation_routine(expr,
                                   "sOrder",
                                   [],
-                                  [Scalar,],
+                                  [],
                                   {Operator : expr},
                                   {(Operator, sOrdering) : expr,
                                    sp.Pow : treat_pow,

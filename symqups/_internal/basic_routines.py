@@ -18,6 +18,8 @@ def screen_type(expr : sp.Expr, forbidden_types : type | Sequence[type], name : 
     Raise an error if the input 'expr' to some callable 'name' 
     **is** an object of 'forbidden_type'.
     """
+    if not(isinstance(forbidden_types, Sequence)):
+        forbidden_types = [forbidden_types]
     forbidden_types = tuple(forbidden_types)
     if isinstance(expr, forbidden_types):
         msg = f"'{name}' does not accept {forbidden_types}."
@@ -50,9 +52,10 @@ def operation_routine(expr : sp.Expr,
                                                            Union[Callable, object]],
                        return_if_expr_is : Dict[Union[type, Sequence[type]], 
                                                 Union[Callable, object]]):
-    
     """
-    Routine that is used repeatedly in some functionalities.
+    Routine that is used repeatedly in some functionalities, where the input expression
+    is treated differently depending on its top-level algebraic strcuture, or where certain
+    types of expressions/subexpressions are prohibited. 
     """
     
     expr = sp.expand(sp.sympify(expr))

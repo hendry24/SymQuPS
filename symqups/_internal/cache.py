@@ -9,15 +9,13 @@ class _AutoSortedUniqueList(list):
     def _append(self, item):
         
         if item in self:
-            return 
+            return
 
         super().append(item)
         self.sort(key=sp.default_sort_key)
         
-        from ..objects import scalars
-        from ..objects.scalars import StateFunction, t, alpha, alphaD
-        scalars.W = StateFunction(t(), 
-                                  *[cls(sub) for sub in self for cls in (alpha, alphaD)])
+        from ..objects.scalars import t, alpha, alphaD, W
+        W._set_args((t(), *[cls(sub) for sub in self for cls in (alpha, alphaD)]))
         
     def append(self, item):
         raise NotImplementedError

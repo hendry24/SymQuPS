@@ -36,12 +36,16 @@ from ..objects.operators import Operator, createOp, annihilateOp
 #     return expr
 
 def get_oper_sub(expr:sp.Expr):
-    return {atom.sub for atom in expr.atoms(Operator)}
+    return {atom.sub for atom in expr.atoms(Operator) if atom.has_sub}
             # Must use a set to avoid repeated 'sub's.
 
 def is_universal(expr : sp.Expr) -> bool:
+    """
+    Returns 'True' if the input has at least one universally-noncommuting
+    operator, e.g. 'densityOp'. Returns 'False' otherwise.
+    """
     if not(expr.has(Operator)):
-        raise ValueError("Input does not contain any 'Operator'.")
+        return False
     return not(all(atom.has_sub for atom in expr.atoms(Operator)))
 
 def separate_operator(expr: sp.Expr):
@@ -91,14 +95,14 @@ def separate_term_by_polynomiality(expr : sp.Expr, polynomials_in = (createOp, a
             if factor != 1:
                 out.append(factor)
             factor = arg
-    """
-    The polynomiality may change at the last argument. If so, then 'factor'
-    contains the last argument when the loop ends which has not been added
-    to 'out' yet. Otherwise, 'factor' has not been appended to 'out' since
-    the last ddetected polynomial change. So in any case, at the end of
-    the loop, 'factor' contains the leftover arguments not appended yet to 'out',
-    but it would never be unity. 
-    """
+    
+    # The polynomiality may change at the last argument. If so, then 'factor'
+    # contains the last argument when the loop ends which has not been added
+    # to 'out' yet. Otherwise, 'factor' has not been appended to 'out' since
+    # the last ddetected polynomial change. So in any case, at the end of
+    # the loop, 'factor' contains the leftover arguments not appended yet to 'out',
+    # but it would never be unity. 
+    
     out.append(factor)
         
     return out
@@ -145,20 +149,24 @@ def separate_term_oper_by_sub(expr : sp.Expr):
     
     Returns a list of 'expr.args' separated by 'sub' while maintaining 
     the order. That is, `Mul(*out)` returns the original expression.
-    Scalars are multiplied into the first entry.
+    Scalars are multiplied into the first entry, which **always** contains
+    non-operator objects.
     
     NOTE: This assumes that no universally-noncommuting operators (e.g., rho) 
     are present, which is usually the case in applications.
     """
     screen_type(expr, sp.Add, "_separate_term_oper_by_sub")
     
-    if is_universal(expr):
-        raise ValueError("Input is universally noncommuting.")
-    
-    if not(isinstance(expr, sp.Mul)):
+    if not(expr.has(Operator)):
         return [expr]
     
+    if is_universal(expr):
+        raise ValueError("Input must not contain universally noncommuting operators.")
+     
     non_op, oper = separate_operator(expr)
+    
+    if not(isinstance(oper, sp.Mul)):
+        return [non_op, oper]
     
     # The monkey-patched Mul is ordered by 'sub' groups. As such, an encounter
     # with an operator belonging to a different 'sub' group means to move

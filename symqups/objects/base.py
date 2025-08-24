@@ -17,19 +17,19 @@ class Base(sp.Symbol):
                               name = name,
                               **assumptions)
         obj._custom_args = custom_args
-        """
-        '_args' is used by SymPy and should not be overriden, or the method
-        .atoms which is crucial in this package will not work correctly.
-            
-        This allows us to store custom_args as accessible attributes. We can
-        also set what each custom argument is called in a given subclass, 
-        by defining a property then returning the argument.
         
-        Having empty .args means that every instance of this class is atomic.
-        As such, we make it our design philosophy to keep the subclasses
-        atomic, allowing us to use the .atoms method in the algortihms to access
-        these objects.
-        """        
+        # '_args' is used by SymPy and should not be overriden, or the method
+        # .atoms which is crucial in this package will not work correctly.
+        #    
+        # This allows us to store custom_args as accessible attributes. We can
+        # also set what each custom argument is called in a given subclass, 
+        # by defining a property then returning the argument.
+        #
+        # Having empty .args means that every instance of this class is atomic.
+        # As such, we make it our design philosophy to keep the subclasses
+        # atomic, allowing us to use the .atoms method in the algortihms to access
+        # these objects.        
+        
         return obj
 
     def __reduce__(self):
