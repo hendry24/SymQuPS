@@ -1,7 +1,8 @@
 import sympy as sp
 
 from .base import Base
-from .._internal.grouping import qpType, alphaType, PhaseSpaceObject, UnBoppable, PrimedPSO
+from .._internal.grouping import (qpType, alphaType, PhaseSpaceVariable, 
+                                  PhaseSpaceObject, UnBoppable, PrimedPSO)
 from .._internal.cache import sub_cache
 from .._internal.basic_routines import treat_sub, invalid_input
 
@@ -41,7 +42,7 @@ class t(Scalar):
 
 ###
 
-class q(Scalar, PhaseSpaceObject, qpType):
+class q(Scalar, PhaseSpaceVariable, qpType):
     """
     The canonical position operator or first phase-space quadrature.
     
@@ -53,7 +54,7 @@ class q(Scalar, PhaseSpaceObject, qpType):
     """
     base = r"q"
     
-class p(Scalar, PhaseSpaceObject, qpType):
+class p(Scalar, PhaseSpaceVariable, qpType):
     """
     The canonical position operator or first phase-space quadrature.
     
@@ -65,7 +66,7 @@ class p(Scalar, PhaseSpaceObject, qpType):
     """
     base = r"p"
     
-class alpha(Scalar, PhaseSpaceObject, alphaType):
+class alpha(Scalar, PhaseSpaceVariable, alphaType):
     base = r"\alpha"
     is_real = False
     
@@ -78,7 +79,7 @@ class alpha(Scalar, PhaseSpaceObject, alphaType):
     def _eval_conjugate(self):
         return self.conjugate()
     
-class alphaD(Scalar, PhaseSpaceObject, alphaType):
+class alphaD(Scalar, PhaseSpaceVariable, alphaType):
     base = r"\overline{\alpha}"
     is_real = False
     
@@ -101,10 +102,10 @@ class _Primed(Base, PrimedPSO):
         
         A = sp.sympify(A)
         
-        if isinstance(A, PhaseSpaceObject):
+        if isinstance(A, PhaseSpaceVariable):
             return super().__new__(cls, A)
         
-        return A.subs({X:_Primed(X) for X in A.atoms(PhaseSpaceObject)})
+        return A.subs({X:_Primed(X) for X in A.atoms(PhaseSpaceVariable)})
     
     @property
     def base(self):

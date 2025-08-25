@@ -6,8 +6,8 @@ from ._internal.multiprocessing import _mp_helper
 
 from .objects.base import Base
 from .objects import scalars
-from .objects.scalars import q, p, alpha, alphaD
-from .objects.operators import qOp, pOp, annihilateOp, createOp, Operator
+from .objects.scalars import q, p, alpha, alphaD, W
+from .objects.operators import qOp, pOp, annihilateOp, createOp, Operator, rho
 
 ###
 
@@ -91,7 +91,7 @@ def get_op2sc_dict() -> dict:
             for op,sc in [[qOp, q],
             [pOp, p],
             [annihilateOp, alpha], 
-            [createOp, alphaD]]}
+            [createOp, alphaD]]} | {rho : W}
 
 def get_sc2op_dict() -> dict:
     return {v:k for k,v in get_op2sc_dict().items()}

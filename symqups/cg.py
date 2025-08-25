@@ -2,7 +2,8 @@ import sympy as sp
 
 from . import s as CahillGlauberS
 
-from .objects.operators import Operator
+from .objects.scalars import W
+from .objects.operators import Operator, rho
 from .star_product import Star
 from .ordering import sOrdering
 
@@ -45,7 +46,7 @@ def CG_transform(expr : sp.Expr) -> sp.Expr:
     return operation_routine(expr,
                             "CG_transform",
                             [],
-                            [],
+                            [W],
                             {Operator : expr},
                             {sp.Add : treat_add,
                             sp.Mul : treat_mul,

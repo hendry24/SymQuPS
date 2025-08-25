@@ -31,6 +31,12 @@ class PhaseSpaceObject(ObjectGroup):
     """
     pass
 
+class PhaseSpaceVariable(PhaseSpaceObject):
+    """
+    This object is a phase space variable.
+    """
+    pass
+
 ###
 
 class PrimedPSO(ObjectGroup):
