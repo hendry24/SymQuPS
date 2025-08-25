@@ -5,6 +5,8 @@ from functools import cmp_to_key
 global original_Mul_flatten
 original_Mul_flatten = sp.Mul.flatten
 
+# HACK: Monkey patching sympy's core implementation to do something
+# extra if 'Operator' objects are input.
 def patched_Mul_flatten(seq : Sequence) -> Tuple[list, list, list]: 
     from .operator_handling import get_oper_sub
     from .cache import sub_cache
@@ -34,37 +36,43 @@ def patched_Mul_flatten(seq : Sequence) -> Tuple[list, list, list]:
     # We cannot reorder universally noncommuting expressions. As such,
     # they serve as a bound for the interval in 'nc_part' we can reoder
     # a time. We collect this interval into 'reorderable_nc' and reorder
-    # it using some kind of bubble sort that checks whether a given
-    # entry can swap position with the previous entry. 
+    # it using Python's built-in 'sorted', by providing a sort key that 
+    # checks whether a given entry can go before the previous entry based
+    # on 'sub' in them. 
 
     reordered_nc_part = []
     reorderable_nc = []      
 
     def treat_reorderable_nc() -> None:
+    
+        # NOTE: There may be better reordering rules we can implement
+        # to make nonpolynomial expressions prettier, but the current
+        # simple one already works very well for polynomials and does not
+        # break for nonpolynomials.
+        
         def can_move_left(A : sp.Expr, B : sp.Expr) -> bool:
-            """
-            Whether A can move to the left of B, assuming A is originally
-            to B's right. 
+            # Whether A can move to the left of B, assuming A is originally
+            # to B's right. 
             
-            A can move to the left of B if they do not share any common 'sub'
-            and if the 'sub's of A are all 
-            """
             A_sub = get_oper_sub(A)
             B_sub = get_oper_sub(B)
+            
+            # A can be safely reordered with respect to B if they do *not* share
+            # any common 'sub's. 
                     
-            if A_sub & B_sub: # There are common 'sub's, so there is no need for A to move further to the left.
+            if A_sub & B_sub: 
                 return False
             
-            # Otherwise, we determine whether A can move to the left of B following the sequence in which
+            # We determine whether A can move to the left of B following the sequence in which
             # the 'sub's appear in sub_cache. By doing it this way, we try our best to make the 'Operator'
-            # ordering obey sympy's canonincal ordering rule.
+            # ordering obey sympy's canonical ordering rule. This ordering rule is also *consistent*.
             
             first_A_sub_in_sub_cache = min(sub_cache.index(sub) for sub in A_sub)
             first_B_sub_in_sub_cache = min(sub_cache.index(sub) for sub in B_sub)
 
             if first_A_sub_in_sub_cache < first_B_sub_in_sub_cache:
                 return True
-            return False  
+            return False
 
         def cmp(A, B):
             if can_move_left(A, B):

@@ -7,7 +7,6 @@ from ..objects.operators import Operator, annihilateOp, createOp
 from .._internal.cache import sub_cache
 from .._internal.basic_routines import deep_screen_type, operation_routine
 
-from ..utils.multiprocessing import _mp_helper
 from ..utils.algebra import qp2a
 
 from .operator_ordering import sOrdering

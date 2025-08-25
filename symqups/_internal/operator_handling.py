@@ -73,7 +73,8 @@ def separate_operator(expr: sp.Expr) -> Tuple[sp.Expr, sp.Expr]:
     return non_operator, operator
 
 def separate_term_by_polynomiality(expr : sp.Expr, 
-                                   polynomials_in : tuple[Operator]) -> list[sp.Expr] :
+                                   polynomials_in : tuple[Operator] = (createOp, annihilateOp)
+                                   ) -> list[sp.Expr] :
     """
     Subsequent elements of the output has alternating polynomiality in the 'polynomials_in'.
     """

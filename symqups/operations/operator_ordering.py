@@ -1,7 +1,7 @@
 import sympy as sp
 from itertools import permutations
 from typing import Tuple
-from pprint import pprint
+import warnings
 
 from .. import s as ClahillGlauberS
 from ..objects.scalars import q, p, alpha, alphaD
@@ -36,7 +36,7 @@ class sOrdering(sp.Expr):
             msg += "as plain scalars, and this warning is raised in case "
             msg += "these objects are mistakenly used instead of the 'Operator' "
             msg += "counterparts."
-            pprint(msg)
+            warnings.warn(msg, stacklevel=2)
         
         s = sp.sympify(s)
         if s is None:
@@ -54,10 +54,15 @@ class sOrdering(sp.Expr):
             if A.is_polynomial(Operator):
                 return A
             return make(A)
-            
-        def treat_foo(A : sp.Expr) -> sp.Expr:
+        
+        def has_ordering_ambiguity(A : sp.Expr) -> bool:
             if any(A.has(annihilateOp(sub)) and A.has(createOp(sub))
                    for sub in sub_cache):
+                return True
+            return False
+            
+        def treat_function(A : sp.Expr) -> sp.Expr:
+            if has_ordering_ambiguity(A):
                 return make(A)
             return A
         
@@ -73,9 +78,9 @@ class sOrdering(sp.Expr):
             # own braces. If there are "coupled factors", such as exp(a_1*a_2),
             # then the factors corresponding to the "coupled 'sub's" are
             # enclosed by the same braces. The expression inside the braces
-            # are normal-ordered to the "greatest extent possible". For example,
-            # if there are non-polynomials stuck in the middle, then the
-            # polynomials to the left and right are normal-ordered.
+            # are normal-ordered to the "greatest extent possible":
+            # the polynomial parts are collected and normal-ordered, and
+            # the nonpolynomial parts go after the poynomial parts.
             
             bracket_arg_by_sub = separate_term_oper_by_sub(A)
                                             
@@ -83,7 +88,10 @@ class sOrdering(sp.Expr):
             
             for arg in bracket_arg_by_sub:
                 
-                if arg.is_polynomial(): 
+                if not(has_ordering_ambiguity(arg)):
+                    out *= arg
+                  
+                elif arg.is_polynomial(): 
                     
                     # contains only one sub because there are no coupled expressions.
                     
@@ -91,7 +99,6 @@ class sOrdering(sp.Expr):
                         collect_alpha_type_oper_from_monomial_by_sub(arg)
                     
                     arg_sub_lst = list(get_oper_sub(arg))
-                    assert len(arg_sub_lst) == 1
                     
                     arg_sub = arg_sub_lst[0]
                     
@@ -133,10 +140,14 @@ class sOrdering(sp.Expr):
                                   {Operator : expr},
                                   {(Operator, sOrdering) : expr,
                                    sp.Pow : treat_pow,
-                                   sp.Function : treat_foo,
+                                   sp.Function : treat_function,
                                    sp.Mul : treat_mul,
                                    sp.Add : treat_add}
                                   )
+    
+    @property
+    def s_val(self):
+        return self.args[1]
         
     def _latex(self, printer) -> str:
         return r"\left\{ %s \right\}_{s=%s}" % (sp.latex(self.args[0]),
