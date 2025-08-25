@@ -1,5 +1,6 @@
 import sympy as sp
 from typing import Tuple, Sequence
+from functools import cmp_to_key
 
 global original_Mul_flatten
 original_Mul_flatten = sp.Mul.flatten
@@ -32,7 +33,7 @@ def patched_Mul_flatten(seq : Sequence) -> Tuple[list, list, list]:
     # is indicated by having at least one Operator with `has_sub=False`, 
     # We cannot reorder universally noncommuting expressions. As such,
     # they serve as a bound for the interval in 'nc_part' we can reoder
-    # a time. WE collect this interval into 'reorderable_nc' and reorder
+    # a time. We collect this interval into 'reorderable_nc' and reorder
     # it using some kind of bubble sort that checks whether a given
     # entry can swap position with the previous entry. 
 
@@ -44,6 +45,9 @@ def patched_Mul_flatten(seq : Sequence) -> Tuple[list, list, list]:
             """
             Whether A can move to the left of B, assuming A is originally
             to B's right. 
+            
+            A can move to the left of B if they do not share any common 'sub'
+            and if the 'sub's of A are all 
             """
             A_sub = get_oper_sub(A)
             B_sub = get_oper_sub(B)
@@ -61,16 +65,17 @@ def patched_Mul_flatten(seq : Sequence) -> Tuple[list, list, list]:
             if first_A_sub_in_sub_cache < first_B_sub_in_sub_cache:
                 return True
             return False  
-        
-        lst = reorderable_nc
-        for j in range(1, len(lst)):
-            k = j
-            while (k > 0 
-                   and can_move_left(lst[k], lst[k-1])):
-                lst[k], lst[k-1] = lst[k-1], lst[k]
-                k -= 1
+
+        def cmp(A, B):
+            if can_move_left(A, B):
+                return -1
+            elif can_move_left(B, A):
+                return 1
+            else:
+                return 0
                 
-        reordered_nc_part.extend(lst)
+        reordered_nc_part.extend(list(sorted(reorderable_nc, 
+                                             key=cmp_to_key(cmp))))
         
     for nc in nc_part:
         if not(is_universal(nc)):
