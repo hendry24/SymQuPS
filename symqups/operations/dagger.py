@@ -4,7 +4,7 @@ from ..objects.operators import Operator
 from .._internal.basic_routines import operation_routine
 from ..utils.multiprocessing import _mp_helper
 
-def dagger(expr : sp.Expr | Operator):
+def dagger(expr : sp.Expr) -> sp.Expr:
     
     def treat_add(A : sp.Expr):
         return sp.Add(*_mp_helper(A.args, dagger))

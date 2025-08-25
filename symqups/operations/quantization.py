@@ -22,7 +22,7 @@ def _prepare_for_quantization(expr : sp.Expr) -> sp.Expr:
     
     return sp.expand(expr)
 
-def naive_quantize(expr : sp.Expr):
+def naive_quantize(expr : sp.Expr) -> sp.Expr:
     expr = _prepare_for_quantization(expr)
     
     naive_quantization_dict = {}
@@ -40,7 +40,7 @@ def naive_quantize(expr : sp.Expr):
     
     return sp.expand(expr_naive_quantized)
 
-def s_quantize(expr : sp.Expr):
+def s_quantize(expr : sp.Expr) -> sp.Expr:
     '''
     Return the totally-symmetric (Weyl) ordering of the
     input expression, most generally a polynomial in 

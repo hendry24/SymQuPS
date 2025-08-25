@@ -18,6 +18,7 @@ class Operator(Base):
     
     def _get_symbol_name_and_assumptions(cls, sub):
         return r"%s_{%s}" % (cls.base, sub), {"commutative":False}
+                                            # This should shut off the assumption system.
     
     def __new__(cls, sub = None):
         sub = treat_sub(sub, cls.has_sub)
@@ -34,8 +35,10 @@ class Operator(Base):
     def dagger(self):
         raise NotImplementedError()
     
-    def wigner_transform(self):
-        raise NotImplementedError()
+    @property
+    def _diff_wrt(self):
+        msg = "No differentiation with respect to 'Operator'."
+        raise NotImplementedError(msg)
     
 class HermitianOp(Operator):
     @typing.final

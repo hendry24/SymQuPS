@@ -51,7 +51,7 @@ class Bopp(sp.Expr):
 
     """
         
-    def __new__(cls, expr : sp.Expr, left : bool = False):
+    def __new__(cls, expr : sp.Expr, left : bool = False) -> sp.Expr:
         
         expr = sp.sympify(expr)
         
@@ -76,7 +76,7 @@ class Bopp(sp.Expr):
         is nevertheless useful to catch errors, so we keep it there.
         """
         
-        def dxx(X):
+        def dxx(X : scalars.Scalar) -> _DerivativeSymbol:
             return _DerivativeSymbol(_Primed(X))
 
         sgn = 1
@@ -101,7 +101,7 @@ class Bopp(sp.Expr):
                         
         return sp.expand(expr.subs(subs_dict))
     
-    def _latex(self, printer):
+    def _latex(self, printer) -> str:
         left = self.args[1]
         star_latex = r"\star"
         bopp_arg = r"\left({%s}\right)" % sp.latex(self.args[0])
@@ -140,7 +140,7 @@ class Star(sp.Expr):
     
     """
 
-    def __new__(cls, *args):
+    def __new__(cls, *args) -> sp.Expr:
         if not(args):
             return sp.Integer(1)
         
@@ -172,8 +172,7 @@ class Star(sp.Expr):
             out += r"\star \left({%s}\right)" % sp.latex(arg)
         return out
 
-def _star_base(A : sp.Expr, B : sp.Expr) \
-    -> sp.Expr:
+def _star_base(A : sp.Expr, B : sp.Expr) -> sp.Expr:
         
     A = sp.sympify(A)
     B = sp.sympify(B)

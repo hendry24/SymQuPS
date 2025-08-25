@@ -8,7 +8,7 @@ from ..objects import scalars
 from ..objects.operators import qOp, pOp, annihilateOp, createOp, Operator
 from .multiprocessing import _mp_helper
 
-def get_random_poly(objects, coeffs=[1], max_pow=3, dice_throw=10):
+def get_random_poly(objects, coeffs=[1], max_pow=3, dice_throw=10) -> sp.Expr:
     """
     Make a random polynomial in 'objects'.
     """
@@ -81,8 +81,7 @@ def derivative_not_in_num(A : sp.Expr) -> sp.Expr:
     return sp.Mul(sp.Mul(*Q_args_without_der), der_lst[0], evaluate=False)
     
 def collect_by_derivative(A : sp.Expr, 
-                          f : None | UndefinedFunction = None) \
-    -> sp.Expr:
+                          f : None | UndefinedFunction = None) -> sp.Expr:
     """
     Collect terms by the derivatives of the input function, by default those of the Wigner function `W`.
 

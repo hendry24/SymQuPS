@@ -2,8 +2,11 @@ import sympy as sp
 
 class Base(sp.Symbol):
     """
-    Base object for the package, essentially a modified sympy.Symbol supporting extra accessible
+    Base object for the package, essentially a modified `sympy.Symbol` supporting extra accessible
     arguments. 
+    
+    We use `Symbol` instead of `AtomicExpr` since the functionalities we need are already available
+    in the former, and "reinventing the wheel" with the latter would just be needlessly troublesome.
     """
     
     def _get_symbol_name_and_assumptions(cls, *custom_args):

@@ -1,5 +1,5 @@
 import sympy as sp
-from typing import Sequence
+from typing import Sequence, Tuple
 
 from .basic_routines import screen_type
 from .cache import sub_cache
@@ -35,7 +35,7 @@ from ..objects.operators import Operator, createOp, annihilateOp
     
 #     return expr
 
-def get_oper_sub(expr:sp.Expr):
+def get_oper_sub(expr : sp.Expr) -> set[sp.Symbol]:
     return {atom.sub for atom in expr.atoms(Operator) if atom.has_sub}
             # Must use a set to avoid repeated 'sub's.
 
@@ -48,7 +48,7 @@ def is_universal(expr : sp.Expr) -> bool:
         return False
     return not(all(atom.has_sub for atom in expr.atoms(Operator)))
 
-def separate_operator(expr: sp.Expr):
+def separate_operator(expr: sp.Expr) -> Tuple[sp.Expr, sp.Expr]:
     expr = sp.sympify(expr)
     
     screen_type(expr, sp.Add, "_separate_operator")
@@ -72,7 +72,8 @@ def separate_operator(expr: sp.Expr):
     
     return non_operator, operator
 
-def separate_term_by_polynomiality(expr : sp.Expr, polynomials_in = (createOp, annihilateOp)):
+def separate_term_by_polynomiality(expr : sp.Expr, 
+                                   polynomials_in : tuple[Operator]) -> list[sp.Expr] :
     """
     Subsequent elements of the output has alternating polynomiality in the 'polynomials_in'.
     """
@@ -107,7 +108,7 @@ def separate_term_by_polynomiality(expr : sp.Expr, polynomials_in = (createOp, a
         
     return out
 
-def collect_alpha_type_oper_from_monomial_by_sub(expr : sp.Expr):
+def collect_alpha_type_oper_from_monomial_by_sub(expr : sp.Expr) -> Tuple[sp.Expr, dict, dict]:
     expr = sp.sympify(expr)
     
     screen_type(expr, sp.Add, "_collect_alpha_type_oper_from_monomial_by_sub")
@@ -137,7 +138,7 @@ def collect_alpha_type_oper_from_monomial_by_sub(expr : sp.Expr):
             
     return non_operator, collect_ad, collect_a
 
-def separate_term_oper_by_sub(expr : sp.Expr):
+def separate_term_oper_by_sub(expr : sp.Expr) -> list[sp.Expr]:
     """
     Separate one term into a list of subexpressions, each 
     corresponding to one "sub group". 

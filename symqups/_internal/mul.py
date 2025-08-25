@@ -1,9 +1,10 @@
 import sympy as sp
+from typing import Tuple, Sequence
 
 global original_Mul_flatten
 original_Mul_flatten = sp.Mul.flatten
 
-def patched_Mul_flatten(seq): 
+def patched_Mul_flatten(seq : Sequence) -> Tuple[list, list, list]: 
     from .operator_handling import get_oper_sub
     from .cache import sub_cache
     from .operator_handling import is_universal
@@ -26,33 +27,51 @@ def patched_Mul_flatten(seq):
     
     c_part, nc_part, order_symbol = original_Mul_flatten(seq)
     # `nc_part`` contains our operators
-        
+    
     # A universal Operator expression
     # is indicated by having at least one Operator with `has_sub=False`, 
-    # We cannot reorder universally noncommuting expressions. 
+    # We cannot reorder universally noncommuting expressions. As such,
+    # they serve as a bound for the interval in 'nc_part' we can reoder
+    # a time. WE collect this interval into 'reorderable_nc' and reorder
+    # it using some kind of bubble sort that checks whether a given
+    # entry can swap position with the previous entry. 
 
     reordered_nc_part = []
-    reorderable_nc = []
+    reorderable_nc = []      
 
-    def treat_reorderable_nc():
-        nc_sub_lst = [get_oper_sub(nc) for nc in reorderable_nc]
-
-        used_nc_idx = []
-        for sub in sub_cache:
-            # Since 'sub_cache' (as well as 'Scalar') is ordered according to
-            # sympy's canon, we try to do the same for 'Operator', the ordering
-            # of which sympy does not automatically do due to the noncommuting
-            # nature.
+    def treat_reorderable_nc() -> None:
+        def can_move_left(A : sp.Expr, B : sp.Expr) -> bool:
+            """
+            Whether A can move to the left of B, assuming A is originally
+            to B's right. 
+            """
+            A_sub = get_oper_sub(A)
+            B_sub = get_oper_sub(B)
+                    
+            if A_sub & B_sub: # There are common 'sub's, so there is no need for A to move further to the left.
+                return False
             
-            for j, nc_sub in enumerate(nc_sub_lst):
-                
-                if (sub in nc_sub) and (j not in used_nc_idx):
-                    
-                    reordered_nc_part.append(reorderable_nc[j])
-                    used_nc_idx.append(j)
-                    
-        assert len(used_nc_idx) == len(reorderable_nc)
+            # Otherwise, we determine whether A can move to the left of B following the sequence in which
+            # the 'sub's appear in sub_cache. By doing it this way, we try our best to make the 'Operator'
+            # ordering obey sympy's canonincal ordering rule.
+            
+            first_A_sub_in_sub_cache = min(sub_cache.index(sub) for sub in A_sub)
+            first_B_sub_in_sub_cache = min(sub_cache.index(sub) for sub in B_sub)
 
+            if first_A_sub_in_sub_cache < first_B_sub_in_sub_cache:
+                return True
+            return False  
+        
+        lst = reorderable_nc
+        for j in range(1, len(lst)):
+            k = j
+            while (k > 0 
+                   and can_move_left(lst[k], lst[k-1])):
+                lst[k], lst[k-1] = lst[k-1], lst[k]
+                k -= 1
+                
+        reordered_nc_part.extend(lst)
+        
     for nc in nc_part:
         if not(is_universal(nc)):
             # As long as 'nc' is not universal (i.e., reorderable),

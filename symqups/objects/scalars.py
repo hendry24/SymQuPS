@@ -18,7 +18,7 @@ class Scalar(Base):
     
     def _get_symbol_name_and_assumptions(cls, sub):
         name = r"%s_{%s}" % (cls.base, sub)
-        return name, {"real" : cls.is_real}
+        return name, {"real" : cls.is_real, "commutative" : True}
         
     def __new__(cls, sub = None):
         sub = treat_sub(sub, cls.has_sub)

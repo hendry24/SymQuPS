@@ -1,8 +1,10 @@
 import sympy as sp
 from itertools import permutations
+from typing import Tuple
+from pprint import pprint
 
 from .. import s as ClahillGlauberS
-from ..objects.scalars import Scalar
+from ..objects.scalars import q, p, alpha, alphaD
 from .._internal.cache import sub_cache
 from ..objects.operators import Operator, annihilateOp, createOp
 from .._internal.basic_routines import operation_routine
@@ -17,7 +19,7 @@ from ..utils.algebra import qp2a
 
 class sOrdering(sp.Expr):
     
-    def __new__(cls, expr : sp.Expr, s : sp.Number | None = None, lazy : bool = False):
+    def __new__(cls, expr : sp.Expr, s : sp.Number | None = None, lazy : bool = False) -> sp.Expr:
         expr = qp2a(sp.sympify(expr)) 
         
         # We assume that the input does not contain any universally-noncommuting
@@ -28,30 +30,38 @@ class sOrdering(sp.Expr):
             msg += "the ordering braces."
             raise ValueError(msg)
         
+        if expr.has(q, p, alpha, alphaD):
+            msg = "The input 'expr' has the phase-space 'Scalar' objects "
+            msg += "('q', 'p', 'alpha', 'alphaD'). Here, they are treated "
+            msg += "as plain scalars, and this warning is raised in case "
+            msg += "these objects are mistakenly used instead of the 'Operator' "
+            msg += "counterparts."
+            pprint(msg)
+        
         s = sp.sympify(s)
         if s is None:
             s = ClahillGlauberS.val
         
-        def make(A : sp.Expr):
+        def make(A : sp.Expr) -> sOrdering:
             return super(sOrdering, cls).__new__(cls, A, s)
                     # need to specify since we do this
                     # inside another function. 
 
-        def treat_add(A : sp.Expr):
+        def treat_add(A : sp.Expr) -> sp.Expr:
             return sp.Add(*_mp_helper(A.args, sOrdering))
                     
-        def treat_pow(A : sp.Expr):
+        def treat_pow(A : sp.Expr) -> sp.Expr:
             if A.is_polynomial(Operator):
                 return A
             return make(A)
             
-        def treat_foo(A : sp.Expr):
+        def treat_foo(A : sp.Expr) -> sp.Expr:
             if any(A.has(annihilateOp(sub)) and A.has(createOp(sub))
                    for sub in sub_cache):
                 return make(A)
             return A
         
-        def treat_mul(A : sp.Expr):
+        def treat_mul(A : sp.Expr) -> sp.Expr:
             if lazy:
                 leftovers, bracket_arg = separate_operator(A)
                 return leftovers * make(bracket_arg)
@@ -68,8 +78,7 @@ class sOrdering(sp.Expr):
             # polynomials to the left and right are normal-ordered.
             
             bracket_arg_by_sub = separate_term_oper_by_sub(A)
-                                # If 'A' is a monomial, then this only has one entry.
-            
+                                            
             out = bracket_arg_by_sub.pop(0) # gets all non-Operator subexpresions.
             
             for arg in bracket_arg_by_sub:
@@ -129,17 +138,17 @@ class sOrdering(sp.Expr):
                                    sp.Add : treat_add}
                                   )
         
-    def _latex(self, printer):
+    def _latex(self, printer) -> str:
         return r"\left\{ %s \right\}_{s=%s}" % (sp.latex(self.args[0]),
                                               sp.latex(self.args[1]))
 
-    def _collect_oper(self):
+    def _collect_oper(self) -> Tuple[dict, dict]:
         non_operator, collect_ad, collect_a = \
             collect_alpha_type_oper_from_monomial_by_sub(self.args[0])
         assert non_operator == 1
         return collect_ad, collect_a
         
-    def explicit(self):
+    def explicit(self) -> sp.Expr:
         if not(self.args[0].is_polynomial(Operator)):
             return self
         
@@ -167,7 +176,7 @@ class sOrdering(sp.Expr):
             case default:
                 return self
 
-    def express(self, t = 1, explicit=True):
+    def express(self, t = 1, explicit=True) -> sp.Expr:
         """
         Expand the expression in terms of t-ordered expressions.
         By default, `t=1` corresponds to normal-ordering. If `define`,
@@ -197,19 +206,19 @@ class sOrdering(sp.Expr):
         
         return sp.Mul(*[expand_s_ordered_unipartite_string(sub) for sub in sub_cache])
 
-def normal_order(expr : sp.Expr):
+def normal_order(expr : sp.Expr) -> sp.Expr:
     return sOrdering(expr, s=1).explicit()
 
-def antinormal_order(expr : sp.Expr):
+def antinormal_order(expr : sp.Expr) -> sp.Expr:
     return sOrdering(expr, s=-1).explicit()
 
-def weyl_order(expr : sp.Expr):
+def weyl_order(expr : sp.Expr) -> sp.Expr:
     return sOrdering(expr, s=0).explicit()
 
-def explicit(expr: sp.Expr):
+def explicit(expr: sp.Expr) -> sp.Expr:
     return expr.replace(lambda A: isinstance(A, sOrdering),
                         lambda A: A.explicit())
     
-def express(expr : sp.Expr, t=1, explicit=True):
+def express(expr : sp.Expr, t=1, explicit=True) -> sp.Expr:
     return expr.replace(lambda A: isinstance(A, sOrdering),
                         lambda A: A.express(t=t, explicit=explicit))

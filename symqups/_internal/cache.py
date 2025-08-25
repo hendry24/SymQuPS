@@ -1,12 +1,12 @@
 import sympy as sp
 
 class _AutoSortedUniqueList(list):
-    def __init__(self, *args):
+    def __init__(self, *args) -> None:
         if args:
             raise ValueError("Must be empty on initialization.")
         super().__init__(*args)
     
-    def _append(self, item):
+    def _append(self, item) -> None:
         
         if item in self:
             return

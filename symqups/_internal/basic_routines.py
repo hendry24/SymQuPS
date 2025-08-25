@@ -1,7 +1,7 @@
 import sympy as sp
-from typing import Callable, Dict, Union, Sequence
+from typing import Callable, Dict, Union, Sequence, Any
 
-def treat_sub(sub, has_sub):
+def treat_sub(sub, has_sub) -> sp.Symbol:
     """
     Treat the input subscript to always be a 'sympy.Symbol'.
     """
@@ -13,7 +13,9 @@ def treat_sub(sub, has_sub):
         return sub
     return sp.Symbol(sp.latex(sub))
 
-def screen_type(expr : sp.Expr, forbidden_types : type | Sequence[type], name : str):
+def screen_type(expr : sp.Expr, 
+                forbidden_types : type | Sequence[type], 
+                name : str) -> None:
     """
     Raise an error if the input 'expr' to some callable 'name' 
     **is** an object of 'forbidden_type'.
@@ -25,7 +27,9 @@ def screen_type(expr : sp.Expr, forbidden_types : type | Sequence[type], name : 
         msg = f"'{name}' does not accept {forbidden_types}."
         raise TypeError(msg)
     
-def deep_screen_type(expr : sp.Expr, forbidden_types : type | Sequence[type], name : str):
+def deep_screen_type(expr : sp.Expr, 
+                     forbidden_types : type | Sequence[type], 
+                     name : str) -> None:
     """
     Raise an error if the input 'expr' to some callable 'name' 
     **contains** an object of 'forbidden_type'.
@@ -36,7 +40,7 @@ def deep_screen_type(expr : sp.Expr, forbidden_types : type | Sequence[type], na
     if expr.has(*forbidden_types):
         msg = f"'{name} does not accept expressions that contain {forbidden_types}."
 
-def invalid_input(inpt : object, name : str):
+def invalid_input(inpt : object, name : str) -> None:
     """
     Raise an error for invalid 'inpt' to some callable 'name'.
     """
@@ -51,7 +55,7 @@ def operation_routine(expr : sp.Expr,
                        return_if_expr_does_not_have : Dict[Union[type, Sequence[type]], 
                                                            Union[Callable, object]],
                        return_if_expr_is : Dict[Union[type, Sequence[type]], 
-                                                Union[Callable, object]]):
+                                                Union[Callable, object]]) -> Any:
     """
     Routine that is used repeatedly in some functionalities, where the input expression
     is treated differently depending on its top-level algebraic strcuture, or where certain

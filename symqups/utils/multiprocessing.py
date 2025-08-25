@@ -2,6 +2,7 @@ import os
 from multiprocessing import Pool
 import dill
 from functools import partial
+import sympy as sp
 
 from typing import TypedDict, Sequence
 
@@ -43,7 +44,7 @@ MP_CONFIG["min_num_args"] = 2
 # Skip multiprocessing if the number of elements is spall,
 # in which case a single core execution is enough.
 
-def _mp_helper(inpt_lst : Sequence, foo : callable):
+def _mp_helper(inpt_lst : Sequence, foo : callable) -> list[sp.Expr]:
     """
     Apply `foo` to a sequence of inputs, using multiprocessing
     if possible.
@@ -64,7 +65,7 @@ def _mp_helper(inpt_lst : Sequence, foo : callable):
     else:
         return [foo(inpt) for inpt in inpt_lst]
     
-def _pool_helper(inpt_bytes : bytes, foo : callable):
+def _pool_helper(inpt_bytes : bytes, foo : callable) -> bytes:
     """
     The package usage involves `sympy.Function`, which the
     package `pickle`, used by `multiprocessing`, cannot pickle.
