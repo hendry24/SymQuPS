@@ -1,7 +1,7 @@
 import sympy as sp
 from sympy.core.sympify import CantSympify
 
-from .expr import _ReadOnlyExpr
+from .grouping import _ReadOnlyExpr
 from ..objects.base import Base
 
 class CahillGlauberSParameter(CantSympify, _ReadOnlyExpr, Base):

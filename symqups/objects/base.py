@@ -43,17 +43,3 @@ class Base(sp.Symbol):
     
     def define(self):
         return self
-    
-###
-
-# For grouping
-
-class PhaseSpaceObject(sp.Basic):
-                        # complicance with sympy functionalities.
-    pass
-
-class alphaTypePSO(PhaseSpaceObject):
-    pass
-
-class qpTypePSO(PhaseSpaceObject):
-    pass

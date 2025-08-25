@@ -7,7 +7,7 @@ from utils import arithmetic_test
 import sympy as sp
 sMul = deepcopy(sp.Mul)
 
-from symqups.objects.base import alphaTypePSO, qpTypePSO
+from symqups._internal.grouping import alphaType, qpType
 from symqups.objects.scalars import (hbar, mu, Scalar, q, p, t, W, alpha, alphaD,
                                     _Primed, _deprime, _DerivativeSymbol)
 from symqups.objects.operators import (Operator, qOp, pOp, createOp, annihilateOp,
@@ -109,8 +109,8 @@ def test_define_and_qp2a():
         expr = get_random_poly(obj_lst, dice_throw=3)
         expr_def = define(expr)
         expr_qp2a = qp2a(expr)
-        assert not(expr_def.has(alphaTypePSO)) and expr_def.has(qpTypePSO)
-        assert not(expr_qp2a.has(qpTypePSO)) and expr_qp2a.has(alphaTypePSO)
+        assert not(expr_def.has(alphaType)) and expr_def.has(qpType)
+        assert not(expr_qp2a.has(qpType)) and expr_qp2a.has(alphaType)
         assert sp.simplify(define(expr_qp2a) -  expr_def) == 0
         assert sp.simplify(qp2a(expr_def) - expr_qp2a) == 0
 

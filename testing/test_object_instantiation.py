@@ -5,11 +5,12 @@ import sympy as sp
 # TESTED FUNCTIONALITIES
 # ======================
 
-from symqups.objects.base import PhaseSpaceObject, qpTypePSO, alphaTypePSO
+from symqups._internal.cache import sub_cache
+from symqups._internal.grouping import PhaseSpaceObject, qpType, alphaType
+
 from symqups.objects.scalars import (Scalar, t, q, p, alpha, alphaD, StateFunction, W,
                                      _Primed, _DerivativeSymbol)
 from symqups.objects.operators import Operator, qOp, pOp, createOp, annihilateOp, densityOp, rho
-from symqups._internal.cache import sub_cache
 
 ###
 
@@ -30,12 +31,12 @@ class TestObjectInstantiation:
         
         for obj in [q(), p()]:
             assert isinstance(obj, PhaseSpaceObject)
-            assert isinstance(obj, qpTypePSO)
+            assert isinstance(obj, qpType)
             
         for obj in [alpha(), alphaD()]:
             assert obj.is_Atom
             assert isinstance(obj, PhaseSpaceObject)
-            assert isinstance(obj, alphaTypePSO)
+            assert isinstance(obj, alphaType)
             assert r"\alpha" in sp.latex(obj) 
             
     def test_Primed(self):

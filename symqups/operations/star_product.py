@@ -1,7 +1,7 @@
 import sympy as sp
 from pprint import pprint
 
-from ..objects.base import PhaseSpaceObject, qpTypePSO
+from .._internal.grouping import UnBoppable, PhaseSpaceObject, qpType, alphaType
 from ..objects import scalars
 from ..objects.scalars import q, p, alpha, alphaD, _DerivativeSymbol, _Primed, _deprime
 from ..utils.multiprocessing import _mp_helper
@@ -12,7 +12,7 @@ from .. import s
 __all__ = ["Bopp",
            "Star"]
 
-class Bopp(sp.Expr):
+class Bopp(sp.Expr, UnBoppable):
     """
     Bopp shift the input quantity for the calculation of the Moyal star-product. 
 
@@ -65,6 +65,9 @@ class Bopp(sp.Expr):
                 pprint(msg)
                 return super().__new__(cls, expr, left)
             
+        if isinstance(expr, UnBoppable):
+            return super().__new__(cls, expr, left)
+            
         """
         The derivative evaluation attempt in `Bopp` will deal with intermediate
         unevaluated derivative(s) during the ★-product chain in `Star`. Since
@@ -114,7 +117,7 @@ class Bopp(sp.Expr):
 class _CannotBoppFlag(BaseException):
     pass
 
-class Star(sp.Expr):
+class Star(sp.Expr, UnBoppable):
     """
     The s-parameterized star-product `A(q,p) ★ B(q,p) ★ ...` (or the `alpha` equivalent), 
     calculated using the Bopp shift.
@@ -158,10 +161,10 @@ class Star(sp.Expr):
                     unboppable_args.append(arg)
         
         if unboppable_args:
-            msg = "One or more pairs of consecutive inputs cannot be properly "
-            msg += "Bopp-shifted to work with the package. "
-            msg += "In the current version, non-polynomial inputs are unboppable."
-            pprint(msg)
+            # msg = "One or more pairs of consecutive inputs cannot be properly "
+            # msg += "Bopp-shifted to work with the package. "
+            # msg += "In the current version, non-polynomial inputs are unboppable."
+            # pprint(msg)
             return super().__new__(cls, *unboppable_args)
         else:
             return out
@@ -181,15 +184,15 @@ def _star_base(A : sp.Expr, B : sp.Expr) -> sp.Expr:
         (B.has(PhaseSpaceObject))):
         return A*B
 
-    cannot_Bopp_A = not(A.is_polynomial(scalars.Scalar))
-    cannot_Bopp_B = not(B.is_polynomial(scalars.Scalar))
+    cannot_Bopp_A = A.has(UnBoppable) or not(A.is_polynomial(PhaseSpaceObject))
+    cannot_Bopp_B = B.has(UnBoppable) or not(B.is_polynomial(PhaseSpaceObject))
 
     if cannot_Bopp_A and cannot_Bopp_B:
         raise _CannotBoppFlag()
     
-    if A.has(qpTypePSO):
+    if A.has(qpType):
         A = qp2a(A)
-    if B.has(qpTypePSO):
+    if B.has(qpType):
         B = qp2a(B)
     # Bopp-shifting functions of (q,p) results in more terms, so we do this for efficiency
     # also. 

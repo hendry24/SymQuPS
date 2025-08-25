@@ -1,6 +1,7 @@
 import sympy as sp
 
-from .base import Base, qpTypePSO, alphaTypePSO, PhaseSpaceObject
+from .base import Base
+from .._internal.grouping import qpType, alphaType, PhaseSpaceObject, UnBoppable, PrimedPSO
 from .._internal.cache import sub_cache
 from .._internal.basic_routines import treat_sub, invalid_input
 
@@ -40,7 +41,7 @@ class t(Scalar):
 
 ###
 
-class q(Scalar, qpTypePSO):
+class q(Scalar, PhaseSpaceObject, qpType):
     """
     The canonical position operator or first phase-space quadrature.
     
@@ -52,7 +53,7 @@ class q(Scalar, qpTypePSO):
     """
     base = r"q"
     
-class p(Scalar, qpTypePSO):
+class p(Scalar, PhaseSpaceObject, qpType):
     """
     The canonical position operator or first phase-space quadrature.
     
@@ -64,7 +65,7 @@ class p(Scalar, qpTypePSO):
     """
     base = r"p"
     
-class alpha(Scalar, alphaTypePSO):
+class alpha(Scalar, PhaseSpaceObject, alphaType):
     base = r"\alpha"
     is_real = False
     
@@ -77,7 +78,7 @@ class alpha(Scalar, alphaTypePSO):
     def _eval_conjugate(self):
         return self.conjugate()
     
-class alphaD(Scalar, alphaTypePSO):
+class alphaD(Scalar, PhaseSpaceObject, alphaType):
     base = r"\overline{\alpha}"
     is_real = False
     
@@ -92,7 +93,7 @@ class alphaD(Scalar, alphaTypePSO):
         return self.conjugate()
 ###
 
-class _Primed(Base):
+class _Primed(Base, PrimedPSO):
     def _get_symbol_name_and_assumptions(cls, A):
         return r"{%s}'" % sp.latex(A), {"commutative" : False}
     
@@ -115,7 +116,7 @@ def _deprime(expr : sp.Expr):
 
 ###
 
-class _DerivativeSymbol(Base):
+class _DerivativeSymbol(Base, PrimedPSO):
     
     def _get_symbol_name_and_assumptions(cls, primed_phase_space_coordinate):
         return r"\partial_{%s}" % sp.latex(primed_phase_space_coordinate), {"commutative":False}
@@ -133,7 +134,7 @@ class _DerivativeSymbol(Base):
 
 ###
 
-class StateFunction(sp.Expr):
+class StateFunction(sp.Expr, PhaseSpaceObject, UnBoppable):
     """
     The state function object.
     

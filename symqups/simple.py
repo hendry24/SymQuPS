@@ -6,6 +6,12 @@ from . import s
 
 ###
 
+from . import disable_Mul_patch
+disable_Mul_patch()
+del disable_Mul_patch
+
+###
+
 from .objects.scalars import q, p, alpha, alphaD, W
 q = q()
 p = p()

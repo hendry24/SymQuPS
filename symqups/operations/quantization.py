@@ -1,9 +1,9 @@
 import sympy as sp
 
-from ..objects.base import qpTypePSO, alphaTypePSO, PhaseSpaceObject
 from ..objects.scalars import alpha, alphaD
 from ..objects.operators import Operator, annihilateOp, createOp
 
+from .._internal.grouping import qpType, PhaseSpaceObject
 from .._internal.cache import sub_cache
 from .._internal.basic_routines import deep_screen_type, operation_routine
 
@@ -16,7 +16,7 @@ def _prepare_for_quantization(expr : sp.Expr) -> sp.Expr:
     
     deep_screen_type(expr, Operator, "_prepare_for_quantization")
     
-    if expr.has(qpTypePSO):
+    if expr.has(qpType):
         expr = qp2a(expr)
     
     return sp.expand(expr)

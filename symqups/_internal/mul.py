@@ -2,6 +2,8 @@ import sympy as sp
 from typing import Tuple, Sequence
 from functools import cmp_to_key
 
+from .grouping import NotAnOperator
+
 global original_Mul_flatten
 original_Mul_flatten = sp.Mul.flatten
 
@@ -25,8 +27,24 @@ def patched_Mul_flatten(seq : Sequence) -> Tuple[list, list, list]:
     # expressions where Operator appears, since they are the one whose 
     # ordering we care about.
     
-    if all(not(item.has(Operator)) for item in seq):
+    ###
+    
+    # First, we bail from the reordering process in the cases where we 
+    # are clearly not multiplying operators with operators. The first
+    # conditional by itself is not sufficient since we may have 
+    # expressions that has 'Operator' but actually does not represent
+    # 'Operator' objects, such as an unevaluated 'CGTransform'. These
+    # objects are grouped into 'NotAnOperator'. Furthermore,
+    # the user may also use other noncommuting 'Expr's with the package, in
+    # which case the implementation below will be confused because it expects
+    # to get at least one 'sub' value. 
+    if (all(not(item.has(Operator)) for item in seq)
+        or any(item.has(NotAnOperator) for item in seq)
+        or any(not(isinstance(atom, Operator)) for item in seq 
+               for atom in item.atoms() if getattr(atom, "is_commutative") is False)):
         return original_Mul_flatten(seq)
+    
+    ###
     
     c_part, nc_part, order_symbol = original_Mul_flatten(seq)
     # `nc_part`` contains our operators
@@ -39,9 +57,9 @@ def patched_Mul_flatten(seq : Sequence) -> Tuple[list, list, list]:
     # it using Python's built-in 'sorted', by providing a sort key that 
     # checks whether a given entry can go before the previous entry based
     # on 'sub' in them. 
-
+    
     reordered_nc_part = []
-    reorderable_nc = []      
+    reorderable_nc = []
 
     def treat_reorderable_nc() -> None:
     
@@ -67,10 +85,19 @@ def patched_Mul_flatten(seq : Sequence) -> Tuple[list, list, list]:
             # the 'sub's appear in sub_cache. By doing it this way, we try our best to make the 'Operator'
             # ordering obey sympy's canonical ordering rule. This ordering rule is also *consistent*.
             
-            first_A_sub_in_sub_cache = min(sub_cache.index(sub) for sub in A_sub)
-            first_B_sub_in_sub_cache = min(sub_cache.index(sub) for sub in B_sub)
-
-            if first_A_sub_in_sub_cache < first_B_sub_in_sub_cache:
+            A_sub_index_in_sub_cache = [sub_cache.index(sub) for sub in A_sub]
+            B_sub_index_in_sub_cache = [sub_cache.index(sub) for sub in B_sub]
+        
+            # By construction, 'Operator's with 'has_sub=False' is not put into
+            # 'reorderable_nc' and hence would not appear here, so no misleading
+            # "empty 'sub'" from these objects. 
+            #
+            # Furthermore, these two lists must have at least one item. If the
+            # list is empty, then the expression is noncommuting but is not 
+            # the package's Operator. Something must have barged in here... considering
+            # the filter above.
+                        
+            if min(A_sub_index_in_sub_cache) < min(B_sub_index_in_sub_cache):
                 return True
             return False
 

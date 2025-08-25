@@ -4,14 +4,15 @@ import typing
 from . import scalars 
 # Avoid, e.g., "from scalars import hbar" 
 # since we want its value to follow changes at runtime.
-from .base import Base, qpTypePSO, alphaTypePSO
+from .base import Base
+from .._internal.grouping import HilbertSpaceObject, qpType, alphaType
 from .._internal.cache import sub_cache
 from .._internal.basic_routines import treat_sub
 
 # NOTE: 'import .._internal.operator_handling' will result
 # in circular imports. 
 
-class Operator(Base):
+class Operator(Base, HilbertSpaceObject):
     
     base = NotImplemented
     has_sub = True
@@ -45,13 +46,13 @@ class HermitianOp(Operator):
     def dagger(self):
         return self
 
-class qOp(HermitianOp, qpTypePSO):
+class qOp(HermitianOp, qpType):
     base = r"\hat{q}"
     
-class pOp(HermitianOp, qpTypePSO):
+class pOp(HermitianOp, qpType):
     base = r"\hat{p}"
     
-class annihilateOp(Operator, alphaTypePSO):
+class annihilateOp(Operator, alphaType):
     base = r"\hat{a}"
         
     def define(self):
@@ -62,7 +63,7 @@ class annihilateOp(Operator, alphaTypePSO):
     def dagger(self):
         return createOp(sub = self.sub)
     
-class createOp(Operator, alphaTypePSO):
+class createOp(Operator, alphaType):
     base = r"\hat{a}^{\dagger}"
     
     def define(self):

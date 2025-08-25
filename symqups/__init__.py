@@ -6,12 +6,19 @@ del CahillGlauberSParameter
 
 ###
 
-import sympy as sp
-from ._internal.mul import patched_Mul_flatten
+def enable_Mul_patch():
+    import sympy as sp
+    from ._internal.mul import patched_Mul_flatten
 
-sp.Mul.flatten = patched_Mul_flatten
+    sp.Mul.flatten = patched_Mul_flatten
 
-del sp, patched_Mul_flatten
+def disable_Mul_patch():
+    import sympy as sp
+    from ._internal.mul import original_Mul_flatten
+
+    sp.Mul.flatten = original_Mul_flatten
+
+enable_Mul_patch()
 
 ###
 

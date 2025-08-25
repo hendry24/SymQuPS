@@ -2,7 +2,7 @@ import pytest
 import random
 import sympy as sp
 
-from symqups.objects.base import PhaseSpaceObject, qpTypePSO, alphaTypePSO
+from symqups._internal.grouping import PhaseSpaceObject, qpType, alphaType
 from symqups.objects.scalars import q, p,_Primed, _DerivativeSymbol, alpha, alphaD, hbar, mu
 from symqups.objects import scalars
 from symqups.operations.star_product import Bopp, _first_index_and_diff_order, _replace_diff, _star_base, Star
@@ -129,7 +129,7 @@ class TestStarProduct():
                          ]:
             
             res = _star_base(A, B)
-            assert res.has(alphaTypePSO) and not(res.has(qpTypePSO))
+            assert res.has(alphaType) and not(res.has(qpType))
             assert sp.expand(res - out) == 0
         
     def test_star(self):
@@ -139,5 +139,5 @@ class TestStarProduct():
         assert isinstance(Star(scalars.W, scalars.W), Star)
         for n in range(1, 5):
             res = Star(*[self.a]*n)
-            assert res.has(alphaTypePSO) and not(res.has(qpTypePSO))
+            assert res.has(alphaType) and not(res.has(qpType))
             assert sp.expand(res - self.a**n) == 0

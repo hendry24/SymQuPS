@@ -1,6 +1,5 @@
 import pytest
 import sympy as sp
-import random
 
 from symqups.objects.scalars import Scalar, q, p, alpha, alphaD, W, hbar, mu
 from symqups.objects.operators import Operator, qOp, pOp, createOp, annihilateOp

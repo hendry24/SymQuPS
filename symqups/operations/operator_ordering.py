@@ -5,6 +5,7 @@ import warnings
 
 from .. import s as ClahillGlauberS
 from ..objects.scalars import q, p, alpha, alphaD
+from .._internal.grouping import HilbertSpaceObject
 from .._internal.cache import sub_cache
 from ..objects.operators import Operator, annihilateOp, createOp
 from .._internal.basic_routines import operation_routine
@@ -17,7 +18,7 @@ from .._internal.operator_handling import (separate_operator,
 from ..utils.multiprocessing import _mp_helper
 from ..utils.algebra import qp2a
 
-class sOrdering(sp.Expr):
+class sOrdering(sp.Expr, HilbertSpaceObject):
     
     def __new__(cls, expr : sp.Expr, s : sp.Number | None = None, lazy : bool = False) -> sp.Expr:
         expr = qp2a(sp.sympify(expr)) 
@@ -111,6 +112,7 @@ class sOrdering(sp.Expr):
                         out *= make(ad**m * a**n)
                     
                 else:
+                    
                     arg_by_polynomiality = separate_term_by_polynomiality(arg,
                                                                           (Operator,))
                     collect_polynomial = sp.Number(1)
@@ -130,7 +132,7 @@ class sOrdering(sp.Expr):
                             sp.Pow(*collect_ad[sub]) * sp.Pow(*collect_a[sub])
                         
                     out *= make(collect_polynomial_normal_ordered * collect_nonpolynomial)
-                    
+                        
             return out
                                         
         return operation_routine(expr,

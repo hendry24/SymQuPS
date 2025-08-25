@@ -4,7 +4,7 @@ import sympy as sp
 from symqups import s
 from symqups.objects.scalars import q, p, alpha, alphaD, W
 from symqups.objects.operators import Operator, qOp, pOp, annihilateOp, createOp
-from symqups.utils.algebra import get_random_poly, qp2a
+from symqups.utils.algebra import qp2a
 from symqups.operations.operator_ordering import sOrdering
 
 from symqups.operations.quantization import s_quantize
