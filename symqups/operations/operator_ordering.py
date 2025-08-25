@@ -3,7 +3,7 @@ from itertools import permutations
 from typing import Tuple
 import warnings
 
-from .. import s as ClahillGlauberS
+from .. import s as CahillGlauberS
 from ..objects.scalars import q, p, alpha, alphaD
 from .._internal.grouping import HilbertSpaceObject
 from .._internal.cache import sub_cache
@@ -41,7 +41,7 @@ class sOrdering(sp.Expr, HilbertSpaceObject):
         
         s = sp.sympify(s)
         if s is None:
-            s = ClahillGlauberS.val
+            s = CahillGlauberS.val
         
         def make(A : sp.Expr) -> sOrdering:
             return super(sOrdering, cls).__new__(cls, A, s)
