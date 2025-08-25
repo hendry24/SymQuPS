@@ -6,11 +6,8 @@ import sympy as sp
 
 from typing import TypedDict, Sequence
 
-############################################################
-
 __all__ = ["MP_CONFIG"]
 
-############################################################
 global _mp_is_running
 _mp_is_running = False
 

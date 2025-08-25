@@ -2,10 +2,14 @@ import sympy as sp
 import sympy.physics.quantum as spq
 from functools import cached_property
 
-# from ..transforms.wigner_transform import WignerTransform
-from ..objects import scalars
-from ..objects.operators import densityOp, Dagger
-from ..utils.algebra import collect_by_derivative, derivative_not_in_num
+from ._internal.grouping import _AddOnlyExpr
+
+from .objects import scalars
+from .objects.operators import rho
+
+from .manipulations import dagger
+from .cg import CG_transform
+from .utils import derivative_not_in_num, collect_by_derivative
 
 __all__ = ["LindbladMasterEquation"]
     
@@ -32,7 +36,7 @@ class _LindbladDissipator(_AddOnlyExpr):
     def operator_2(self):
         return self.args[2]
     
-    def __str__(self):
+    def _latex(self, printer):
         if self.operator_1 == self.operator_2:
             op_str = sp.latex(self.operator_1)
         else:
@@ -41,18 +45,11 @@ class _LindbladDissipator(_AddOnlyExpr):
         return r"{{%s}\mathcal{D}\left({%s}\right)\left[\rho\right]}" \
                 % (sp.latex(self.rate), op_str)
     
-    def __repr__(self):
-        return str(self)
-    
-    def _latex(self, printer):
-        return str(self)
-    
     def expand(self):
-        rho = densityOp()
         P = self.operator_1
         
         Q = self.operator_2
-        Qd = Dagger(Q)
+        Qd = dagger(Q)
         
         out = (2*P*rho*Qd - rho*Qd*P - Qd*P*rho)
         rate_mul = self.rate / 2
@@ -100,31 +97,25 @@ class LindbladMasterEquation(sp.Basic):
     
     @property
     def lhs(self):
-        return sp.Derivative(densityOp(), scalars.t())
+        return sp.Derivative(rho, scalars.t())
 
     @property
     def rhs(self):
-        out = -sp.I/scalars.hbar * spq.Commutator(self.H, densityOp())
+        out = -sp.I/scalars.hbar * spq.Commutator(self.H, rho)
         for dissip in self.dissipators:
             out += dissip
         return out
     
     @cached_property
-    def wigner_transform(self):
-        lhs = sp.Derivative(scalars.W(), scalars.t())
-        rhs = WignerTransform(self.rhs.doit().expand())
-                                            # By calling expand, we effectively call .expand of _LindbladDissipator
+    def CG_transform(self):
+        lhs = sp.Derivative(scalars.W, scalars.t())
+        rhs = CG_transform(self.rhs.doit().expand())
+                                # By calling expand, we effectively call .expand of _LindbladDissipator
 
             # Collect first to reduce the number of terms. 
         if self.neat_display:
             rhs = derivative_not_in_num(collect_by_derivative(rhs, lhs.args[0]))
         return sp.Equality(lhs, rhs)
     
-    def __str__(self):
-        return sp.latex(sp.Equality(self.lhs, self.rhs))
-    
-    def __repr__(self):
-        return str(self)
-    
     def _latex(self, printer):
-        return str(self)
+        return sp.latex(sp.Equality(self.lhs, self.rhs))

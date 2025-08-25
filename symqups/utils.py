@@ -1,12 +1,12 @@
 import sympy as sp
-import random
 from sympy.core.function import UndefinedFunction
+import random
 
-from ..objects.base import Base
-from .._internal.cache import sub_cache
-from ..objects import scalars
-from ..objects.operators import qOp, pOp, annihilateOp, createOp, Operator
-from .multiprocessing import _mp_helper
+from ._internal.multiprocessing import _mp_helper
+
+from .objects import scalars
+
+###
 
 def get_random_poly(objects, coeffs=[1], max_pow=3, dice_throw=10) -> sp.Expr:
     """
@@ -15,44 +15,8 @@ def get_random_poly(objects, coeffs=[1], max_pow=3, dice_throw=10) -> sp.Expr:
     return sp.Add(*[sp.Mul(*[random.choice(coeffs)*random.choice(objects)**random.randint(0, max_pow)
                              for _ in range(dice_throw)])
                     for _ in range(dice_throw)])
-
-def define(expr : sp.Expr) -> sp.Expr:
-    """
-    Given a composite expression `expr`, call the `.define` method
-    where applicable.
-    """
-    expr = sp.sympify(expr)
-    expr_defined = expr.subs({A: A.define() for A in expr.atoms(Base)})
-    return sp.expand(expr_defined)
-
-def qp2a(expr : sp.Expr) -> sp.Expr:
-    def get_subs_expr(A : scalars.Scalar | Operator):
-        if isinstance(A, scalars.Scalar):
-            a, ad = scalars.alpha(A.sub), scalars.alphaD(A.sub)
-        else:
-            a, ad = annihilateOp(A.sub), createOp(A.sub)
-            
-        mu = scalars.mu
-        mu_conj = sp.conjugate(mu)
-        hbar = scalars.hbar
-        
-        if isinstance(A, (scalars.q, qOp)):
-            out = mu*a + mu_conj*ad
-        else:
-            out = sp.I*mu*mu_conj*(mu*ad - mu_conj*a)
-            
-        out *= sp.sqrt(2*hbar) / (mu**2 + mu_conj**2)
-        
-        return out
-        
-    sub_dict = {}
-    for sub in sub_cache:
-        sub_dict[scalars.q(sub)] = get_subs_expr(scalars.q(sub))
-        sub_dict[scalars.p(sub)] = get_subs_expr(scalars.p(sub))
-        sub_dict[qOp(sub)] = get_subs_expr(qOp(sub))
-        sub_dict[pOp(sub)] = get_subs_expr(pOp(sub))
-        
-    return sp.expand(expr.subs(sub_dict))
+    
+###
 
 def derivative_not_in_num(A : sp.Expr) -> sp.Expr:
     """

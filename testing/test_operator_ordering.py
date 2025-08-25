@@ -4,7 +4,7 @@ import sympy as sp
 
 from symqups.objects.scalars import Scalar
 from symqups.objects.operators import annihilateOp, createOp
-from symqups.operations.operator_ordering import sOrdering
+from symqups.ordering import sOrdering
 
 rand_N = random.randint(1, 20)
 

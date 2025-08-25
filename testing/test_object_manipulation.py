@@ -12,8 +12,8 @@ from symqups.objects.scalars import (hbar, mu, Scalar, q, p, t, W, alpha, alphaD
                                     _Primed, _deprime, _DerivativeSymbol)
 from symqups.objects.operators import (Operator, qOp, pOp, createOp, annihilateOp,
                                         densityOp, rho)
-from symqups.operations.dagger import dagger
-from symqups.utils.algebra import get_random_poly, define, qp2a
+from symqups.manipulations import dagger, define, qp2a
+from symqups.utils import get_random_poly
     
 @pytest.mark.fast
 def test_core_arithmetic():

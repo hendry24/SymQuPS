@@ -1,16 +1,17 @@
 import sympy as sp
 from pprint import pprint
 
-from .._internal.grouping import UnBoppable, PhaseSpaceObject, qpType, alphaType
-from ..objects import scalars
-from ..objects.scalars import q, p, alpha, alphaD, _DerivativeSymbol, _Primed, _deprime
-from ..utils.multiprocessing import _mp_helper
-from .._internal.basic_routines import invalid_input
-from ..utils.algebra import qp2a
-from .. import s
+from ._internal.grouping import UnBoppable, PhaseSpaceObject, qpType
+from ._internal.multiprocessing import _mp_helper
+from ._internal.basic_routines import invalid_input
 
-__all__ = ["Bopp",
-           "Star"]
+from .objects import scalars
+from .objects.scalars import q, p, alpha, alphaD, _DerivativeSymbol, _Primed, _deprime
+
+from .manipulations import qp2a
+from . import s
+
+###
 
 class Bopp(sp.Expr, UnBoppable):
     """

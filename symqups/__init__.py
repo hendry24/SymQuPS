@@ -8,17 +8,21 @@ del CahillGlauberSParameter
 
 def enable_Mul_patch():
     import sympy as sp
-    from ._internal.mul import patched_Mul_flatten
+    from ._internal.operator_handling import patched_Mul_flatten
 
     sp.Mul.flatten = patched_Mul_flatten
 
 def disable_Mul_patch():
     import sympy as sp
-    from ._internal.mul import original_Mul_flatten
+    from ._internal.operator_handling import original_Mul_flatten
 
     sp.Mul.flatten = original_Mul_flatten
 
 enable_Mul_patch()
+
+###
+
+from ._internal.multiprocessing import MP_CONFIG
 
 ###
 

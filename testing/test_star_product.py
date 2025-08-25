@@ -5,8 +5,8 @@ import sympy as sp
 from symqups._internal.grouping import PhaseSpaceObject, qpType, alphaType
 from symqups.objects.scalars import q, p,_Primed, _DerivativeSymbol, alpha, alphaD, hbar, mu
 from symqups.objects import scalars
-from symqups.operations.star_product import Bopp, _first_index_and_diff_order, _replace_diff, _star_base, Star
-from symqups.utils.algebra import qp2a
+from symqups.star_product import Bopp, _first_index_and_diff_order, _replace_diff, _star_base, Star
+from symqups.manipulations import qp2a
 from symqups import s
 
 @pytest.mark.fast

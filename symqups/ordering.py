@@ -3,20 +3,25 @@ from itertools import permutations
 from typing import Tuple
 import warnings
 
-from .. import s as CahillGlauberS
-from ..objects.scalars import q, p, alpha, alphaD
-from .._internal.grouping import HilbertSpaceObject
-from .._internal.cache import sub_cache
-from ..objects.operators import Operator, annihilateOp, createOp
-from .._internal.basic_routines import operation_routine
-from .._internal.operator_handling import (separate_operator,
+from ._internal.grouping import HilbertSpaceObject
+from ._internal.cache import sub_cache
+from ._internal.multiprocessing import _mp_helper
+from ._internal.basic_routines import operation_routine
+from ._internal.operator_handling import (separate_operator,
                                            is_universal,
                                            get_oper_sub,
                                             collect_alpha_type_oper_from_monomial_by_sub,
                                             separate_term_by_polynomiality,
                                             separate_term_oper_by_sub)
-from ..utils.multiprocessing import _mp_helper
-from ..utils.algebra import qp2a
+
+from .objects.scalars import q, p, alpha, alphaD
+from .objects.operators import Operator, annihilateOp, createOp
+
+from .manipulations import qp2a
+
+from . import s as CahillGlauberS
+
+###
 
 class sOrdering(sp.Expr, HilbertSpaceObject):
     
@@ -210,7 +215,7 @@ class sOrdering(sp.Expr, HilbertSpaceObject):
                 yy = sOrdering(ad**(m-k) * a**(n-k), s=t)
                 if (explicit 
                     and isinstance(yy, sOrdering)
-                    and self.args[1] in (-1, 0, 1)):
+                    and t in (-1, 0, 1)):
                     yy = yy.explicit()
                     
                 out += (sp.factorial(k) * sp.binomial(m,k) * sp.binomial(n,k)
@@ -227,11 +232,3 @@ def antinormal_order(expr : sp.Expr) -> sp.Expr:
 
 def weyl_order(expr : sp.Expr) -> sp.Expr:
     return sOrdering(expr, s=0).explicit()
-
-def explicit(expr: sp.Expr) -> sp.Expr:
-    return expr.replace(lambda A: isinstance(A, sOrdering),
-                        lambda A: A.explicit())
-    
-def express(expr : sp.Expr, t=1, explicit=True) -> sp.Expr:
-    return expr.replace(lambda A: isinstance(A, sOrdering),
-                        lambda A: A.express(t=t, explicit=explicit))

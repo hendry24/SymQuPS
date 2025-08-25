@@ -32,7 +32,8 @@ del annihilateOp, createOp
 
 ###
 
-from .operations.quantization import naive_quantize, s_quantize
-from .operations.star_product import Bopp, Star
-from .utils.multiprocessing import MP_CONFIG
-from .utils.algebra import define, qp2a, collect_by_derivative
+from .quantization import naive_quantize, s_quantize
+from .star_product import Bopp, Star
+from ._internal.multiprocessing import MP_CONFIG
+from .manipulations import define, qp2a
+from .utils import collect_by_derivative

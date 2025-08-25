@@ -4,10 +4,10 @@ import sympy as sp
 from symqups import s
 from symqups.objects.scalars import q, p, alpha, alphaD, W
 from symqups.objects.operators import Operator, qOp, pOp, annihilateOp, createOp
-from symqups.utils.algebra import qp2a
-from symqups.operations.operator_ordering import sOrdering
+from symqups.manipulations import qp2a
+from symqups.ordering import sOrdering
 
-from symqups.operations.quantization import s_quantize
+from symqups.quantization import s_quantize
 
 @pytest.mark.fast
 def test_s_quantize():
