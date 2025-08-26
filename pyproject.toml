@@ -44,3 +44,6 @@ classifiers = [
 Repository = "https://github.com/hendry24/SymQuPS"
 Issues = "https://github.com/hendry24/SymQuPS/issues"
 Tutorial = "https://github.com/hendry24/SymQuPS/blob/main/tutorial.ipynb"
+
+[tool.setuptools.package-data]
+mypackage = ["py.typed"]

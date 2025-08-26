@@ -1,5 +1,6 @@
 import sympy as sp
 
+from .. import s as CahillGlauberS
 from .base import Base
 from .._internal.grouping import (qpType, alphaType, PhaseSpaceVariable, 
                                   PhaseSpaceObject, UnBoppable, PrimedPSO)
@@ -110,10 +111,6 @@ class _Primed(Base, PrimedPSO):
     @property
     def base(self):
         return self._custom_args[0]
-    
-def _deprime(expr : sp.Expr):
-    subs_dict = {X : X.base for X in expr.atoms(_Primed)}
-    return expr.subs(subs_dict)
 
 ###
 
@@ -122,7 +119,7 @@ class _DerivativeSymbol(Base, PrimedPSO):
     def _get_symbol_name_and_assumptions(cls, primed_phase_space_coordinate):
         return r"\partial_{%s}" % sp.latex(primed_phase_space_coordinate), {"commutative":False}
     
-    def __new__(cls, primed_phase_space_coordinate):
+    def __new__(cls, primed_phase_space_coordinate : _Primed):
         if not(isinstance(primed_phase_space_coordinate, _Primed)):
             raise ValueError(r"'_DifferentialSymbol' expects '_Primed', but got '%s' instead" % \
                 type(primed_phase_space_coordinate))
@@ -167,7 +164,15 @@ class StateFunction(sp.Expr, PhaseSpaceObject, UnBoppable):
     ###
     
     def _latex(self, printer):
-        return r"W_s"
+        match CahillGlauberS.val:
+            case -1:
+                return r"Q"
+            case 0:
+                return r"W"
+            case 1:
+                return r"P"
+            case default:
+                return r"W_{s=%s}" % sp.latex(CahillGlauberS.val)
     
 global W
 W = StateFunction(t())

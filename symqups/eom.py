@@ -45,7 +45,7 @@ class _LindbladDissipator(_AddOnlyExpr):
         return r"{{%s}\mathcal{D}\left({%s}\right)\left[\rho\right]}" \
                 % (sp.latex(self.rate), op_str)
     
-    def expand(self):
+    def expand(self, **kwargs):
         P = self.operator_1
         
         Q = self.operator_2
@@ -54,7 +54,7 @@ class _LindbladDissipator(_AddOnlyExpr):
         out = (2*P*rho*Qd - rho*Qd*P - Qd*P*rho)
         rate_mul = self.rate / 2
         with sp.evaluate(False): # force pretty printing
-            out =  rate_mul * out
+            out = rate_mul * out
         return out
     
 class LindbladMasterEquation(sp.Basic):

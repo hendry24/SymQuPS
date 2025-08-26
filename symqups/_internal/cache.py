@@ -1,6 +1,6 @@
 import sympy as sp
 
-class _AutoSortedUniqueList(list):
+class AutoSortedUniqueList(list):
     def __init__(self, *args) -> None:
         if args:
             raise ValueError("Must be empty on initialization.")
@@ -33,4 +33,4 @@ class _AutoSortedUniqueList(list):
         raise NotImplementedError
           
 global sub_cache
-sub_cache = _AutoSortedUniqueList()
+sub_cache = AutoSortedUniqueList()

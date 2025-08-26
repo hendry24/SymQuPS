@@ -5,7 +5,7 @@ import warnings
 
 from ._internal.grouping import HilbertSpaceObject
 from ._internal.cache import sub_cache
-from ._internal.multiprocessing import _mp_helper
+from ._internal.multiprocessing import mp_helper
 from ._internal.basic_routines import operation_routine
 from ._internal.operator_handling import (separate_operator,
                                            is_universal,
@@ -54,7 +54,7 @@ class sOrdering(sp.Expr, HilbertSpaceObject):
                     # inside another function. 
 
         def treat_add(A : sp.Expr) -> sp.Expr:
-            return sp.Add(*_mp_helper(A.args, sOrdering))
+            return sp.Add(*mp_helper(A.args, sOrdering))
                     
         def treat_pow(A : sp.Expr) -> sp.Expr:
             if A.is_polynomial(Operator):

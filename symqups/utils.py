@@ -2,7 +2,7 @@ import sympy as sp
 from sympy.core.function import UndefinedFunction
 import random
 
-from ._internal.multiprocessing import _mp_helper
+from ._internal.multiprocessing import mp_helper
 
 from .objects import scalars
 
@@ -27,7 +27,7 @@ def derivative_not_in_num(A : sp.Expr) -> sp.Expr:
     A = sp.sympify(A)
     
     if isinstance(A, sp.Add):
-        return sp.Add(*_mp_helper(A.args, derivative_not_in_num), evaluate=False)
+        return sp.Add(*mp_helper(A.args, derivative_not_in_num), evaluate=False)
     
     der_lst = list(A.find(sp.Derivative))
     if not(der_lst):

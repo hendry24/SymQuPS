@@ -285,7 +285,9 @@ def patched_Mul_flatten(seq : Sequence) -> Tuple[list, list, list]:
     # which case the implementation below will be confused because it expects
     # to get at least one 'sub' value. 
     if (all(not(item.has(Operator)) for item in seq)
-        or any(item.has(NotAnOperator) for item in seq)
+        # or any(item.has(NotAnOperator) for item in seq) 
+                # NOTE: Currently, 'NotAnOperator' is not implemented in the package, 
+                # but we shall keep this here, commented, just in case.
         or any(not(isinstance(atom, Operator)) for item in seq 
                for atom in item.atoms() if getattr(atom, "is_commutative") is False)):
         return original_Mul_flatten(seq)
@@ -294,6 +296,9 @@ def patched_Mul_flatten(seq : Sequence) -> Tuple[list, list, list]:
     
     c_part, nc_part, order_symbol = original_Mul_flatten(seq)
     # `nc_part`` contains our operators
+    
+    if not(nc_part):
+        return c_part, nc_part, order_symbol
     
     # A universal Operator expression
     # is indicated by having at least one Operator with `has_sub=False`, 

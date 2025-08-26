@@ -2,13 +2,13 @@ import sympy as sp
 from pprint import pprint
 
 from ._internal.grouping import UnBoppable, PhaseSpaceObject, qpType
-from ._internal.multiprocessing import _mp_helper
+from ._internal.multiprocessing import mp_helper
 from ._internal.basic_routines import invalid_input
 
 from .objects import scalars
-from .objects.scalars import q, p, alpha, alphaD, _DerivativeSymbol, _Primed, _deprime
+from .objects.scalars import q, p, alpha, alphaD, _DerivativeSymbol, _Primed
 
-from .manipulations import qp2a
+from .manipulations import qp2a, _deprime
 from . import s
 
 ###
@@ -221,7 +221,7 @@ def _star_base(A : sp.Expr, B : sp.Expr) -> sp.Expr:
     else:
         X_args = [X]
     
-    out = sp.Add(*_mp_helper(X_args, _replace_diff))
+    out = sp.Add(*mp_helper(X_args, _replace_diff))
                 
     return _deprime(out).doit().expand()
 

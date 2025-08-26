@@ -9,11 +9,17 @@ sMul = deepcopy(sp.Mul)
 
 from symqups._internal.grouping import alphaType, qpType
 from symqups.objects.scalars import (hbar, mu, Scalar, q, p, t, W, alpha, alphaD,
-                                    _Primed, _deprime, _DerivativeSymbol)
+                                    _Primed, _DerivativeSymbol)
 from symqups.objects.operators import (Operator, qOp, pOp, createOp, annihilateOp,
                                         densityOp, rho)
-from symqups.manipulations import dagger, define, qp2a
 from symqups.utils import get_random_poly
+
+# TESTED FUNCTIONALITIES
+########################
+
+from symqups.manipulations import _deprime, dagger, define, qp2a, normal_ordered_equivalent
+
+###
     
 @pytest.mark.fast
 def test_core_arithmetic():
@@ -131,3 +137,20 @@ def test_dagger():
                                 coeffs = list(range(10)) + sp.symbols([]),
                                 dice_throw = 3)
     assert (dagger(dagger(rand_poly)) - rand_poly).expand() == 0
+    
+def test_normal_ordered_equivalent():
+    aop = [annihilateOp(i) for i in range(3)]
+    adop = [createOp(i) for i in range(3)]
+    x = sp.Symbol("x")
+    
+    assert normal_ordered_equivalent(1) == 1
+    assert normal_ordered_equivalent(x) == x
+    assert normal_ordered_equivalent(adop[0]) == adop[0]
+    assert normal_ordered_equivalent(rho) == rho
+    
+    assert normal_ordered_equivalent(adop[0]*aop[0]) == adop[0]*aop[0]
+    assert normal_ordered_equivalent(aop[0]*adop[0]) == 1 + adop[0]*aop[0]
+    
+    assert (sp.simplify(sp.expand(normal_ordered_equivalent(aop[0]*adop[0]*aop[1]*adop[1])) 
+             - sp.expand((1+adop[0]*aop[0])*(1+adop[1]*aop[1])))
+            == 0)

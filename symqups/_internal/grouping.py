@@ -68,6 +68,12 @@ class NotAnOperator(ObjectGroup):
     """
     pass
 
+class NotAScalar(ObjectGroup):
+    """
+    This object contains 'Scalar', but is not one. 
+    """
+    pass
+
 ###
 
 class _AddOnlyExpr(sp.Expr):

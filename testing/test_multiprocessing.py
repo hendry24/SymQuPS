@@ -3,13 +3,13 @@ import sympy as sp
 
 from symqups.objects.scalars import Scalar, W
 from symqups.objects.operators import Operator
-from symqups._internal.multiprocessing import _mp_helper, MP_CONFIG
+from symqups._internal.multiprocessing import mp_helper, MP_CONFIG
 
 def mp_helper_foo(x):
         return x+2
 
 @pytest.mark.fast
-def test_mp_helper():
+def testmp_helper():
     inpt = [1, sp.Symbol("x"), Scalar(),
             Operator(), W]
     
@@ -19,7 +19,7 @@ def test_mp_helper():
 
     for enable in [True, False]:
         MP_CONFIG["enable"] = enable
-        assert (_mp_helper(inpt, mp_helper_foo) 
+        assert (mp_helper(inpt, mp_helper_foo) 
                 == list(map(mp_helper_foo, inpt)))
     
     MP_CONFIG["enable"] = enable_default

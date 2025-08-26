@@ -6,7 +6,7 @@ import sympy as sp
 # ======================
 
 from symqups._internal.cache import sub_cache
-from symqups._internal.grouping import PhaseSpaceObject, qpType, alphaType
+from symqups._internal.grouping import PhaseSpaceVariable, qpType, alphaType
 
 from symqups.objects.scalars import (Scalar, t, q, p, alpha, alphaD, StateFunction, W,
                                      _Primed, _DerivativeSymbol)
@@ -30,32 +30,15 @@ class TestObjectInstantiation:
             assert obj.is_Atom
         
         for obj in [q(), p()]:
-            assert isinstance(obj, PhaseSpaceObject)
+            assert isinstance(obj, PhaseSpaceVariable)
             assert isinstance(obj, qpType)
             
         for obj in [alpha(), alphaD()]:
             assert obj.is_Atom
-            assert isinstance(obj, PhaseSpaceObject)
+            assert isinstance(obj, PhaseSpaceVariable)
             assert isinstance(obj, alphaType)
             assert r"\alpha" in sp.latex(obj) 
-            
-    def test_Primed(self):
-        assert not(isinstance(_Primed(Scalar()), _Primed))
-        for obj in [alpha(), alphaD(), q(), p()]:
-            assert isinstance(_Primed(obj), _Primed)
-            assert _Primed(obj).base == obj
-        assert (_Primed(2*alpha()*sp.Symbol("x"))
-                == 2*sp.Symbol("x")*_Primed(alpha()))
-            
-    def test_DerivativeSymbol(self):
-        try:
-            _DerivativeSymbol(alpha())
-            raise RuntimeError("Test failed.")
-        except:
-            pass
-        
-        assert _DerivativeSymbol(_Primed(alpha())).diff_var == _Primed(alpha())
-        
+
     def test_W(self):
         
         sub_cache.clear()
@@ -68,12 +51,37 @@ class TestObjectInstantiation:
         
         assert isinstance(W, StateFunction)
         assert isinstance(W, sp.Expr)
+        assert not(isinstance(W, PhaseSpaceVariable))
         assert ("alpha" in sp.latex(W.args)
                 and "q_" not in sp.latex(W.args)
                 and "p_" not in sp.latex(W.args))
                 
         q(r"newly_added_sub")
         assert "newly_added_sub" in sp.latex(W.args)
+        
+    def test_Primed(self):
+        assert not(isinstance(_Primed(Scalar()), _Primed))
+        for obj in [alpha(), alphaD(), q(), p()]:
+            assert isinstance(_Primed(obj), _Primed)
+            assert _Primed(obj).base == obj
+        assert (_Primed(2*alpha()*sp.Symbol("x"))
+                == 2*sp.Symbol("x")*_Primed(alpha()))
+        
+        assert not(isinstance(_Primed(W), _Primed))
+        for arg in _Primed(W).args:
+            if arg == t():
+                continue
+            if not(isinstance(arg, _Primed)):
+                raise TypeError("_Primed(W) phase space variables must be _Primed.")
+            
+    def test_DerivativeSymbol(self):
+        try:
+            _DerivativeSymbol(alpha())
+            raise RuntimeError("Test failed.")
+        except:
+            pass
+        
+        assert _DerivativeSymbol(_Primed(alpha())).diff_var == _Primed(alpha())
         
     def test_Operator(self):
         for sub in [None, "1", 1, sp.Number(1), sp.Symbol("1")]:
