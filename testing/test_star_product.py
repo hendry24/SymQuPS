@@ -63,6 +63,7 @@ class TestStarProduct():
         assert not(Bopp(1).has(_DerivativeSymbol, PhaseSpaceObject))
         assert not(Bopp(self.x).has(_DerivativeSymbol, PhaseSpaceObject))
         
+        assert isinstance(Bopp(scalars.W), Bopp)
         assert isinstance(Bopp(sp.Derivative(scalars.W, self.a)), Bopp)
                     
     def test_fido(self):

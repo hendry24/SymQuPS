@@ -13,11 +13,12 @@ from symqups.objects.scalars import (hbar, mu, Scalar, q, p, t, W, alpha, alphaD
 from symqups.objects.operators import (Operator, qOp, pOp, createOp, annihilateOp,
                                         densityOp, rho)
 from symqups.utils import get_random_poly
+from symqups.ordering import sOrdering
 
 # TESTED FUNCTIONALITIES
 ########################
 
-from symqups.manipulations import _deprime, dagger, define, qp2a, normal_ordered_equivalent
+from symqups.manipulations import _deprime, dagger, define, qp2a, normal_ordered_equivalent, explicit, express
 
 ###
     
@@ -36,7 +37,7 @@ def test_compound_expressions_with_objects():
         assert dill.loads(dill.dumps(sp.Function("F")(A))) == sp.Function("F")(A)
         assert A in sp.Function("F")(A).free_symbols
 
-@pytest.mark.fast
+@pytest.mark.full
 def test_multiplication_reordering():
     a_op_1 = annihilateOp(1)
     ad_op_1 = createOp(1)
@@ -63,7 +64,7 @@ def test_multiplication_reordering():
     assert a_p_1*da_2 != da_2*a_p_1
     assert a_p_2*da_1 != da_1*a_p_2
     
-@pytest.mark.fast
+@pytest.mark.full
 def test_deprime():
     rand_poly = get_random_poly([q(), p(), alpha(), alphaD(), Scalar()],
                                 [1, sp.Symbol("x"), sp.Symbol("y"), sp.exp(sp.Symbol("z"))],
@@ -138,6 +139,7 @@ def test_dagger():
                                 dice_throw = 3)
     assert (dagger(dagger(rand_poly)) - rand_poly).expand() == 0
     
+@pytest.mark.full
 def test_normal_ordered_equivalent():
     aop = [annihilateOp(i) for i in range(3)]
     adop = [createOp(i) for i in range(3)]
@@ -154,3 +156,26 @@ def test_normal_ordered_equivalent():
     assert (sp.simplify(sp.expand(normal_ordered_equivalent(aop[0]*adop[0]*aop[1]*adop[1])) 
              - sp.expand((1+adop[0]*aop[0])*(1+adop[1]*aop[1])))
             == 0)
+    
+@pytest.mark.full
+def test_explicit_and_express():
+    a = annihilateOp()
+    ad = createOp()
+
+    expr = 2*sOrdering(a*ad, s=1)+3
+    assert not(explicit(expr).has(sOrdering))
+    
+    expr = 2*sOrdering(a*ad, s=0.5)+3
+    assert explicit(expr).has(sOrdering)
+    
+    expr = 2*sOrdering(sp.exp(a*ad), s=1)**2+3
+    assert explicit(expr) == 2*sOrdering(sp.exp(a*ad), s=1)**2+3
+
+    ###
+    
+    expr = 2*sOrdering(a*ad, s = 1)
+    assert express(expr, t = 0.2).has(sOrdering)
+
+    expr = 2*sOrdering(a*ad, s = 1)
+    assert not(express(expr, t = -1).has(sOrdering))
+    assert express(expr, t = -1, explicit=False).has(sOrdering)

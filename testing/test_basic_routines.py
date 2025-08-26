@@ -9,7 +9,8 @@ from symqups._internal.basic_routines import (
     screen_type,
     deep_screen_type,
     invalid_input,
-    operation_routine
+    operation_routine,
+    only_allow_leaves_in_branches
 )
 
 @pytest.mark.fast
@@ -85,3 +86,22 @@ class TestBasicRoutines:
                             "mul or add"]
         for inpt, e_out in zip(inputs[:1], expected_outputs[:1]):
             assert _foo(inpt) == e_out
+            
+    def test_only_allow_leaves_in_branches(self):
+        from symqups.objects.scalars import q, p
+        q = q()
+        p = p()
+        only_allow_leaves_in_branches(q,"",p.func,sp.Pow)
+        only_allow_leaves_in_branches(q**2,"",q.func,sp.Pow)
+        try:
+            only_allow_leaves_in_branches(q,"",q.func,sp.Pow)
+            raise RuntimeError("Test failed.")
+        except:
+            pass
+        
+        only_allow_leaves_in_branches(q*p+2*p,"",(q.func,p.func),sp.Mul)
+        try:
+            only_allow_leaves_in_branches(q**2+q*p**2, "", (q.func,p.func), sp.Mul)
+            raise RuntimeError("Test failed.")
+        except:
+            pass
