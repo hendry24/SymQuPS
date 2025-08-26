@@ -40,6 +40,3 @@ class Base(sp.Symbol):
         # .assumptions0 is needed by sympy.Symbol
         # See https://docs.python.org/3/library/pickle.html
         return self.__class__, self._custom_args, self.assumptions0
-    
-    def define(self):
-        return self

@@ -35,5 +35,5 @@ del annihilateOp, createOp
 from .quantization import naive_quantize, s_quantize
 from .star_product import Bopp, Star
 from ._internal.multiprocessing import MP_CONFIG
-from .manipulations import define, qp2a
+from .manipulations import alpha2qp, qp2alpha
 from .utils import collect_by_derivative

@@ -5,7 +5,7 @@ from .objects.operators import Operator
 from ._internal.grouping import qpType, PhaseSpaceObject
 from ._internal.basic_routines import deep_screen_type, operation_routine
 
-from .manipulations import qp2a, sc2op
+from .manipulations import qp2alpha, sc2op
 
 from .ordering import sOrdering
 
@@ -15,7 +15,7 @@ def _prepare_for_quantization(expr : sp.Expr) -> sp.Expr:
     deep_screen_type(expr, Operator, "_prepare_for_quantization")
     
     if expr.has(qpType):
-        expr = qp2a(expr)
+        expr = qp2alpha(expr)
     
     return sp.expand(expr)
 

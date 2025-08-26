@@ -1,8 +1,10 @@
-from ._internal.s_parameter import CahillGlauberSParameter
+from ._internal.parameters import CahillGlauberSParameter, ReducedPlanckConstant, AlphaScalingParameter
 
 s = CahillGlauberSParameter()
+hbar = ReducedPlanckConstant()
+zeta = AlphaScalingParameter()
 
-del CahillGlauberSParameter
+del CahillGlauberSParameter, ReducedPlanckConstant, AlphaScalingParameter
 
 ###
 

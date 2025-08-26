@@ -8,7 +8,7 @@ from ._internal.basic_routines import invalid_input
 from .objects import scalars
 from .objects.scalars import q, p, alpha, alphaD, _DerivativeSymbol, _Primed
 
-from .manipulations import qp2a, _deprime
+from .manipulations import qp2alpha, _deprime
 from . import s
 
 ###
@@ -192,9 +192,9 @@ def _star_base(A : sp.Expr, B : sp.Expr) -> sp.Expr:
         raise _CannotBoppFlag()
     
     if A.has(qpType):
-        A = qp2a(A)
+        A = qp2alpha(A)
     if B.has(qpType):
-        B = qp2a(B)
+        B = qp2alpha(B)
     # Bopp-shifting functions of (q,p) results in more terms, so we do this for efficiency
     # also. 
     

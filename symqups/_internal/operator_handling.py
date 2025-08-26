@@ -284,13 +284,15 @@ def patched_Mul_flatten(seq : Sequence) -> Tuple[list, list, list]:
     # Furthermore, the user may also use other noncommuting 'Expr's with the package, in
     # which case the implementation below will be confused because it expects
     # to get at least one 'sub' value. 
-    if (all(not(item.has(Operator)) for item in seq)
+    # if (all(not(item.has(Operator)) for item in seq)
         # or any(item.has(NotAnOperator) for item in seq) 
-                # NOTE: Currently, 'NotAnOperator' is not implemented in the package, 
-                # but we shall keep this here, commented, just in case.
-        or any(not(isinstance(atom, Operator)) for item in seq 
-               for atom in item.atoms() if getattr(atom, "is_commutative") is False)):
-        return original_Mul_flatten(seq)
+        # or any(not(isinstance(atom, Operator)) for item in seq 
+        #        for atom in item.atoms() if getattr(atom, "is_commutative") is False)):
+        # return original_Mul_flatten(seq)
+        
+    # NOTE: The above seems unnecessary and only intorduces overhead. We shall keep this here
+    # just in case it turns out useful. Below, we have opted to skip the patch if 
+    # an error occurs.
     
     ###
     
@@ -309,82 +311,87 @@ def patched_Mul_flatten(seq : Sequence) -> Tuple[list, list, list]:
     # checks whether a given entry can go before the previous entry based
     # on 'sub' in them. 
     
-    reordered_nc_part = []
-    reorderable_nc = []
+    try:
+        reordered_nc_part = []
+        reorderable_nc = []
 
-    def treat_reorderable_nc() -> None:
-    
-        # NOTE: There may be better reordering rules we can implement
-        # to make nonpolynomial expressions prettier, but the current
-        # simple one already works very well for polynomials and does not
-        # break for nonpolynomials.
+        def treat_reorderable_nc() -> None:
         
-        def can_move_left(A : sp.Expr, B : sp.Expr) -> bool:
-            # Whether A can move to the left of B, assuming A is originally
-            # to B's right. 
+            # NOTE: There may be better reordering rules we can implement
+            # to make nonpolynomial expressions prettier, but the current
+            # simple one already works very well for polynomials and does not
+            # break for nonpolynomials.
             
-            A_sub = get_oper_sub(A)
-            B_sub = get_oper_sub(B)
-            
-            # A can be safely reordered with respect to B if they do *not* share
-            # any common 'sub's. 
-                    
-            if A_sub & B_sub: 
-                return False
-            
-            # We determine whether A can move to the left of B following the sequence in which
-            # the 'sub's appear in sub_cache. By doing it this way, we try our best to make the 'Operator'
-            # ordering obey sympy's canonical ordering rule. This ordering rule is also *consistent*.
-            
-            A_sub_index_in_sub_cache = [sub_cache.index(sub) for sub in A_sub]
-            B_sub_index_in_sub_cache = [sub_cache.index(sub) for sub in B_sub]
-        
-            # By construction, 'Operator's with 'has_sub=False' is not put into
-            # 'reorderable_nc' and hence would not appear here, so no misleading
-            # "empty 'sub'" from these objects. 
-            #
-            # Furthermore, these two lists must have at least one item. If the
-            # list is empty, then the expression is noncommuting but is not 
-            # the package's Operator. Something must have barged in here... considering
-            # the filter above.
+            def can_move_left(A : sp.Expr, B : sp.Expr) -> bool:
+                # Whether A can move to the left of B, assuming A is originally
+                # to B's right. 
+                
+                A_sub = get_oper_sub(A)
+                B_sub = get_oper_sub(B)
+                
+                # A can be safely reordered with respect to B if they do *not* share
+                # any common 'sub's. 
                         
-            if min(A_sub_index_in_sub_cache) < min(B_sub_index_in_sub_cache):
-                return True
-            return False
+                if A_sub & B_sub: 
+                    return False
+                
+                # We determine whether A can move to the left of B following the sequence in which
+                # the 'sub's appear in sub_cache. By doing it this way, we try our best to make the 'Operator'
+                # ordering obey sympy's canonical ordering rule. This ordering rule is also *consistent*.
+                
+                A_sub_index_in_sub_cache = [sub_cache.index(sub) for sub in A_sub]
+                B_sub_index_in_sub_cache = [sub_cache.index(sub) for sub in B_sub]
+            
+                # By construction, 'Operator's with 'has_sub=False' is not put into
+                # 'reorderable_nc' and hence would not appear here, so no misleading
+                # "empty 'sub'" from these objects. 
+                #
+                # Furthermore, these two lists must have at least one item. If the
+                # list is empty, then the expression is noncommuting but is not 
+                # the package's Operator. Something must have barged in here... considering
+                # the filter above.
+                            
+                if min(A_sub_index_in_sub_cache) < min(B_sub_index_in_sub_cache):
+                    return True
+                return False
 
-        def cmp(A, B):
-            if can_move_left(A, B):
-                return -1
-            elif can_move_left(B, A):
-                return 1
+            def cmp(A, B):
+                if can_move_left(A, B):
+                    return -1
+                elif can_move_left(B, A):
+                    return 1
+                else:
+                    return 0
+                    
+            reordered_nc_part.extend(list(sorted(reorderable_nc, 
+                                                key=cmp_to_key(cmp))))
+            
+        for nc in nc_part:
+            if not(is_universal(nc)):
+                # As long as 'nc' is not universal (i.e., reorderable),
+                # we can keep appending to reorderable_nc.
+                reorderable_nc.append(nc)
             else:
-                return 0
-                
-        reordered_nc_part.extend(list(sorted(reorderable_nc, 
-                                             key=cmp_to_key(cmp))))
+                # A universal 'nc' must stay
+                # to the right of all 'nc' to its left. As such, we can now
+                # cut off the 'reorderable_nc' collection and reorder what's inside,
+                # and empty the list afterwards. Then, we can add our universal 'nc'
+                # of the current iteration.
+                treat_reorderable_nc()
+                reorderable_nc = []
+                reordered_nc_part.append(nc)
         
-    for nc in nc_part:
-        if not(is_universal(nc)):
-            # As long as 'nc' is not universal (i.e., reorderable),
-            # we can keep appending to reorderable_nc.
-            reorderable_nc.append(nc)
-        else:
-            # A universal 'nc' must stay
-            # to the right of all 'nc' to its left. As such, we can now
-            # cut off the 'reorderable_nc' collection and reorder what's inside,
-            # and empty the list afterwards. Then, we can add our universal 'nc'
-            # of the current iteration.
-            treat_reorderable_nc()
-            reorderable_nc = []
-            reordered_nc_part.append(nc)
+        # There may be leftover 'nc' from the loop if the last one is not universal. 
+        treat_reorderable_nc() 
+                    
+        # We run it thorugh the original Mul.flatten again to let sympy clean
+        # up the arguments, like merging adjacent factors into a Pow. The first
+        # call does not do this because the two may be separated by another
+        # object initially. 
+        _, reordered_nc_part_reflattened, _ = original_Mul_flatten(reordered_nc_part)
+        
+        return c_part, reordered_nc_part_reflattened, order_symbol
     
-    # There may be leftover 'nc' from the loop if the last one is not universal. 
-    treat_reorderable_nc() 
-                
-    # We run it thorugh the original Mul.flatten again to let sympy clean
-    # up the arguments, like merging adjacent factors into a Pow. The first
-    # call does not do this because the two may be separated by another
-    # object initially. 
-    _, reordered_nc_part_reflattened, _ = original_Mul_flatten(reordered_nc_part)
-    
-    return c_part, reordered_nc_part_reflattened, order_symbol
+    except:
+        
+        return c_part, nc_part, order_symbol

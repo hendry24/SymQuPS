@@ -17,7 +17,7 @@ from ._internal.operator_handling import (separate_operator,
 from .objects.scalars import q, p, alpha, alphaD
 from .objects.operators import Operator, annihilateOp, createOp
 
-from .manipulations import qp2a
+from .manipulations import qp2alpha
 
 from . import s as CahillGlauberS
 
@@ -26,7 +26,7 @@ from . import s as CahillGlauberS
 class sOrdering(sp.Expr, HilbertSpaceObject):
     
     def __new__(cls, expr : sp.Expr, s : sp.Number | None = None, lazy : bool = False) -> sp.Expr:
-        expr = qp2a(sp.sympify(expr)) 
+        expr = qp2alpha(sp.sympify(expr)) 
         
         # We assume that the input does not contain any universally-noncommuting
         # operators like 'densityOp'.

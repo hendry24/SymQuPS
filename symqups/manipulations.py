@@ -2,13 +2,12 @@ import sympy as sp
 
 from ._internal.basic_routines import operation_routine
 from ._internal.operator_handling import is_universal, separate_term_oper_by_sub, get_oper_sub
-from ._internal.cache import sub_cache
+from ._internal.cache import ( op2sc_subs_dict, sc2op_subs_dict, 
+                              alpha2qp_subs_dict, qp2alpha_subs_dict, ProtectedDict)
 from ._internal.multiprocessing import mp_helper
 
-from .objects.base import Base
-from .objects import scalars
-from .objects.scalars import q, p, alpha, alphaD, W, _Primed
-from .objects.operators import qOp, pOp, annihilateOp, createOp, Operator, rho
+from .objects.scalars import _Primed
+from .objects.operators import annihilateOp, createOp, Operator
 
 ###
 
@@ -16,43 +15,61 @@ def _deprime(expr : sp.Expr):
     subs_dict = {X : X.base for X in expr.atoms(_Primed)}
     return expr.subs(subs_dict)
 
-def define(expr : sp.Expr) -> sp.Expr:
-    """
-    Given a composite expression `expr`, call the `.define` method
-    where applicable.
-    """
-    expr = sp.sympify(expr)
-    expr_defined = expr.subs({A: A.define() for A in expr.atoms(Base)})
-    return sp.expand(expr_defined)
+def _der2symb(expr : sp.Expr):
+    def treat_add(A : sp.Expr) -> sp.Expr:
+        return sp.Add(*mp_helper(A.args, _der2symb))
+    
+    def treat_der(A : sp.Derivative) -> sp.Expr:
+        out_factors = []
+        
+        wrt_lst = A.args[1:]
+        for wrt in wrt_lst:
+            out_factors.append(_DerivativeSymbol(wrt[0])**wrt[1])
+            
+        return sp.Mul(*out_factors, _der2symb(A.args[0]))
+    
+    def treat_mul(A : sp.Expr):
+        for j, arg in enumerate(A.args):
+            if arg.has(sp.Derivative):
+                break
+        return sp.Mul(_der2symb(sp.Mul(*A.args[:j])), 
+                      _der2symb(A.args[j]),
+                      _der2symb(sp.Mul(*A.args[j+1:])))
+    
+    expr = _Primed(sp.expand(sp.sympify(expr)))
+    return operation_routine(expr,
+                             "_der2symb",
+                             [],
+                             [],
+                             {sp.Derivative : expr},
+                             {sp.Add : treat_add,
+                              sp.Derivative : treat_der,
+                              sp.Mul : treat_mul})
 
-def qp2a(expr : sp.Expr) -> sp.Expr:
-    def get_subs_expr(A : scalars.Scalar | Operator):
-        if isinstance(A, scalars.Scalar):
-            a, ad = scalars.alpha(A.sub), scalars.alphaD(A.sub)
-        else:
-            a, ad = annihilateOp(A.sub), createOp(A.sub)
-            
-        mu = scalars.mu
-        mu_conj = sp.conjugate(mu)
-        hbar = scalars.hbar
-        
-        if isinstance(A, (scalars.q, qOp)):
-            out = mu*a + mu_conj*ad
-        else:
-            out = sp.I*mu*mu_conj*(mu*ad - mu_conj*a)
-            
-        out *= sp.sqrt(2*hbar) / (mu**2 + mu_conj**2)
-        
-        return out
-        
-    sub_dict = {}
-    for sub in sub_cache:
-        sub_dict[scalars.q(sub)] = get_subs_expr(scalars.q(sub))
-        sub_dict[scalars.p(sub)] = get_subs_expr(scalars.p(sub))
-        sub_dict[qOp(sub)] = get_subs_expr(qOp(sub))
-        sub_dict[pOp(sub)] = get_subs_expr(pOp(sub))
-        
-    return sp.expand(expr.subs(sub_dict))
+###
+
+def _subs_template(expr, subs_dict : ProtectedDict):
+    # Since SymPy traverses the recursion tree for '.subs', the execution
+    # will become heavier the larger the substitution dictionary is for the same
+    # expression. To improve efficiency, we first trim down the substitution
+    # dictionary by only having keys that are actually present in the input expression.
+    trimmed_subs_dict = {key : subs_dict[key] 
+                         for key in expr.atoms() & qp2alpha_subs_dict.keys()}
+    return sp.expand(sp.sympify(expr).subs(trimmed_subs_dict))
+    
+def alpha2qp(expr : sp.Expr) -> sp.Expr:
+    return _subs_template(expr, alpha2qp_subs_dict)
+
+def qp2alpha(expr : sp.Expr) -> sp.Expr:
+    return _subs_template(expr, qp2alpha_subs_dict)
+
+def op2sc(expr : sp.Expr) -> sp.Expr:
+    return _subs_template(expr, op2sc_subs_dict)
+
+def sc2op(expr : sp.Expr) -> sp.Expr:
+    return _subs_template(expr, sc2op_subs_dict)
+
+###
 
 def dagger(expr : sp.Expr) -> sp.Expr:
     
@@ -85,27 +102,6 @@ def express(expr : sp.Expr, t=1, explicit=True) -> sp.Expr:
     from .ordering import sOrdering
     return expr.replace(lambda A: isinstance(A, sOrdering),
                         lambda A: A.express(t=t, explicit=explicit))
-
-
-# Operator-Scalar substitutions
-# =============================
-
-def _get_op2sc_dict() -> dict:
-    return {op(sub) : sc(sub) 
-            for sub in sub_cache 
-            for op,sc in [[qOp, q],
-            [pOp, p],
-            [annihilateOp, alpha], 
-            [createOp, alphaD]]} | {rho : W}
-
-def _get_sc2op_dict() -> dict:
-    return {v:k for k,v in _get_op2sc_dict().items()}
-
-def op2sc(expr : sp.Expr) -> sp.Expr:
-    return expr.subs(_get_op2sc_dict())
-
-def sc2op(expr : sp.Expr) -> sp.Expr:
-    return expr.subs(_get_sc2op_dict())
 
 # Normal-ordered equivalent
 ###########################
@@ -206,7 +202,7 @@ def normal_ordered_equivalent(expr : sp.Expr) -> sp.Expr:
         
         return sp.expand(out) 
         
-    expr = qp2a(sp.sympify(expr))
+    expr = qp2alpha(sp.sympify(expr))
     return operation_routine(expr,
                              "normal_ordered_equivalent",
                              [],

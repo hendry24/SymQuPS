@@ -100,7 +100,7 @@ class LindbladMasterEquation(sp.Basic):
         return sp.Derivative(rho, scalars.t())
 
     @property
-    def rhs(self):
+    def rhs(self) -> sp.Expr:
         out = -sp.I/scalars.hbar * spq.Commutator(self.H, rho)
         for dissip in self.dissipators:
             out += dissip

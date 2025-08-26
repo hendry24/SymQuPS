@@ -8,7 +8,7 @@ from .objects.operators import Operator
 
 from .star_product import Star
 from .ordering import sOrdering
-from .manipulations import qp2a, sc2op, op2sc
+from .manipulations import qp2alpha, sc2op, op2sc
 
 from . import s as CahillGlauberS
 
@@ -44,7 +44,7 @@ def CG_transform(expr : sp.Expr) -> sp.Expr:
     def treat_mul(A : sp.Expr) -> sp.Expr:
         return Star(*mp_helper(A.args, CG_transform))
         
-    expr = qp2a(sp.sympify(expr))
+    expr = qp2alpha(sp.sympify(expr))
     return operation_routine(expr,
                             "CG_transform",
                             [],

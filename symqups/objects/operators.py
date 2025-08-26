@@ -1,12 +1,10 @@
 import sympy as sp
 
 import typing
-from . import scalars 
-# Avoid, e.g., "from scalars import hbar" 
-# since we want its value to follow changes at runtime.
+from . import scalars
 from .base import Base
 from .._internal.grouping import HilbertSpaceObject, qpType, alphaType
-from .._internal.cache import sub_cache
+from .._internal.cache import sub_cache, op2sc_subs_dict, sc2op_subs_dict
 from .._internal.basic_routines import treat_sub
 
 # NOTE: 'import .._internal.operator_handling' will result
@@ -54,23 +52,12 @@ class pOp(HermitianOp, qpType):
     
 class annihilateOp(Operator, alphaType):
     base = r"\hat{a}"
-        
-    def define(self):
-        with sp.evaluate(False):
-            return ((qOp(sub=self.sub)*scalars.mu + sp.I*pOp(sub=self.sub)/scalars.mu) 
-                    / sp.sqrt(2*scalars.hbar))
     
     def dagger(self):
         return createOp(sub = self.sub)
     
 class createOp(Operator, alphaType):
     base = r"\hat{a}^{\dagger}"
-    
-    def define(self):
-        mu_conj = sp.conjugate(scalars.mu)
-        with sp.evaluate(False):
-            return ((qOp(sub=self.sub)*mu_conj - sp.I*pOp(sub=self.sub)/mu_conj) 
-                    / sp.sqrt(2*scalars.hbar))
         
     def dagger(self):
         return annihilateOp(sub = self.sub)
@@ -84,3 +71,6 @@ class densityOp(HermitianOp):
     
 global rho
 rho = densityOp()
+
+sc2op_subs_dict._set_item(scalars.W, rho)
+op2sc_subs_dict._set_item(rho, scalars.W)
