@@ -73,6 +73,7 @@ def deep_screen_type(expr : sp.Expr,
         
     if expr.has(*forbidden_types):
         msg = f"'{name} does not accept expressions that contain {forbidden_types}."
+        raise TypeError(msg)
 
 def invalid_input(inpt : object, name : str) -> None:
     """
@@ -103,7 +104,7 @@ def operation_routine(expr : sp.Expr,
     
     for if_does_not_have, then_return in return_if_expr_does_not_have.items():
         if not(isinstance(if_does_not_have, Sequence)):
-            if_does_not_have = [if_does_not_have]            
+            if_does_not_have = [if_does_not_have]      
         if not(expr.has(*if_does_not_have)):
             if callable(then_return):
                 return then_return(expr)

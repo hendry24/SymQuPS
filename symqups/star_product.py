@@ -126,7 +126,7 @@ class Star(sp.Expr, UnBoppable):
     See Also
     --------
     
-    .bopp : Bopp shift the input expression. 
+    .Bopp : Bopp shift the input expression. 
     
     """
 
@@ -172,6 +172,8 @@ def _star_base(A : sp.Expr, B : sp.Expr) -> sp.Expr:
         return A*B
 
     cannot_Bopp_A = A.has(UnBoppable) or not(A.is_polynomial(PhaseSpaceObject))
+                                        # should also be true if 'A" contains 'Derivative' objects, which
+                                        # raises an error in 'Bopp' if unevaluable. 
     cannot_Bopp_B = B.has(UnBoppable) or not(B.is_polynomial(PhaseSpaceObject))
 
     if cannot_Bopp_A and cannot_Bopp_B:

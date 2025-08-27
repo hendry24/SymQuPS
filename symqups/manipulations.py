@@ -51,6 +51,10 @@ def _der2symb(expr : sp.Expr) -> sp.Expr:
                              {sp.Add : treat_add,
                               sp.Derivative : treat_der,
                               sp.Mul : treat_mul})
+    # NOTE: We do not allow 'Pow' of 'Derivative' since the meaning changes
+    # once converted. On the same token, we do not allow any `Function` containing
+    # 'Derivative', which aligns with other functionalities of the pacakge. For example,
+    # inputs containing 'Derivative' are UnBoppable. 
     
 def _symb2der(expr : sp.Expr) -> sp.Expr:
     """
