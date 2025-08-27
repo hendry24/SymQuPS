@@ -6,7 +6,7 @@ from symqups.objects.scalars import q, p, alpha, alphaD
 from symqups.objects.operators import qOp, pOp, annihilateOp, createOp
 
 from symqups.ordering import sOrdering
-from symqups.manipulations import qp2a, normal_ordered_equivalent, express
+from symqups.manipulations import qp2alpha, express
 
 from symqups import s as CahillGlauberS
 
@@ -37,8 +37,8 @@ def template(inputs, outputs, foo):
     assert foo(ad_in) == ad_out
     assert foo(ad_in**N) == ad_out**N
     
-    assert sp.simplify(sp.expand(foo(q_in) - qp2a(q_out))) == 0
-    assert sp.simplify(sp.expand(foo(p_in) - qp2a(p_out))) == 0
+    assert sp.simplify(sp.expand(foo(q_in) - qp2alpha(q_out))) == 0
+    assert sp.simplify(sp.expand(foo(p_in) - qp2alpha(p_out))) == 0
     
 @pytest.mark.fast
 def test_CG_transform():

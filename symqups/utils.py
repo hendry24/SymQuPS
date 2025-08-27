@@ -3,8 +3,31 @@ from sympy.core.function import UndefinedFunction
 import random
 
 from ._internal.multiprocessing import mp_helper
+from ._internal.cache import sub_cache
 
 from .objects import scalars
+
+###
+
+def get_N():
+    """
+    Get the number of subsystems esablished so far in the session.
+    """
+    return len(sub_cache)
+
+###
+
+def enable_Mul_patch():
+    import sympy as sp
+    from ._internal.operator_handling import patched_Mul_flatten
+
+    sp.Mul.flatten = patched_Mul_flatten
+
+def disable_Mul_patch():
+    import sympy as sp
+    from ._internal.operator_handling import original_Mul_flatten
+
+    sp.Mul.flatten = original_Mul_flatten
 
 ###
 

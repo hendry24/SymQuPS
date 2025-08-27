@@ -9,11 +9,6 @@ from .._internal.basic_routines import treat_sub, invalid_input
 
 __all__ = ["q", "p", "alpha", "alphaD", "W"]
 
-global hbar, pi, mu
-hbar = sp.Symbol(r"hbar", real=True, positive=True)
-pi = sp.Symbol(r"pi", real=True, positive=True)
-mu = sp.Symbol(r"mu", real=True, positive=True)
-
 class Scalar(Base):
     base = NotImplemented
     has_sub = True
@@ -71,10 +66,6 @@ class alpha(Scalar, PhaseSpaceVariable, alphaType):
     base = r"\alpha"
     is_real = False
     
-    def define(self):
-        with sp.evaluate(False):
-            return (mu*q(self.sub) + sp.I * p(self.sub) / mu) / sp.sqrt(2*hbar)
-    
     def conjugate(self):
         return alphaD(self.sub)
     def _eval_conjugate(self):
@@ -83,11 +74,6 @@ class alpha(Scalar, PhaseSpaceVariable, alphaType):
 class alphaD(Scalar, PhaseSpaceVariable, alphaType):
     base = r"\overline{\alpha}"
     is_real = False
-    
-    def define(self):
-        mu_conj = sp.conjugate(mu)
-        with sp.evaluate(False):
-            return (mu_conj*q(self.sub) - sp.I * p(self.sub) / mu_conj) / sp.sqrt(2*hbar)
         
     def conjugate(self):
         return alpha(self.sub)
@@ -176,11 +162,3 @@ class StateFunction(sp.Expr, PhaseSpaceObject, UnBoppable):
     
 global W
 W = StateFunction(t())
-
-# In the previous version, W retrieves 'sub_cache' to use as its arguments
-# at instantiation. However, this is problematic when W is instantiated
-# before other objects it is supposed to interact with, for example in
-# `Star(alpha(1), W(), alpha(2))`. Here W() only sees the sub '1' when
-# it is constructed. A better construction would to let the variable
-# W be updated each time 'sub_cache' is updated. See
-# `cache.sub_cache.update`.

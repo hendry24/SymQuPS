@@ -5,7 +5,7 @@ import warnings
 from .grouping import _ReadOnlyExpr
 from ..objects.base import Base
 
-class Parameter(CantSympify, _ReadOnlyExpr, Base):
+class Constant(CantSympify, _ReadOnlyExpr, Base):
     """
     Base class for package parameters. Set its value by setting the `.val`
     attribute.
@@ -28,16 +28,19 @@ class Parameter(CantSympify, _ReadOnlyExpr, Base):
 
     @val.setter
     def val(self, value):
-        self._val = value
+        self._val = sp.sympify(value)
+        
+        from .cache import sub_cache
+        sub_cache._refresh_all()
         
     def _latex(self, printer):
         return r"%s = %s" % (self.name, sp.latex(self.val))
     
-class CahillGlauberSParameter(Parameter):
+class CahillGlauberSParameter(Constant):
     name = "Cahill-Glauber s parameter"
     default_value = sp.Number(0)
         
-    @Parameter.val.setter
+    @Constant.val.setter
     def val(self, value):
         value = sp.sympify(value)
         if (isinstance(value, sp.Number) 
@@ -49,15 +52,24 @@ class CahillGlauberSParameter(Parameter):
             msg = "The Cahill-Glauber formalism works best when 's' is real and lies between -1 and 1. "
             msg += "The input value does not identify as such."
             warnings.warn(msg)
-        self._val = value
+        super(CahillGlauberSParameter,
+              CahillGlauberSParameter).val.__set__(self, value)
             
     def _latex(self, printer):
         return r"\text{%s,}\quad s = %s" % (self.name, sp.latex(self.val))
     
-class ReducedPlanckConstant(Parameter):
+class ReducedPlanckConstant(Constant):
     name = r"\hbar"
     default_value = sp.Symbol(r"hbar")
     
-class AlphaScalingParameter(Parameter):
+class AlphaScalingParameter(Constant):
     name = r"\zeta"
     default_value = sp.Symbol(r"zeta")
+    
+class piTranscendentalNumber(Constant):
+    name = r"\pi"
+    default_value = sp.Symbol(r"pi")
+    
+    @Constant.val.setter
+    def val(self, value):
+        raise NotImplementedError("Cannot set the value of 'pi'.")

@@ -32,8 +32,12 @@ del annihilateOp, createOp
 
 ###
 
+from ._internal.multiprocessing import MP_CONFIG
+from .cg import CG_transform, iCG_transform
+from .eom import LindbladMasterEquation
+from .manipulations import (alpha2qp, qp2alpha, sc2op, op2sc, dagger, 
+                            explicit, express, normal_ordered_equivalent)
+from .ordering import sOrdering
 from .quantization import naive_quantize, s_quantize
 from .star_product import Bopp, Star
-from ._internal.multiprocessing import MP_CONFIG
-from .manipulations import alpha2qp, qp2alpha
-from .utils import collect_by_derivative
+from .utils import get_random_poly, collect_by_derivative

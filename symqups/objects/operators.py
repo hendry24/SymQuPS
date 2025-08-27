@@ -1,10 +1,9 @@
 import sympy as sp
-
 import typing
-from . import scalars
+
 from .base import Base
 from .._internal.grouping import HilbertSpaceObject, qpType, alphaType
-from .._internal.cache import sub_cache, op2sc_subs_dict, sc2op_subs_dict
+from .._internal.cache import sub_cache
 from .._internal.basic_routines import treat_sub
 
 # NOTE: 'import .._internal.operator_handling' will result
@@ -16,7 +15,7 @@ class Operator(Base, HilbertSpaceObject):
     has_sub = True
     
     def _get_symbol_name_and_assumptions(cls, sub):
-        return r"%s_{%s}" % (cls.base, sub), {"commutative":False}
+        return r"%s_{%s}" % (cls.base, sub), {"commutative" : False}
                                             # This should shut off the assumption system.
     
     def __new__(cls, sub = None):
@@ -71,6 +70,3 @@ class densityOp(HermitianOp):
     
 global rho
 rho = densityOp()
-
-sc2op_subs_dict._set_item(scalars.W, rho)
-op2sc_subs_dict._set_item(rho, scalars.W)

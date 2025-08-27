@@ -4,13 +4,16 @@ from ._internal.multiprocessing import mp_helper
 from ._internal.basic_routines import operation_routine
 from ._internal.grouping import PhaseSpaceVariable
 
-from .objects.operators import Operator
+from .objects.scalars import W
+from .objects.operators import Operator, densityOp
 
 from .star_product import Star
 from .ordering import sOrdering
-from .manipulations import qp2alpha, sc2op, op2sc
+from .manipulations import qp2alpha, op2sc
+from .utils import get_N
 
 from . import s as CahillGlauberS
+from . import pi, hbar
 
 ###
         
@@ -23,6 +26,8 @@ def CG_transform(expr : sp.Expr) -> sp.Expr:
         return sp.Add(*mp_helper(A.args, CG_transform))
     
     def treat_substitutable(A : sp.Expr) -> sp.Expr:
+        if isinstance(A, densityOp):
+            return (2*pi.val*hbar.val)**get_N() * W
         return op2sc(A)
     
     def treat_function(A : sp.Function) -> sp.Expr:
@@ -51,10 +56,10 @@ def CG_transform(expr : sp.Expr) -> sp.Expr:
                             [PhaseSpaceVariable],
                             {Operator : expr},
                             {sp.Add : treat_add,
-                            sp.Mul : treat_mul,
-                            (Operator, sp.Pow) : treat_substitutable,
-                            sp.Function : treat_function,
-                            sOrdering : treat_sOrdering})
+                             sp.Mul : treat_mul,
+                             (Operator, sp.Pow) : treat_substitutable,
+                             sp.Function : treat_function,
+                             sOrdering : treat_sOrdering})
     
 def iCG_transform(expr : sp.Expr, lazy=False) -> sp.Expr:   
-    return sOrdering(sc2op(expr), lazy=lazy)
+    return 

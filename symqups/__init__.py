@@ -1,25 +1,13 @@
-from ._internal.parameters import CahillGlauberSParameter, ReducedPlanckConstant, AlphaScalingParameter
+from ._internal import constants as m
 
-s = CahillGlauberSParameter()
-hbar = ReducedPlanckConstant()
-zeta = AlphaScalingParameter()
+s = m.CahillGlauberSParameter()
+hbar = m.ReducedPlanckConstant()
+zeta = m.AlphaScalingParameter()
+pi = m.piTranscendentalNumber()
 
-del CahillGlauberSParameter, ReducedPlanckConstant, AlphaScalingParameter
+del m
 
-###
-
-def enable_Mul_patch():
-    import sympy as sp
-    from ._internal.operator_handling import patched_Mul_flatten
-
-    sp.Mul.flatten = patched_Mul_flatten
-
-def disable_Mul_patch():
-    import sympy as sp
-    from ._internal.operator_handling import original_Mul_flatten
-
-    sp.Mul.flatten = original_Mul_flatten
-
+from .utils import enable_Mul_patch
 enable_Mul_patch()
 
 ###

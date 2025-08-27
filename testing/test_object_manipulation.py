@@ -8,12 +8,17 @@ import sympy as sp
 sMul = deepcopy(sp.Mul)
 
 from symqups._internal.grouping import alphaType, qpType
-from symqups.objects.scalars import (hbar, mu, Scalar, q, p, t, W, alpha, alphaD,
+from symqups.objects.scalars import (Scalar, q, p, t, W, alpha, alphaD,
                                     _Primed, _DerivativeSymbol)
 from symqups.objects.operators import (Operator, qOp, pOp, createOp, annihilateOp,
                                         densityOp, rho)
 from symqups.utils import get_random_poly
 from symqups.ordering import sOrdering
+
+from symqups import hbar, zeta
+
+hbar = hbar.val
+zeta = zeta.val
 
 # TESTED FUNCTIONALITIES
 ########################
