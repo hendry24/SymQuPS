@@ -48,41 +48,30 @@ class CGTransform(sp.Expr, PhaseSpaceObject):
             # of an s-ordered operator is a straightforward replacement.
             return treat_substitutable(A.args[0])
         
-        def treat_function(A : sp.Function):
-            opers_in_A = A.atoms(Operator)
-            
-            if rho in opers_in_A:
+        def treat_function(A : sp.Function) -> sp.Expr:
+            if rho in A.atoms(Operator):
                 return make(A)
+
+            # The CG transform of any function in only one of 'annihilateOp'
+            # and 'createOp' can be evaluated by replacing the 'Operator' with
+            # the 'Scalar' counterpart. 
+            #
+            # This also applies to any function in only one of `qOp` and `pOp`,
+            # but only in the 's=0' case (the Wigner transform).
             
-            evaluable = True
-            _, col_ad, col_a = collect_alpha_type_oper_from_monomial_by_sub(sp.Mul(*opers_in_A))
-            for sub in sub_cache:
-                if col_ad[sub][1] > 0 and col_a[sub][1] > 0:
-                    evaluable = False
-                    break
+            def is_evaluable(AA : sp.Function) -> bool:
+                sub_found = []
+                for oper in AA.atoms(Operator):
+                    if oper.sub in sub_found:
+                        return False
+                    sub_found.append(oper.sub)
+                return True
             
-            ###
-                 
-            # NOTE: f(qOp) and g(pOp) are also evaluable for the special case where s=0.
-            # Compared to above, the following block is "lazier" in the sense that it only
-            # allows functions with atomic arguments, e.g. f(qOp) but not f(zeta*qOp).
-            if not(evaluable) and CahillGlauberS.val==0:
-                sub_found = {}
-                evaluable = True
-                for arg in set(alpha2qp(A).args):
-                    if isinstance(arg, (qOp, pOp)):
-                        if sub in sub_found: # same sub twice means that qOp and pOp are both present.
-                            evaluable = False
-                            break
-                        sub_found.append(arg.sub)
-                    else: 
-                        evaluable = False
-                        break
-                
-            ###
-            
-            if evaluable:
+            if (is_evaluable(A)
+                or (CahillGlauberS.val==0
+                    and is_evaluable(alpha2qp(A)))):
                 return treat_substitutable(A)
+            
             return make(A)
             
         def make(A : sp.Expr):
