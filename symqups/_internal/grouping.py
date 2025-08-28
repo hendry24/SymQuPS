@@ -75,6 +75,17 @@ class NotAScalar(ObjectGroup):
     pass
 
 ###
+    
+class Defined(sp.Basic):
+    """
+    This object has the `definition` class property.
+    """
+    @staticmethod
+    def _definition():
+        return NotImplementedError
+    definition = _definition()
+    
+###
 
 class _AddOnlyExpr(sp.Expr):
     def __pow__(self, other):

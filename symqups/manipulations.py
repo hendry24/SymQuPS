@@ -11,6 +11,8 @@ from ._internal.grouping import qpType, alphaType, PrimedPSO
 from .objects.scalars import _Primed, _DerivativeSymbol, Scalar
 from .objects.operators import annihilateOp, createOp, Operator
 
+from . import hbar
+
 ###
 
 def _deprime(expr : sp.Expr) -> sp.Expr:
@@ -55,69 +57,68 @@ def _der2symb(expr : sp.Expr) -> sp.Expr:
     # once converted. On the same token, we do not allow any `Function` containing
     # 'Derivative', which aligns with other functionalities of the pacakge. For example,
     # inputs containing 'Derivative' are UnBoppable. 
+
+def _fido(A : sp.Expr | _DerivativeSymbol) -> None | Tuple[int, _Primed, int|sp.Integer]:
+    """
+    Short for "first index and diff order", this function looks for the index in `expr.args`
+    which contains `_DerivativeSymbol`, then return that index alongisde the differentiation
+    variable (a `_Primed` object) and the differentiation order given in that index (the power
+    of `_DerivativeSymbol'). 
+    """
+
+    # Everything to the right of the first "derivative operator" symbol
+    # must be ordered in .args since we have specified the noncommutativity
+    # of the primed symbols. It does not matter if the unprimed symbols get
+    # stuck in the middle since the operator does not work on them. What is 
+    # important is that _Primed objects are correctly placed with respect to the
+    # derivative operators.
     
+    def treat_mul(AA : sp.Mul) -> tuple:
+        for idx, arg in enumerate(AA.args): 
+            if isinstance(arg, _DerivativeSymbol):
+                return idx, arg.diff_var, 1
+            if arg.has(_DerivativeSymbol):
+                return idx, arg.args[0].diff_var, arg.args[1]
+                
+    return operation_routine(A,
+                            "_fido",
+                            [sp.Add],
+                            [],
+                            {_DerivativeSymbol : None},    # stops the recursion in _der2symb
+                            {_DerivativeSymbol : lambda A: (0, A.diff_var, 1),
+                                sp.Pow : lambda A: (0, A.args[0].diff_var, A.args[1]),
+                                sp.Mul : treat_mul}
+                            )
+def _replace_diff(A : sp.Expr) -> sp.Expr:
+    """
+    Recursively replace the differential operator symbols,
+    with the appropriate `sympy.Derivative` objects. Input must
+    not be Add.
+    """
+    
+    fido_res = _fido(A)
+
+    if fido_res: # no more recursion if fido is None
+        cut_idx, diff_var, diff_order = fido_res
+        prefactor = A.args[:cut_idx]
+        A_leftover = sp.Mul(*A.args[cut_idx+1:])
+        return sp.Mul(*prefactor,
+                        sp.Derivative(_replace_diff(A_leftover),
+                                    *[diff_var]*diff_order))
+        
+        # With this code, we can afford to replace any power of the first
+        # _DerivativeSymbol we encounter, instead of replacing only the base
+        # and letting the rest of the factors be dealt with in the next recursion
+        # node, making the recursion more efficient. 
+    
+    return A
+
 def _symb2der(expr : sp.Expr) -> sp.Expr:
     """
     Convert derivative expressions with the package's `_DerivativeSymbol` objects into an equivalent
     expression using `sympy.Derivative'. All `_Primed` variables are then returned to their original
     version.
     """
-    
-    def fido(A : sp.Expr | _DerivativeSymbol) -> None | Tuple[int, _Primed, int|sp.Integer]:
-        """
-        Short for "first index and diff order", this function looks for the index in `expr.args`
-        which contains `_DerivativeSymbol`, then return that index alongisde the differentiation
-        variable (a `_Primed` object) and the differentiation order given in that index (the power
-        of `_DerivativeSymbol'). 
-        """
-
-        # Everything to the right of the first "derivative operator" symbol
-        # must be ordered in .args since we have specified the noncommutativity
-        # of the primed symbols. It does not matter if the unprimed symbols get
-        # stuck in the middle since the operator does not work on them. What is 
-        # important is that _Primed objects are correctly placed with respect to the
-        # derivative operators.
-        
-        def treat_mul(AA : sp.Mul) -> tuple:
-            for idx, arg in enumerate(AA.args): 
-                if isinstance(arg, _DerivativeSymbol):
-                    return idx, arg.diff_var, 1
-                if arg.has(_DerivativeSymbol):
-                    return idx, arg.args[0].diff_var, arg.args[1]
-                    
-        return operation_routine(A,
-                                "_fido",
-                                [sp.Add],
-                                [],
-                                {_DerivativeSymbol : None},    # stops the recursion in _der2symb
-                                {_DerivativeSymbol : lambda A: (0, A.diff_var, 1),
-                                 sp.Pow : lambda A: (0, A.args[0].diff_var, A.args[1]),
-                                 sp.Mul : treat_mul}
-                                )
-        
-    def replace_diff(A : sp.Expr) -> sp.Expr:
-        """
-        Recursively replace the differential operator symbols,
-        with the appropriate `sympy.Derivative` objects. Input must
-        not be Add.
-        """
-        
-        fido_res = fido(A)
-
-        if fido_res: # no more recursion if fido is None
-            cut_idx, diff_var, diff_order = fido_res
-            prefactor = A.args[:cut_idx]
-            A_leftover = sp.Mul(*A.args[cut_idx+1:])
-            return sp.Mul(*prefactor,
-                            sp.Derivative(replace_diff(A_leftover),
-                                        *[diff_var]*diff_order))
-            
-            # With this code, we can afford to replace any power of the first
-            # _DerivativeSymbol we encounter, instead of replacing only the base
-            # and letting the rest of the factors be dealt with in the next recursion
-            # node, making the recursion more efficient. 
-        
-        return A
     
     def treat_add(A : sp.Add) -> sp.Expr:
         return sp.Add(*mp_helper(A.args, _symb2der))
@@ -148,7 +149,7 @@ def alpha2qp(expr : sp.Expr) -> sp.Expr:
     
 def qp2alpha(expr : sp.Expr) -> sp.Expr:
     return _symb2der(_subs_template(_der2symb(expr), qp2alpha_subs_dict, (qpType, PrimedPSO)))
-
+    
 def op2sc(expr : sp.Expr) -> sp.Expr:
     return _subs_template(expr, op2sc_subs_dict, (Operator,))
 
