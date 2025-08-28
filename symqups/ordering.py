@@ -51,7 +51,7 @@ class sOrdering(sp.Expr, HilbertSpaceObject):
         def make(A : sp.Expr) -> sOrdering:
             return super(sOrdering, cls).__new__(cls, A, s)
                     # need to specify since we do this
-                    # inside another function. 
+                    # inside another function.
 
         def treat_add(A : sp.Expr) -> sp.Expr:
             return sp.Add(*mp_helper(A.args, sOrdering))
