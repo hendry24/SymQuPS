@@ -143,11 +143,17 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined):
                 return iCGTransform(A)
                         
             der_args = list(A.args)
+            
             diff_var = der_args[1][0] # leftmost derivative.
-            der_args[1] = (dagger(diff_var), der_args[1][1] - 1) 
+            if isinstance(diff_var, alpha):
+                comm_left = -createOp(diff_var.sub)
+            else:
+                comm_left = annihilateOp(diff_var.sub)
+            
+            der_args[1] = (diff_var, der_args[1][1] - 1) 
             # sp.Derivative(f, (x, 0)) is valid and returns f.
             # When this happens, the recursion into 'treat_der" stops.
-            return spq.Commutator(sc2op(diff_var), iCGTransform(sp.Derivative(*der_args)))
+            return spq.Commutator(comm_left, iCGTransform(sp.Derivative(*der_args)))
         
         def treat_pow(A : sp.Pow) -> sp.Expr:
             if (isinstance(A.args[0], sp.Derivative)
@@ -201,10 +207,10 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined):
                 # the CBopp is similar to how we compute the 'CGTransform' of an operator
                 # and then 'Bopp'-shifting the resulting phase-space function.
                 aop = annihilateOp(a.sub)
-                subs_dict[aop] = aop - (1 + CahillGlauberS.val)/2 * _CommutatorSymbol(aop)
+                subs_dict[aop] = aop - (CahillGlauberS.val + 1)/2 * _CommutatorSymbol(aop)
                 # NOTE: Yes, 'annihilateOp' in '_CommutatorSymbol', not 'createOp'.
             for ad in arg_no_W.atoms(alphaD):
-                adop = createOp(a.sub)
+                adop = createOp(ad.sub)
                 subs_dict[adop] = adop - (1 - CahillGlauberS.val)/2 * _CommutatorSymbol(adop)
             
                             # This is the 'iCGTransform' of arg_no_W
