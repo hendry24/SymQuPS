@@ -21,25 +21,9 @@ def _deprime(expr : sp.Expr) -> sp.Expr:
 
 ###
 
-def _sympy2symb(expr : sp.Expr, sympy : sp.Basic, symb : sp.Symbol) -> sp.Expr:
-    """
-    Convert sympy mathematical operators into noncommutative symbols for algebraic
-    manipulation. This is done because sympy requires us to input the arguments
-    of the operations upon instantiation, which is not what we always want
-    to do. 
-    
-    This can be done because a mathematical operator essentialyl acts multiplicatively.
-    For example, we can define an "add by 2" operator that multiplies into
-    some number 'x' to give 'x+2'. 
-    
-    The user of this function must then make the operands noncommuting 
-    as well before doing the algebra using this function's output. 
-    
-    For example, we can use this function to convert a derivative into a derivative
-    symbol, while its designated operand can be established using '_Primed'.
-    """
+def _der2symb(expr : sp.Expr) -> sp.Expr:
     def treat_add(A : sp.Expr) -> sp.Expr:
-        return sp.Add(*mp_helper(A.args, _sympy2symb))
+        return sp.Add(*mp_helper(A.args, _der2symb))
     
     def treat_der(A : sp.Derivative) -> sp.Expr:
         A = _Primed(A)
@@ -50,19 +34,19 @@ def _sympy2symb(expr : sp.Expr, sympy : sp.Basic, symb : sp.Symbol) -> sp.Expr:
         for wrt in wrt_lst:
             out_factors.append(_DerivativeSymbol(wrt[0])**wrt[1])
             
-        return sp.Mul(*out_factors, _sympy2symb(A.args[0]))
+        return sp.Mul(*out_factors, _der2symb(A.args[0]))
     
     def treat_mul(A : sp.Expr):
         for j, arg in enumerate(A.args):
             if arg.has(sp.Derivative):
                 break
-        return sp.Mul(_sympy2symb(sp.Mul(*A.args[:j])), 
-                      _sympy2symb(A.args[j]),
-                      _sympy2symb(sp.Mul(*A.args[j+1:])))
+        return sp.Mul(_der2symb(sp.Mul(*A.args[:j])), 
+                      _der2symb(A.args[j]),
+                      _der2symb(sp.Mul(*A.args[j+1:])))
     
     expr = sp.expand(sp.sympify(expr))
     return operation_routine(expr,
-                             "_sympy2symb",
+                             "_der2symb",
                              [],
                              [],
                              {sp.Derivative : expr},
@@ -74,16 +58,18 @@ def _sympy2symb(expr : sp.Expr, sympy : sp.Basic, symb : sp.Symbol) -> sp.Expr:
     # 'Derivative', which aligns with other functionalities of the pacakge. For example,
     # inputs containing 'Derivative' are UnBoppable. 
 
-def _symb2sympy(expr : sp.Expr) -> sp.Expr:
-    """
-    Convert mathematical operator symbols back to the corresponding sympy
-    functionalities, where the operand is taken to be the noncommuting objects
-    positioned to the right. This is used after the algebraic manipulation with
-    the operator symbols obtained by '_sympy2symb' and the corresponding operands
-    set as needed. 
-    """
 
-    def _fido(A : sp.Expr | _DerivativeSymbol) -> None | Tuple[int, _Primed, int|sp.Integer]:
+def _symb2der(expr : sp.Expr) -> sp.Expr:
+    """
+    Convert derivative expressions with the package's `_DerivativeSymbol` objects into an equivalent
+    expression using `sympy.Derivative'. All `_Primed` variables are then returned to their original
+    version.
+    """
+    
+    def treat_add(A : sp.Add) -> sp.Expr:
+        return sp.Add(*mp_helper(A.args, _symb2der))
+
+    def fido(A : sp.Expr | _DerivativeSymbol) -> None | Tuple[int, _Primed, int|sp.Integer]:
         """
         Short for "first index and diff order", this function looks for the index in `expr.args`
         which contains `_DerivativeSymbol`, then return that index alongisde the differentiation
@@ -106,29 +92,30 @@ def _symb2sympy(expr : sp.Expr) -> sp.Expr:
                     return idx, arg.args[0].diff_var, arg.args[1]
                     
         return operation_routine(A,
-                                "_fido",
+                                "fido",
                                 [sp.Add],
                                 [],
-                                {_DerivativeSymbol : None},    # stops the recursion in _sympy2symb
+                                {_DerivativeSymbol : None},    # stops the recursion in _der2symb
                                 {_DerivativeSymbol : lambda A: (0, A.diff_var, 1),
-                                    sp.Pow : lambda A: (0, A.args[0].diff_var, A.args[1]),
-                                    sp.Mul : treat_mul}
+                                sp.Pow : lambda A: (0, A.args[0].diff_var, A.args[1]),
+                                sp.Mul : treat_mul}
                                 )
-    def _replace_diff(A : sp.Expr) -> sp.Expr:
+        
+    def replace_diff(A : sp.Expr) -> sp.Expr:
         """
         Recursively replace the differential operator symbols,
         with the appropriate `sympy.Derivative` objects. Input must
         not be Add.
         """
         
-        fido_res = _fido(A)
+        fido_res = fido(A)
 
         if fido_res: # no more recursion if fido is None
             cut_idx, diff_var, diff_order = fido_res
             prefactor = A.args[:cut_idx]
             A_leftover = sp.Mul(*A.args[cut_idx+1:])
             return sp.Mul(*prefactor,
-                            sp.Derivative(_replace_diff(A_leftover),
+                            sp.Derivative(replace_diff(A_leftover),
                                         *[diff_var]*diff_order))
             
             # With this code, we can afford to replace any power of the first
@@ -138,16 +125,14 @@ def _symb2sympy(expr : sp.Expr) -> sp.Expr:
         
         return A
 
-    def treat_add(A : sp.Add) -> sp.Expr:
-        return sp.Add(*mp_helper(A.args, _symb2sympy))
     
     return _deprime(operation_routine(expr,
-                                      "_symb2sympy",
+                                      "_symb2der",
                                       [],
                                       [],
                                       {_DerivativeSymbol : expr},
                                       {sp.Add : treat_add,
-                                       (sp.Mul, sp.Pow, _DerivativeSymbol) : _replace_diff}
+                                       (sp.Mul, sp.Pow, _DerivativeSymbol) : replace_diff}
                                       )
                     )
     
@@ -163,10 +148,10 @@ def _subs_template(expr : sp.Expr, subs_dict : ProtectedDict, lookup_atoms : tup
     return sp.expand(sp.sympify(expr).subs(trimmed_subs_dict))
     
 def alpha2qp(expr : sp.Expr) -> sp.Expr:
-    return _symb2sympy(_subs_template(_sympy2symb(expr), alpha2qp_subs_dict, (alphaType, PrimedPSO)))
+    return _symb2der(_subs_template(_der2symb(expr), alpha2qp_subs_dict, (alphaType, PrimedPSO)))
     
 def qp2alpha(expr : sp.Expr) -> sp.Expr:
-    return _symb2sympy(_subs_template(_sympy2symb(expr), qp2alpha_subs_dict, (qpType, PrimedPSO)))
+    return _symb2der(_subs_template(_der2symb(expr), qp2alpha_subs_dict, (qpType, PrimedPSO)))
     
 def op2sc(expr : sp.Expr) -> sp.Expr:
     return _subs_template(expr, op2sc_subs_dict, (Operator,))
