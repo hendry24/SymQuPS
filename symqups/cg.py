@@ -107,7 +107,7 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined):
         def make(A : sp.Expr):
             return super(CGTransform, cls).__new__(cls, A)
             
-        expr = qp2alpha(sp.sympify(expr)) 
+        expr = qp2alpha(sp.sympify(expr.doit()))  # '.doit' in case there is Commutator.
         return operation_routine(expr,
                                 "CG_transform",
                                 [],
@@ -273,6 +273,11 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined):
         def treat_W(A : StateFunction) -> sp.Expr:
             return rho/(pi.val)**get_N()
         
+        def treat_foo(A: sp.Function) -> sp.Expr:
+            if A.has(StateFunction):
+                return make(A)
+            return treat_substitutable(A)
+        
         def treat_substitutable(A: sp.Expr) -> sp.Expr:
             return sOrdering(sc2op(A))
         
@@ -289,7 +294,9 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined):
                                  StateFunction : treat_W,
                                  sp.Derivative : treat_der,
                                  sp.Pow : treat_pow,
-                                 sp.Mul : treat_mul}
+                                 sp.Mul : treat_mul,
+                                 PhaseSpaceVariable : treat_substitutable,
+                                 sp.Function : treat_foo}
                                 )
     def _latex(self, printer):
         return r"\mathcal{W}^{-1}_{s={%s}}\left[{%s}\right]" % (sp.latex(CahillGlauberS.val),
