@@ -139,9 +139,11 @@ class Star(sp.Expr, UnBoppable):
         
         unboppable_args = []
         
-        out = 1
+        out = sp.Integer(1)
         for k, arg in enumerate(args):
             try:
+                if arg.has(qpType):
+                    arg = qp2alpha(arg)
                 out = _star_base(out, arg)
             except _CannotBoppFlag:
                 if out != 1:
@@ -156,48 +158,42 @@ class Star(sp.Expr, UnBoppable):
             # msg += "In the current version, non-polynomial inputs are unboppable."
             # pprint(msg)
             return super().__new__(cls, *unboppable_args)
-        else:
-            return out
+        
+        return out
         
     def _latex(self, printer):
         out = r"\left({%s}\right)" % sp.latex(self.args[0])
         for arg in self.args[1:]:
-            out += r"\star \left({%s}\right)" % sp.latex(arg)
+            out += r"\star_s \left({%s}\right)" % sp.latex(arg)
         return out
 
 def _star_base(A : sp.Expr, B : sp.Expr) -> sp.Expr:
-        
-    A = sp.sympify(A)
-    B = sp.sympify(B)
-
+    """
+    Assumptions:
+    - A and B does contains (alpha, alphaD).
+    """
+    
     if not(A.has(PhaseSpaceObject) or 
         (B.has(PhaseSpaceObject))):
         return A*B
 
-    cannot_Bopp_A = A.has(UnBoppable) or not(A.is_polynomial(PhaseSpaceObject))
+    cannot_Bopp_A = A.has(UnBoppable) or not(A.is_polynomial(PhaseSpaceVariable))
                                         # should also be true if 'A" contains 'Derivative' objects, which
                                         # raises an error in 'Bopp' if unevaluable. 
-    cannot_Bopp_B = B.has(UnBoppable) or not(B.is_polynomial(PhaseSpaceObject))
+    cannot_Bopp_B = B.has(UnBoppable) or not(B.is_polynomial(PhaseSpaceVariable))
 
     if cannot_Bopp_A and cannot_Bopp_B:
         raise _CannotBoppFlag()
     
-    if A.has(qpType):
-        A = qp2alpha(A)
-    if B.has(qpType):
-        B = qp2alpha(B)
-    # Bopp-shifting functions of (q,p) results in more terms, so we do this for efficiency
-    # also. 
-    
     if cannot_Bopp_A:
         A = _Primed(A)
         B = _eval_Bopp(B, left=True)
-        X = sp.expand(B * A)
+        X = B*A
     else:
         A = _eval_Bopp(A, left=False)
         B = _Primed(B)
-        X = sp.expand(A * B)
-                
+        X = A*B
+
     return _symb2der(X).doit().expand()
 
 # Dual Star-Product
@@ -266,3 +262,50 @@ class dBopp(sp.Expr, UnDualBoppable):
     
     def _latex(self, printer) -> str:
         return r"\widetilde{\mathrm{Bopp}}\left[{%s}\right]" % sp.latex(self.args[0])
+    
+def _dual_star_base(A : sp.Expr, B : sp.Expr) -> sp.Expr:
+    
+    if any(not(obj.has(Operator)) for obj in [A,B]):
+        return A*B
+    
+    cannot_dBopp_A = A.has(UnDualBoppable) or not(A.is_polynomial(Operator))
+    cannot_dBopp_B = B.has(UnDualBoppable) or not(A.is_polynomial(Operator))
+    
+    if cannot_dBopp_A and cannot_dBopp_B:
+        raise _CannotBoppFlag()
+    
+    if cannot_dBopp_A:
+        return _symb2comm(dBopp(B)*A)
+    else:
+        return _symb2comm(dBopp(A)*B)
+    
+class dStar(sp.Expr, UnDualBoppable):
+    def __new__(cls, *args) -> sp.Expr:
+        if not(args):
+            return sp.Integer(1)
+        
+        undboppable_args = []
+        
+        out = sp.Integer(1)
+        for k,arg in enumerate(args):
+            try:
+                if arg.has(qpType):
+                    arg = qp2alpha(arg)
+                out = _dual_star_base(out, arg)
+            except _CannotBoppFlag:
+                if out != 1:
+                    undboppable_args.append(out)
+                out = arg
+                if k == (len(args)-1):
+                    undboppable_args.append(arg)
+                    
+        if undboppable_args:
+            return super().__new__(cls, *undboppable_args)
+    
+        return out
+    
+    def _latex(self, printer):
+        out = r"\left({%s}\right)" % sp.latex(self.args[0])
+        for arg in self.args[1:]:
+            out += r"\widetilde{\star}_s \left({%s}\right)" % sp.latex(arg)
+        return out

@@ -43,14 +43,15 @@ class CahillGlauberSParameter(Constant):
     @Constant.val.setter
     def val(self, value):
         value = sp.sympify(value)
-        if (isinstance(value, sp.Number) 
-            and value.is_real
-            and value <= 1 
-            and value >= -1):
+        if ((isinstance(value, sp.Number) 
+             and value.is_real
+             and value <= 1 
+             and value >= -1)
+            or isinstance(value, sp.Symbol)):
             pass
         else:
             msg = "The Cahill-Glauber formalism works best when 's' is real and lies between -1 and 1. "
-            msg += "The input value does not identify as such."
+            msg += "The input value does not identify as such, nor is it a 'sympy.Symbol'."
             warnings.warn(msg)
         super(CahillGlauberSParameter,
               CahillGlauberSParameter).val.__set__(self, value)

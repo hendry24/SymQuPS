@@ -104,6 +104,9 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
                 return treat_substitutable(A)
             
             return make(A)
+        
+        def treat_dStar(A : dStar) -> sp.Expr:
+            return sp.Mul(*mp_helper(A.args, CGTransform))
             
         def make(A : sp.Expr):
             return super(CGTransform, cls).__new__(cls, A)
@@ -118,11 +121,12 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
                                 {},
                                 {sp.Add : treat_add,
                                  sp.Mul : treat_mul,
-                                 (Operator, sp.Pow) : treat_substitutable,
                                  sp.Function : treat_function,
+                                 (Operator, sp.Pow) : treat_substitutable,
                                  sOrdering : treat_sOrdering,
                                  iCGTransform : lambda A: A.args[0],
-                                 spq.Commutator : lambda A: CGTransform(A.doit())})
+                                 spq.Commutator : lambda A: CGTransform(A.doit()),
+                                 dStar : treat_dStar})
         
     def _latex(self, printer):
         return r"\mathcal{W}_{s={%s}}\left[{%s}\right]" % (sp.latex(CahillGlauberS.val),
@@ -204,6 +208,9 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
         def treat_substitutable(A: sp.Expr) -> sp.Expr:
             return sOrdering(sc2op(A))
         
+        def treat_Star(A : Star) -> sp.Expr:
+            return sp.Mul(*mp_helper(A.args, iCGTransform))
+        
         def make(A : sp.Expr) -> iCGTransform:
             return super(iCGTransform, cls).__new__(cls, A)
         
@@ -220,7 +227,8 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
                                  sp.Mul : treat_mul,
                                  PhaseSpaceVariable : treat_substitutable,
                                  sp.Function : treat_foo,
-                                 CGTransform : lambda A: A.args[0]}
+                                 CGTransform : lambda A: A.args[0],
+                                 Star : treat_Star}
                                 )
     def _latex(self, printer):
         return r"\mathcal{W}^{-1}_{s={%s}}\left[{%s}\right]" % (sp.latex(CahillGlauberS.val),
