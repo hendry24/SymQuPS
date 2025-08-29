@@ -2,7 +2,7 @@ import sympy as sp
 import typing
 
 from .base import Base
-from .._internal.grouping import HilbertSpaceObject, qpType, alphaType
+from .._internal.grouping import HilbertSpaceObject, qpType, alphaType, UnDualBoppable
 from .._internal.cache import sub_cache
 from .._internal.basic_routines import treat_sub
 
@@ -60,8 +60,20 @@ class createOp(Operator, alphaType):
         
     def dagger(self):
         return annihilateOp(sub = self.sub)
+
+class _CommutatorSymbol(Base, HilbertSpaceObject):
+    def _get_symbol_name_and_assumptions(cls, left):
+        return r"\left[%s, \cdot\right]" % (sp.latex(left)), {"commutative" : False}
+
+    def __new__(cls, left : sp.Expr):
+        return super().__new__(cls, left)
     
-class densityOp(HermitianOp):
+    @property
+    def left(self):
+        return self._custom_args[0]
+
+
+class densityOp(HermitianOp, UnDualBoppable):
     base = r"\rho"
     has_sub = False
     

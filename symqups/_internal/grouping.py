@@ -54,6 +54,14 @@ class UnBoppable(ObjectGroup):
     """
     pass
 
+class UnDualBoppable(ObjectGroup):
+    """
+    This object cannot be dual-Bopp-shifted.
+    """
+    pass
+
+###
+
 class HilbertSpaceObject(UnBoppable):
     """
     This object lives in the Hilbert Space.
@@ -102,3 +110,17 @@ class _ReadOnlyExpr(_AddOnlyExpr):
     def __add__(self, other):
         raise NotImplementedError()
     __radd__ = __add__
+    
+###
+
+class AndClassMeta(type):
+    def __instancecheck__(cls, instance):
+        """Return True only if instance is an instance of all classes in _classes."""
+        return all(isinstance(instance, c) for c in cls._classes)
+
+def AndClass(*classes):
+    """
+    Create a pseudo-class that matches instances of ALL given classes.
+    """
+    name = "And_" + "_".join(c.__name__ for c in classes)
+    return AndClassMeta(name, (), {"_classes": classes})

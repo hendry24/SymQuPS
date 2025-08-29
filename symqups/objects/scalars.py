@@ -86,7 +86,6 @@ class _Primed(Base, PrimedPSO):
         return r"{%s}'" % sp.latex(A), {"commutative" : False}
     
     def __new__(cls, A : sp.Expr):
-        
         A = sp.sympify(A)
         
         if isinstance(A, PhaseSpaceVariable):
@@ -102,8 +101,8 @@ class _Primed(Base, PrimedPSO):
 
 class _DerivativeSymbol(Base, PrimedPSO):
     
-    def _get_symbol_name_and_assumptions(cls, primed_phase_space_coordinate):
-        return r"\partial_{%s}" % sp.latex(primed_phase_space_coordinate), {"commutative":False}
+    def _get_symbol_name_and_assumptions(cls, primed_phase_space_coordinate : _Primed):
+        return r"\frac{\partial \cdot}{\partial {%s}}" % sp.latex(primed_phase_space_coordinate.base), {"commutative":False}
     
     def __new__(cls, primed_phase_space_coordinate : _Primed):
         if not(isinstance(primed_phase_space_coordinate, _Primed)):

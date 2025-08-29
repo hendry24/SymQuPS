@@ -1,18 +1,20 @@
 import sympy as sp
+import sympy.physics.quantum as spq
 import warnings
+from typing import Tuple
 
-from ._internal.grouping import UnBoppable, PhaseSpaceObject, qpType, PhaseSpaceVariable
-from ._internal.cache import Bopp_r_dict, Bopp_l_dict
+from ._internal.basic_routines import operation_routine
+from ._internal.grouping import UnBoppable, UnDualBoppable, PhaseSpaceObject, qpType, alphaType, PhaseSpaceVariable, AndClass
+from ._internal.cache import Bopp_r_dict, Bopp_l_dict, dBopp_dict
+from ._internal.multiprocessing import mp_helper
 
-from .objects.scalars import _Primed, W
+from .objects.scalars import _Primed, W, _DerivativeSymbol
+from .objects.operators import Operator, _CommutatorSymbol
 
 from .manipulations import qp2alpha, _symb2der, _subs_template
 
-###
-
-class _placeholderDot(sp.Expr):
-    def _latex(self, printer):
-        return r""
+# The Star Product
+##################
 
 class Bopp(sp.Expr, UnBoppable):
     """
@@ -82,8 +84,7 @@ class Bopp(sp.Expr, UnBoppable):
         """
         res = _eval_Bopp(expr, left)
         
-        return _symb2der(res*_placeholderDot(*_Primed(W).args))
-                        # No `_Primed` objects facing the user. 
+        return res
 
     def _latex(self, printer) -> str:
         bopp_arrow = r"\longrightarrow"
@@ -100,6 +101,8 @@ def _eval_Bopp(expr : sp.Expr, left : bool) -> sp.Expr:
         Bopp_dict = Bopp_l_dict
         
     return _subs_template(expr, Bopp_dict, (PhaseSpaceVariable,))
+
+###
 
 class _CannotBoppFlag(BaseException):
     pass
@@ -196,3 +199,70 @@ def _star_base(A : sp.Expr, B : sp.Expr) -> sp.Expr:
         X = sp.expand(A * B)
                 
     return _symb2der(X).doit().expand()
+
+# Dual Star-Product
+###################
+
+def _symb2comm(expr : sp.Expr) -> sp.Expr:
+    # We put this here insteaad of 'manipulations' since we only use this here. 
+    
+    def treat_add(A : sp.Add) -> sp.Expr:
+        return sp.Add(*mp_helper(A.args, _symb2comm))
+    
+    def fico(A : sp.Expr) -> None | Tuple[int, Operator, int|sp.Integer]: # first index and commutator order. 
+        def treat_mul(AA : sp.Mul) -> tuple:
+            for idx, arg in enumerate(AA.args):
+                if isinstance(arg, _CommutatorSymbol):
+                    return idx, arg.left, 1
+                if arg.has(_CommutatorSymbol):
+                    return idx, arg.args[0].left, arg.args[1]
+        
+        return operation_routine(A,
+                                "_symb2comm.fico",
+                                [sp.Add],
+                                [],
+                                {_CommutatorSymbol : None},
+                                {_CommutatorSymbol : lambda A: (0, A.left, 1),
+                                sp.Pow : lambda A: (0, A.args[0].left, A.args[1]),
+                                sp.Mul : treat_mul}
+                                )
+    def replace_comm(A : sp.Expr) -> sp.Expr:
+        fico_res = fico(A)
+        
+        if fico_res:
+            cut_idx, comm_left, comm_order = fico_res
+            prefactor = A.args[:cut_idx]
+            A_leftover = _CommutatorSymbol(comm_left)**(comm_order-1) * sp.Mul(*A.args[cut_idx+1:])
+            # NOTE: This is where it differs from sp.Derivative. We can't just shortcut and do multiple 
+            # commutator brackets. 
+            return sp.Mul(*prefactor,
+                            spq.Commutator(comm_left, replace_comm(A_leftover)))
+            
+        return A
+    
+    return operation_routine(expr,
+                            "_symb2der",
+                            [],
+                            [],
+                            {_CommutatorSymbol : expr},
+                            {sp.Add : treat_add,
+                            (sp.Mul, sp.Pow, _CommutatorSymbol) : replace_comm}
+                            )
+
+def _eval_dBopp(expr: sp.Expr) -> sp.Expr:
+    return _subs_template(expr, dBopp_dict, (AndClass(Operator, qpType),
+                                             AndClass(Operator, alphaType)))
+
+class dBopp(sp.Expr, UnDualBoppable):
+    def __new__(cls, expr : sp.Expr) -> sp.Expr:
+        expr = sp.sympify(expr)
+        
+        if expr.has(UnDualBoppable):
+            return super().__new__(cls, expr)
+        
+        res = _eval_dBopp(expr)
+        
+        return res
+    
+    def _latex(self, printer) -> str:
+        return r"\widetilde{\mathrm{Bopp}}\left[{%s}\right]" % sp.latex(self.args[0])

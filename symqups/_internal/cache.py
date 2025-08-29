@@ -19,7 +19,7 @@ class AutoSortedUniqueList(list):
     def _refresh(self, sub):
         
         from ..objects.scalars import t, q, p, alpha, alphaD, W, _Primed, _DerivativeSymbol
-        from ..objects.operators import qOp, pOp, annihilateOp, createOp
+        from ..objects.operators import qOp, pOp, annihilateOp, createOp, _CommutatorSymbol
         from .. import zeta, hbar, s
         
         zeta = zeta.val
@@ -117,6 +117,22 @@ class AutoSortedUniqueList(list):
             Bopp_dict._set_item(ad, ad
                                     + (CGs-sgn)/2 * der(a))
             
+        ###
+        
+        dBopp_dict._set_item(aop,
+                             aop - (1+CGs)/2 * _CommutatorSymbol(aop))
+        dBopp_dict._set_item(adop,
+                             adop - (1-CGs)/2 * _CommutatorSymbol(adop))
+        
+        subs_dict_1 = {aop : dBopp_dict[aop], 
+                       adop : dBopp_dict[adop]}
+        subs_dict_2 = {aop : alpha2qp_subs_dict[aop],
+                       adop : alpha2qp_subs_dict[adop]}
+        dBopp_dict._set_item(qop,
+                             qp2alpha_subs_dict[qop].subs(subs_dict_1).subs(subs_dict_2))
+        dBopp_dict._set_item(pop,
+                             qp2alpha_subs_dict[pop].subs(subs_dict_1).subs(subs_dict_2))
+            
     def _refresh_all(self):
         for sub in self:
             self._refresh(sub)
@@ -151,5 +167,6 @@ op2sc_subs_dict = ProtectedDict()
 sc2op_subs_dict = ProtectedDict()
 Bopp_r_dict = ProtectedDict()
 Bopp_l_dict = ProtectedDict()
+dBopp_dict = ProtectedDict()
 
 sub_cache = AutoSortedUniqueList()

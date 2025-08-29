@@ -4,16 +4,17 @@ from typing import Tuple
 
 from ._internal.multiprocessing import mp_helper, MP_CONFIG
 from ._internal.basic_routines import operation_routine
-from ._internal.grouping import PhaseSpaceVariable, PhaseSpaceObject, Defined, HilbertSpaceObject
+from ._internal.grouping import (PhaseSpaceVariable, PhaseSpaceObject, Defined, 
+                                 HilbertSpaceObject, NotAnOperator, NotAScalar)
 from ._internal.cache import sub_cache
 
 from .objects.base import Base
 from .objects.scalars import W, StateFunction, alpha, alphaD
 from .objects.operators import Operator, densityOp, rho, annihilateOp, createOp
 
-from .star_product import Star
+from .star_product import Star, dStar
 from .ordering import sOrdering
-from .manipulations import qp2alpha, op2sc, alpha2qp, sc2op, dagger, express
+from .manipulations import qp2alpha, op2sc, alpha2qp, sc2op, express
 from .utils import get_N
 
 from . import s as CahillGlauberS
@@ -41,7 +42,7 @@ def _iCGT_str(x : str, var : bool = False) -> str:
 
 ###
 
-class CGTransform(sp.Expr, PhaseSpaceObject, Defined):
+class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
     
     @staticmethod
     def _definition():
@@ -107,17 +108,21 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined):
         def make(A : sp.Expr):
             return super(CGTransform, cls).__new__(cls, A)
             
-        expr = qp2alpha(sp.sympify(expr.doit()))  # '.doit' in case there is Commutator.
+        expr = qp2alpha(sp.sympify(expr))
+        if not(expr.has(Operator)) and not(isinstance(expr, NotAScalar)):
+            return expr
         return operation_routine(expr,
                                 "CG_transform",
                                 [],
-                                [PhaseSpaceVariable],
-                                {Operator : expr},
+                                [],
+                                {},
                                 {sp.Add : treat_add,
-                                sp.Mul : treat_mul,
-                                (Operator, sp.Pow) : treat_substitutable,
-                                sp.Function : treat_function,
-                                sOrdering : treat_sOrdering})
+                                 sp.Mul : treat_mul,
+                                 (Operator, sp.Pow) : treat_substitutable,
+                                 sp.Function : treat_function,
+                                 sOrdering : treat_sOrdering,
+                                 iCGTransform : lambda A: A.args[0],
+                                 spq.Commutator : lambda A: CGTransform(A.doit())})
         
     def _latex(self, printer):
         return r"\mathcal{W}_{s={%s}}\left[{%s}\right]" % (sp.latex(CahillGlauberS.val),
@@ -125,7 +130,7 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined):
     
 ###
 
-class iCGTransform(sp.Expr, HilbertSpaceObject, Defined):
+class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
     @staticmethod
     def _definition():
         lhs = sp.Symbol(_iCGT_str(r"f\left(\bm{\alpha}\right)"))
@@ -138,10 +143,6 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined):
             return sp.Add(*mp_helper(A.args, iCGTransform))
         
         def treat_der(A : sp.Derivative) -> sp.Expr:
-            A = A.doit()
-            if not(isinstance(A, sp.Derivative)):
-                return iCGTransform(A)
-                        
             der_args = list(A.args)
             
             diff_var = der_args[1][0] # leftmost derivative.
@@ -180,95 +181,17 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined):
                     arg_with_W *= arg
                 else:
                     arg_no_W *= arg
-                    
-            # We now do an analogue of the Bopp shift where we have commutator
-            # brackets instead of differenial operators, which we call the 
-            # 'CBopp' (Commutator-Bopp). Since sympy requires the argument to
-            # be specified on instantiation, we again turn the "commutator bracket
-            # operator" into a noncommuting symbol we can freely multiply.  
-            #
-            # NOTE: Unlike the operator version, we can freely move the scalars
-            # around so we can always CBopp from the left.
             
-            class _CommutatorSymbol(Base, HilbertSpaceObject):
-                def _get_symbol_name_and_assumptions(cls, left):
-                    return r"\left[%s, \cdot\right]" % (sp.latex(left)), {"commutative" : False}
-
-                def __new__(cls, left : sp.Expr):
-                    return super().__new__(cls, left)
-                
-                @property
-                def left(self):
-                    return self._custom_args[0]
+            # NOTE: This collection process should generally make evaluations
+            # faster as we only need to call 'dStar' once.        
             
-            subs_dict = {}
-            for a in arg_no_W.atoms(alpha):
-                # Here we skip the naive sc2op substitution. The naive substitution plus
-                # the CBopp is similar to how we compute the 'CGTransform' of an operator
-                # and then 'Bopp'-shifting the resulting phase-space function.
-                aop = annihilateOp(a.sub)
-                subs_dict[aop] = aop - (CahillGlauberS.val + 1)/2 * _CommutatorSymbol(aop)
-                # NOTE: Yes, 'annihilateOp' in '_CommutatorSymbol', not 'createOp'.
-            for ad in arg_no_W.atoms(alphaD):
-                adop = createOp(ad.sub)
-                subs_dict[adop] = adop - (1 - CahillGlauberS.val)/2 * _CommutatorSymbol(adop)
-            
-                            # This is the 'iCGTransform' of arg_no_W
-            arg_no_W_iCG = express(sOrdering(sc2op(arg_no_W)), 1, True).subs(subs_dict)
+            arg_no_W_iCG = express(sOrdering(sc2op(arg_no_W)), 1, True)
                         # Any 't' produces equally many terms except on some edge cases, so we
                         # choose 't=1' quite arbitrarily, though it may prove to be useful
                         # in normal-ordered cases, which should be the most popular out of the three.
+            arg_with_W_iCG = iCGTransform(arg_with_W)
             
-            X = sp.expand(arg_no_W_iCG * iCGTransform(arg_with_W))
-                                    # No need to '_Primed' this since operators are noncommutative.
-            
-            # We now recursively replace '_CommutatorSymbol' by the real thing.
-            # Code is similar to 'fido' in symqups.manipulations. Though it is interesting
-            # to combine the two, it is too much work and may not be trivial.
-            def fico(A : sp.Expr) -> None | Tuple[int, Operator, int|sp.Integer]: # first index and commutator order. 
-                def treat_mul(AA : sp.Mul) -> tuple:
-                    for idx, arg in enumerate(AA.args):
-                        if isinstance(arg, _CommutatorSymbol):
-                            return idx, arg.left, 1
-                        if arg.has(_CommutatorSymbol):
-                            return idx, arg.args[0].left, arg.args[1]
-                
-                return operation_routine(A,
-                                         "iCGTransform.__new__.treat_mul.fico",
-                                         [sp.Add],
-                                         [],
-                                         {_CommutatorSymbol : None},
-                                         {_CommutatorSymbol : lambda A: (0, A.left, 1),
-                                          sp.Pow : lambda A: (0, A.args[0].left, A.args[1]),
-                                          sp.Mul : treat_mul}
-                                         )
-            
-            def replace_comm(A : sp.Expr) -> sp.Expr:
-                fico_res = fico(A)
-                
-                if fico_res:
-                    cut_idx, comm_left, comm_order = fico_res
-                    prefactor = A.args[:cut_idx]
-                    A_leftover = _CommutatorSymbol(comm_left)**(comm_order-1) * sp.Mul(*A.args[cut_idx+1:])
-                    # NOTE: This is where it differs from sp.Derivative. We can't just shortcut and do multiple 
-                    # commutator brackets. 
-                    return sp.Mul(*prefactor,
-                                  spq.Commutator(comm_left, replace_comm(A_leftover)))
-                    
-                return A
-            
-            if isinstance(X, sp.Add):
-                X_args = X.args
-            else:
-                X_args = [X]
-            
-            # NOTE: It is a pain to make 'replace_comm' pickleable, so we just run this
-            # without multiprocessing, which is generally likely the case.
-            original_mp_enable = MP_CONFIG["enable"]
-            MP_CONFIG["enable"] = False
-            out = sp.Add(*mp_helper(X_args, replace_comm))
-            MP_CONFIG["enable"] = original_mp_enable
-            return out            
+            return dStar(arg_no_W_iCG, arg_with_W_iCG)
         
         def treat_W(A : StateFunction) -> sp.Expr:
             return rho/(pi.val)**get_N()
@@ -282,7 +205,7 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined):
             return sOrdering(sc2op(A))
         
         def make(A : sp.Expr) -> iCGTransform:
-            super(iCGTransform, cls).__new__(cls, A)
+            return super(iCGTransform, cls).__new__(cls, A)
         
         expr = qp2alpha(sp.sympify(expr))
         return operation_routine(expr, 
@@ -296,7 +219,8 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined):
                                  sp.Pow : treat_pow,
                                  sp.Mul : treat_mul,
                                  PhaseSpaceVariable : treat_substitutable,
-                                 sp.Function : treat_foo}
+                                 sp.Function : treat_foo,
+                                 CGTransform : lambda A: A.args[0]}
                                 )
     def _latex(self, printer):
         return r"\mathcal{W}^{-1}_{s={%s}}\left[{%s}\right]" % (sp.latex(CahillGlauberS.val),
