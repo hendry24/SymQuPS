@@ -1,6 +1,8 @@
 import sympy as sp
 from typing import Callable, Dict, Union, Sequence, Any
 
+from .multiprocessing import mp_helper
+
 def treat_sub(sub, has_sub) -> sp.Symbol:
     """
     Treat the input subscript to always be a 'sympy.Symbol'.
@@ -84,7 +86,7 @@ def invalid_input(inpt : object, name : str) -> None:
     raise ValueError(msg)
 
 def operation_routine(expr : sp.Expr,
-                       name : str,
+                       name : str | callable,
                        screen_types : Sequence[type],
                        deep_screen_types : Sequence[type],
                        return_if_expr_does_not_have : Dict[Union[type, Sequence[type]], 
@@ -97,7 +99,8 @@ def operation_routine(expr : sp.Expr,
     types of expressions/subexpressions are prohibited. 
     """
     
-    expr = sp.expand(sp.sympify(expr))
+    if callable(name):
+        name = name.__module__ + "." + name.__qualname__
     
     screen_type(expr, screen_types, name)
     deep_screen_type(expr, deep_screen_types, name)
@@ -117,3 +120,10 @@ def operation_routine(expr : sp.Expr,
             return then_return
         
     invalid_input(expr, name)
+    
+def default_treat_add(A : sp.Expr, foo : callable) -> sp.Expr:
+    """
+    Default 'sp.Add' treatment, where 'foo' is applied to each of
+    'A.args'.
+    """
+    return sp.Add(*mp_helper(A, foo))

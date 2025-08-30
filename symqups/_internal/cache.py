@@ -69,16 +69,6 @@ class AutoSortedUniqueList(list):
             
             qp2alpha_subs_dict._set_item(sc2op_subs_dict[k], 
                                          v.subs({a:aop, ad:adop}))
-            
-            da_dqq = zeta / sp.sqrt(2*hbar)
-            dad_dqq = da_dqq
-            da_dpp = (sp.I/sp.sqrt(2*hbar)) * (1/zeta)
-            dad_dpp = -da_dpp
-            
-            qp2alpha_subs_dict._set_item(der(qq), 
-                                         da_dqq*der(a) + dad_dqq*der(ad))
-            qp2alpha_subs_dict._set_item(der(pp), 
-                                         da_dpp*der(a) + dad_dpp*der(ad))
 
         ###
         
@@ -89,16 +79,6 @@ class AutoSortedUniqueList(list):
             
             alpha2qp_subs_dict._set_item(sc2op_subs_dict[k], 
                                          v.subs({qq:qop, pp:pop}))
-            
-            dqq_da = sp.sqrt(hbar)/sp.sqrt(2) * (1/zeta)
-            dqq_dad = dqq_da
-            dpp_da = sp.sqrt(hbar)/sp.sqrt(2) * (zeta/sp.I)
-            dpp_dad = -dpp_da
-            
-            alpha2qp_subs_dict._set_item(der(a),
-                                         dqq_da*der(qq) + dpp_da*der(pp))
-            alpha2qp_subs_dict._set_item(der(ad),
-                                         dqq_dad*der(qq) + dpp_dad*der(pp))
             
         ###
         
@@ -119,19 +99,14 @@ class AutoSortedUniqueList(list):
             
         ###
         
-        dBopp_dict._set_item(aop,
-                             aop - (1+CGs)/2 * _CommutatorSymbol(aop))
-        dBopp_dict._set_item(adop,
-                             adop - (1-CGs)/2 * _CommutatorSymbol(adop))
+        # NOTE: The dual-star-product is commutative.
         
-        subs_dict_1 = {aop : dBopp_dict[aop], 
-                       adop : dBopp_dict[adop]}
-        subs_dict_2 = {aop : alpha2qp_subs_dict[aop],
-                       adop : alpha2qp_subs_dict[adop]}
-        dBopp_dict._set_item(qop,
-                             qp2alpha_subs_dict[qop].subs(subs_dict_1).subs(subs_dict_2))
-        dBopp_dict._set_item(pop,
-                             qp2alpha_subs_dict[pop].subs(subs_dict_1).subs(subs_dict_2))
+        dBopp_dict._set_item(aop,
+                             aop - (CGs+1)/2 * _CommutatorSymbol(aop))
+        # dBopp_dict._set_item(adop,
+        #                      adop - (1-CGs)/2 * _CommutatorSymbol(adop))
+        dBopp_dict._set_item(adop,
+                             adop + (CGs-1)/2 * _CommutatorSymbol(adop))
             
     def _refresh_all(self):
         for sub in self:

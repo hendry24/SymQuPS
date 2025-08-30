@@ -46,6 +46,9 @@ def mp_helper(inpt_lst : Sequence, foo : callable) -> list[sp.Expr]:
     Apply `foo` to a sequence of inputs, using multiprocessing
     if possible.
     """
+    if not(inpt_lst):
+        return []
+    
     global _mp_is_running
     
     use_mp = (not(_mp_is_running) and 

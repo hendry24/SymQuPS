@@ -1,20 +1,145 @@
 import sympy as sp
-import sympy.physics.quantum as spq
-import warnings
 from typing import Tuple
+import warnings
 
 from ._internal.basic_routines import operation_routine
-from ._internal.grouping import UnBoppable, UnDualBoppable, PhaseSpaceObject, qpType, alphaType, PhaseSpaceVariable, AndClass
-from ._internal.cache import Bopp_r_dict, Bopp_l_dict, dBopp_dict
+from ._internal.grouping import UnBoppable, PhaseSpaceVariable, Defined, qpType
+from ._internal.cache import Bopp_r_dict, Bopp_l_dict
 from ._internal.multiprocessing import mp_helper
 
-from .objects.scalars import _Primed, W, _DerivativeSymbol
-from .objects.operators import Operator, _CommutatorSymbol
+from .objects.base import Base
 
-from .manipulations import qp2alpha, _symb2der, _subs_template
+from .manipulations import qp2alpha, _subs_template
 
-# The Star Product
-##################
+###
+
+class _Primed(Base):
+    def _get_symbol_name_and_assumptions(cls, A):
+        return r"{%s}'" % sp.latex(A), {"commutative" : False}
+
+        
+    def __new__(cls, A : sp.Expr):
+        def make(A : sp.Expr):
+            return super(_Primed, cls).__new__(cls, A)
+        
+        def prime_expr(A : sp.Expr):
+            return A.subs({X:_Primed(X) for X in A.atoms(PhaseSpaceVariable)})    
+        
+        return operation_routine(A,
+                                 _Primed,
+                                 [],
+                                 [],
+                                 {_Primed, prime_expr},
+                                 {PhaseSpaceVariable : make}
+                                 )
+    
+    @property
+    def base(self):
+        return self._custom_args[0]
+
+###
+
+class _DerivativeSymbol(Base):
+    
+    def _get_symbol_name_and_assumptions(cls, phase_space_variable):
+        return r"\partial_{%s}" % sp.latex(phase_space_variable), {"commutative":False}
+    
+    def __new__(cls, phase_space_variable : PhaseSpaceVariable):
+        def make(A):
+            return super(_DerivativeSymbol, cls).__new__(cls, _Primed(A))
+            
+        return operation_routine(phase_space_variable,
+                                 _DerivativeSymbol,
+                                 [],
+                                 [],
+                                 {},
+                                 {PhaseSpaceVariable : make}
+                                 )
+    @property
+    def diff_var(self):
+        return self._custom_args[0]
+    
+def _deprime(expr : sp.Expr) -> sp.Expr:
+    subs_dict = {X : X.base for X in expr.atoms(_Primed)}
+    return expr.subs(subs_dict)
+
+###
+
+def _symb2der(expr : sp.Expr) -> sp.Expr:
+    """
+    Convert derivative expressions with the package's `_DerivativeSymbol` objects into an equivalent
+    expression using `sympy.Derivative'. All `_Primed` variables are then returned to their original
+    version.
+    """
+    
+    def treat_add(A : sp.Add) -> sp.Expr:
+        return sp.Add(*mp_helper(A.args, _symb2der))
+
+    def fido(A : sp.Expr | _DerivativeSymbol) -> None | Tuple[int, _Primed, int|sp.Integer]:
+        """
+        Short for "first index and diff order", this function looks for the index in `expr.args`
+        which contains `_DerivativeSymbol`, then return that index alongisde the differentiation
+        variable (a `_Primed` object) and the differentiation order given in that index (the power
+        of `_DerivativeSymbol'). 
+        """
+
+        # Everything to the right of the first "derivative operator" symbol
+        # must be ordered in .args since we have specified the noncommutativity
+        # of the primed symbols. It does not matter if the unprimed symbols get
+        # stuck in the middle since the operator does not work on them. What is 
+        # important is that _Primed objects are correctly placed with respect to the
+        # derivative operators.
+        
+        def treat_mul(AA : sp.Mul) -> tuple:
+            for idx, arg in enumerate(AA.args): 
+                if isinstance(arg, _DerivativeSymbol):
+                    return idx, arg.diff_var, 1
+                if arg.has(_DerivativeSymbol):
+                    return idx, arg.args[0].diff_var, arg.args[1]
+                    
+        return operation_routine(A,
+                                fido,
+                                [sp.Add],
+                                [],
+                                {_DerivativeSymbol : None},    # stops the recursion in _der2symb
+                                {_DerivativeSymbol : lambda A: (0, A.diff_var, 1),
+                                sp.Pow : lambda A: (0, A.args[0].diff_var, A.args[1]),
+                                sp.Mul : treat_mul}
+                                )
+        
+    def replace_diff(A : sp.Expr) -> sp.Expr:
+        """
+        Recursively replace the differential operator symbols,
+        with the appropriate `sympy.Derivative` objects. Input must
+        not be Add.
+        """
+        
+        fido_res = fido(A)
+
+        if fido_res: # no more recursion if fido is None
+            cut_idx, diff_var, diff_order = fido_res
+            prefactor = A.args[:cut_idx]
+            A_leftover = sp.Mul(*A.args[cut_idx+1:])
+            return sp.Mul(*prefactor,
+                            sp.Derivative(replace_diff(A_leftover),
+                                        *[diff_var]*diff_order))
+            
+            # With this code, we can afford to replace any power of the first
+            # _DerivativeSymbol we encounter, instead of replacing only the base
+            # and letting the rest of the factors be dealt with in the next recursion
+            # node, making the recursion more efficient. 
+        
+        return A
+
+    return _deprime(operation_routine(expr,
+                                      replace_diff,
+                                      [],
+                                      [],
+                                      {_DerivativeSymbol : expr},
+                                      {sp.Add : treat_add,
+                                       (sp.Mul, sp.Pow, _DerivativeSymbol) : replace_diff}
+                                      )
+    )
 
 class Bopp(sp.Expr, UnBoppable):
     """
@@ -107,7 +232,35 @@ def _eval_Bopp(expr : sp.Expr, left : bool) -> sp.Expr:
 class _CannotBoppFlag(BaseException):
     pass
 
-class Star(sp.Expr, UnBoppable):
+def _star_base(A : sp.Expr, B : sp.Expr) -> sp.Expr:
+    """
+    Assumptions:
+    - A and B does contains (alpha, alphaD).
+    """
+    
+    if not(A.has(PhaseSpaceVariable) or B.has(PhaseSpaceVariable)):
+        return A*B
+
+    cannot_Bopp_A = A.has(UnBoppable) or not(A.is_polynomial(PhaseSpaceVariable))
+                                        # should also be true if 'A" contains 'Derivative' objects, which
+                                        # raises an error in 'Bopp' if unevaluable. 
+    cannot_Bopp_B = B.has(UnBoppable) or not(B.is_polynomial(PhaseSpaceVariable))
+
+    if cannot_Bopp_A and cannot_Bopp_B:
+        raise _CannotBoppFlag()
+    
+    if cannot_Bopp_A:
+        A = _Primed(A)
+        B = _eval_Bopp(B, left=True)
+        X = sp.expand(B*A)
+    else:
+        A = _eval_Bopp(A, left=False)
+        B = _Primed(B)
+        X = sp.expand(A*B)
+
+    return _symb2der(X).doit()
+
+class Star(sp.Expr, UnBoppable, Defined):
     """
     The s-parameterized star-product `A(q,p) ★ B(q,p) ★ ...` (or the `alpha` equivalent), 
     calculated using the Bopp shift.
@@ -133,6 +286,17 @@ class Star(sp.Expr, UnBoppable):
     
     """
 
+    @staticmethod
+    def _definition():
+        out = r"f\left(\bm{\alpha},\overline{\bm{\alpha}}\right)"
+        out += r"\mathbin{\star_s}"
+        out += r"g\left(\bm{\alpha},\overline{\bm{\alpha}}\right)"
+        out += r"= f\left(\bm{\alpha}+\frac{s+1}{2}\partial_{\bm{\alpha}'},"
+        out += r"\overline{\bm{\alpha}} + \frac{s-1}{2}\partial_{\overline{\bm{\alpha}}'}\right)"
+        out += r"g\left(\bm{\alpha}',\overline{\bm{\alpha}}'\right)"
+        return sp.Symbol(out)
+    definition = _definition()
+    
     def __new__(cls, *args) -> sp.Expr:
         if not(args):
             return sp.Integer(1)
@@ -165,147 +329,4 @@ class Star(sp.Expr, UnBoppable):
         out = r"\left({%s}\right)" % sp.latex(self.args[0])
         for arg in self.args[1:]:
             out += r"\star_s \left({%s}\right)" % sp.latex(arg)
-        return out
-
-def _star_base(A : sp.Expr, B : sp.Expr) -> sp.Expr:
-    """
-    Assumptions:
-    - A and B does contains (alpha, alphaD).
-    """
-    
-    if not(A.has(PhaseSpaceObject) or 
-        (B.has(PhaseSpaceObject))):
-        return A*B
-
-    cannot_Bopp_A = A.has(UnBoppable) or not(A.is_polynomial(PhaseSpaceVariable))
-                                        # should also be true if 'A" contains 'Derivative' objects, which
-                                        # raises an error in 'Bopp' if unevaluable. 
-    cannot_Bopp_B = B.has(UnBoppable) or not(B.is_polynomial(PhaseSpaceVariable))
-
-    if cannot_Bopp_A and cannot_Bopp_B:
-        raise _CannotBoppFlag()
-    
-    if cannot_Bopp_A:
-        A = _Primed(A)
-        B = _eval_Bopp(B, left=True)
-        X = B*A
-    else:
-        A = _eval_Bopp(A, left=False)
-        B = _Primed(B)
-        X = A*B
-
-    return _symb2der(X).doit().expand()
-
-# Dual Star-Product
-###################
-
-def _symb2comm(expr : sp.Expr) -> sp.Expr:
-    # We put this here insteaad of 'manipulations' since we only use this here. 
-    
-    def treat_add(A : sp.Add) -> sp.Expr:
-        return sp.Add(*mp_helper(A.args, _symb2comm))
-    
-    def fico(A : sp.Expr) -> None | Tuple[int, Operator, int|sp.Integer]: # first index and commutator order. 
-        def treat_mul(AA : sp.Mul) -> tuple:
-            for idx, arg in enumerate(AA.args):
-                if isinstance(arg, _CommutatorSymbol):
-                    return idx, arg.left, 1
-                if arg.has(_CommutatorSymbol):
-                    return idx, arg.args[0].left, arg.args[1]
-        
-        return operation_routine(A,
-                                "_symb2comm.fico",
-                                [sp.Add],
-                                [],
-                                {_CommutatorSymbol : None},
-                                {_CommutatorSymbol : lambda A: (0, A.left, 1),
-                                sp.Pow : lambda A: (0, A.args[0].left, A.args[1]),
-                                sp.Mul : treat_mul}
-                                )
-    def replace_comm(A : sp.Expr) -> sp.Expr:
-        fico_res = fico(A)
-        
-        if fico_res:
-            cut_idx, comm_left, comm_order = fico_res
-            prefactor = A.args[:cut_idx]
-            A_leftover = _CommutatorSymbol(comm_left)**(comm_order-1) * sp.Mul(*A.args[cut_idx+1:])
-            # NOTE: This is where it differs from sp.Derivative. We can't just shortcut and do multiple 
-            # commutator brackets. 
-            return sp.Mul(*prefactor,
-                            spq.Commutator(comm_left, replace_comm(A_leftover)))
-            
-        return A
-    
-    return operation_routine(expr,
-                            "_symb2der",
-                            [],
-                            [],
-                            {_CommutatorSymbol : expr},
-                            {sp.Add : treat_add,
-                            (sp.Mul, sp.Pow, _CommutatorSymbol) : replace_comm}
-                            )
-
-def _eval_dBopp(expr: sp.Expr) -> sp.Expr:
-    return _subs_template(expr, dBopp_dict, (AndClass(Operator, qpType),
-                                             AndClass(Operator, alphaType)))
-
-class dBopp(sp.Expr, UnDualBoppable):
-    def __new__(cls, expr : sp.Expr) -> sp.Expr:
-        expr = sp.sympify(expr)
-        
-        if expr.has(UnDualBoppable):
-            return super().__new__(cls, expr)
-        
-        res = _eval_dBopp(expr)
-        
-        return res
-    
-    def _latex(self, printer) -> str:
-        return r"\widetilde{\mathrm{Bopp}}\left[{%s}\right]" % sp.latex(self.args[0])
-    
-def _dual_star_base(A : sp.Expr, B : sp.Expr) -> sp.Expr:
-    
-    if any(not(obj.has(Operator)) for obj in [A,B]):
-        return A*B
-    
-    cannot_dBopp_A = A.has(UnDualBoppable) or not(A.is_polynomial(Operator))
-    cannot_dBopp_B = B.has(UnDualBoppable) or not(A.is_polynomial(Operator))
-    
-    if cannot_dBopp_A and cannot_dBopp_B:
-        raise _CannotBoppFlag()
-    
-    if cannot_dBopp_A:
-        return _symb2comm(dBopp(B)*A)
-    else:
-        return _symb2comm(dBopp(A)*B)
-    
-class dStar(sp.Expr, UnDualBoppable):
-    def __new__(cls, *args) -> sp.Expr:
-        if not(args):
-            return sp.Integer(1)
-        
-        undboppable_args = []
-        
-        out = sp.Integer(1)
-        for k,arg in enumerate(args):
-            try:
-                if arg.has(qpType):
-                    arg = qp2alpha(arg)
-                out = _dual_star_base(out, arg)
-            except _CannotBoppFlag:
-                if out != 1:
-                    undboppable_args.append(out)
-                out = arg
-                if k == (len(args)-1):
-                    undboppable_args.append(arg)
-                    
-        if undboppable_args:
-            return super().__new__(cls, *undboppable_args)
-    
-        return out
-    
-    def _latex(self, printer):
-        out = r"\left({%s}\right)" % sp.latex(self.args[0])
-        for arg in self.args[1:]:
-            out += r"\widetilde{\star}_s \left({%s}\right)" % sp.latex(arg)
         return out

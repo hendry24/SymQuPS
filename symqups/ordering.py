@@ -6,7 +6,7 @@ import warnings
 from ._internal.grouping import HilbertSpaceObject
 from ._internal.cache import sub_cache
 from ._internal.multiprocessing import mp_helper
-from ._internal.basic_routines import operation_routine
+from ._internal.basic_routines import operation_routine, default_treat_add
 from ._internal.operator_handling import (separate_operator,
                                            is_universal,
                                            get_oper_sub,
@@ -43,29 +43,24 @@ class sOrdering(sp.Expr, HilbertSpaceObject):
             msg += "these objects are mistakenly used instead of the 'Operator' "
             msg += "counterparts."
             warnings.warn(msg, stacklevel=2)
-        
+            
         s = sp.sympify(s)
         if s is None:
             s = CahillGlauberS.val
-        
-        def make(A : sp.Expr) -> sOrdering:
-            return super(sOrdering, cls).__new__(cls, A, s)
-                    # need to specify since we do this
-                    # inside another function.
 
-        def treat_add(A : sp.Expr) -> sp.Expr:
-            return sp.Add(*mp_helper(A.args, sOrdering))
-                    
-        def treat_pow(A : sp.Expr) -> sp.Expr:
-            if A.is_polynomial(Operator):
-                return A
-            return make(A)
-        
         def has_ordering_ambiguity(A : sp.Expr) -> bool:
             if any(A.has(annihilateOp(sub)) and A.has(createOp(sub))
                    for sub in sub_cache):
                 return True
             return False
+        
+        def treat_add(A : sp.Expr) -> sp.Expr:
+            return default_treat_add(A, sOrdering)
+                    
+        def treat_pow(A : sp.Expr) -> sp.Expr:
+            if A.is_polynomial(Operator):
+                return A
+            return make(A)
             
         def treat_function(A : sp.Expr) -> sp.Expr:
             if has_ordering_ambiguity(A):
@@ -139,9 +134,12 @@ class sOrdering(sp.Expr, HilbertSpaceObject):
                     out *= make(collect_polynomial_normal_ordered * collect_nonpolynomial)
                         
             return out
-                                        
-        return operation_routine(expr,
-                                  "sOrder",
+
+        def make(A : sp.Expr) -> sOrdering:
+            return super(sOrdering, cls).__new__(cls, A, s)
+           
+        return operation_routine(sp.expand(sp.sympify(expr)),
+                                  "symqups.sOrdering",
                                   [],
                                   [],
                                   {Operator : expr},

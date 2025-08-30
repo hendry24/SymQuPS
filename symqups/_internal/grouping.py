@@ -6,7 +6,7 @@ class ObjectGroup(sp.Basic):
     """
     def __new__(cls, *args, **kwargs):
         if cls in [ObjectGroup, qpType, alphaType,
-                   PhaseSpaceObject, PrimedPSO, UnBoppable,
+                   PhaseSpaceObject, UnBoppable,
                    HilbertSpaceObject]:
             raise TypeError("For grouping only. Instantiation is prohibited.")
         return super().__new__(cls, *args, **kwargs)
@@ -39,22 +39,13 @@ class PhaseSpaceVariable(PhaseSpaceObject):
 
 ###
 
-class PrimedPSO(ObjectGroup):
-    """
-    This object is the primed version of the `PhaseSpaceObject`. Not
-    physical, but `sympy`-convenient.
-    """
-    pass
-
-###
-
 class UnBoppable(ObjectGroup):
     """
     This object cannot be Bopp-shifted.
     """
     pass
 
-class UnDualBoppable(ObjectGroup):
+class UnDBoppable(ObjectGroup):
     """
     This object cannot be dual-Bopp-shifted.
     """

@@ -2,14 +2,12 @@ import sympy as sp
 import sympy.physics.quantum as spq
 from typing import Tuple
 
-from ._internal.multiprocessing import mp_helper, MP_CONFIG
+from ._internal.multiprocessing import mp_helper
 from ._internal.basic_routines import operation_routine
 from ._internal.grouping import (PhaseSpaceVariable, PhaseSpaceObject, Defined, 
                                  HilbertSpaceObject, NotAnOperator, NotAScalar)
-from ._internal.cache import sub_cache
 
-from .objects.base import Base
-from .objects.scalars import W, StateFunction, alpha, alphaD
+from .objects.scalars import W, StateFunction, alpha
 from .objects.operators import Operator, densityOp, rho, annihilateOp, createOp
 
 from .star_product import Star, dStar
@@ -18,7 +16,7 @@ from .manipulations import qp2alpha, op2sc, alpha2qp, sc2op, express
 from .utils import get_N
 
 from . import s as CahillGlauberS
-from . import pi, hbar
+from . import pi
 
 ###
 
@@ -189,13 +187,13 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
             # NOTE: This collection process should generally make evaluations
             # faster as we only need to call 'dStar' once.        
             
-            arg_no_W_iCG = express(sOrdering(sc2op(arg_no_W)), 1, True)
+            # arg_no_W_iCG = express(sOrdering(sc2op(arg_no_W)), 1, True)
                         # Any 't' produces equally many terms except on some edge cases, so we
                         # choose 't=1' quite arbitrarily, though it may prove to be useful
                         # in normal-ordered cases, which should be the most popular out of the three.
             arg_with_W_iCG = iCGTransform(arg_with_W)
             
-            return dStar(arg_no_W_iCG, arg_with_W_iCG)
+            return dStar(sc2op(arg_no_W), arg_with_W_iCG)
         
         def treat_W(A : StateFunction) -> sp.Expr:
             return rho/(pi.val)**get_N()

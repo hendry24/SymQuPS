@@ -24,7 +24,7 @@ def naive_quantize(expr : sp.Expr) -> sp.Expr:
     # we do the sub, the resulting expression is normal-ordered, corresponding
     # to s = 1. This applies in the multipartite case: all `alphaD` are 
     # situated to the left of all `alpha`.
-    return sp.expand(sc2op(_prepare_for_quantization(expr)))
+    return sc2op(_prepare_for_quantization(expr))
 
 def s_quantize(expr : sp.Expr) -> sp.Expr:
     '''

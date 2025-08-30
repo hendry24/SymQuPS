@@ -8,7 +8,7 @@ from .objects import scalars
 from .objects.operators import rho
 
 from .manipulations import dagger
-from .cg import CG_transform
+from .cg import CGTransform
 from .utils import derivative_not_in_num, collect_by_derivative
 
 __all__ = ["LindbladMasterEquation"]
@@ -109,7 +109,7 @@ class LindbladMasterEquation(sp.Basic):
     @cached_property
     def CG_transform(self):
         lhs = sp.Derivative(scalars.W, scalars.t())
-        rhs = CG_transform(self.rhs.doit().expand())
+        rhs = CGTransform(self.rhs.doit().expand())
                                 # By calling expand, we effectively call .expand of _LindbladDissipator
 
             # Collect first to reduce the number of terms. 

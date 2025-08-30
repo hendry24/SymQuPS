@@ -77,43 +77,9 @@ class alphaD(Scalar, PhaseSpaceVariable, alphaType):
         
     def conjugate(self):
         return alpha(self.sub)
+    
     def _eval_conjugate(self):
         return self.conjugate()
-###
-
-class _Primed(Base, PrimedPSO):
-    def _get_symbol_name_and_assumptions(cls, A):
-        return r"{%s}'" % sp.latex(A), {"commutative" : False}
-    
-    def __new__(cls, A : sp.Expr):
-        A = sp.sympify(A)
-        
-        if isinstance(A, PhaseSpaceVariable):
-            return super().__new__(cls, A)
-        
-        return A.subs({X:_Primed(X) for X in A.atoms(PhaseSpaceVariable)})
-    
-    @property
-    def base(self):
-        return self._custom_args[0]
-
-###
-
-class _DerivativeSymbol(Base, PrimedPSO):
-    
-    def _get_symbol_name_and_assumptions(cls, primed_phase_space_coordinate : _Primed):
-        return r"\frac{\partial \cdot}{\partial {%s}}" % sp.latex(primed_phase_space_coordinate.base), {"commutative":False}
-    
-    def __new__(cls, primed_phase_space_coordinate : _Primed):
-        if not(isinstance(primed_phase_space_coordinate, _Primed)):
-            raise ValueError(r"'_DifferentialSymbol' expects '_Primed', but got '%s' instead" % \
-                type(primed_phase_space_coordinate))
-            
-        return super().__new__(cls, primed_phase_space_coordinate)
-    
-    @property
-    def diff_var(self):
-        return self._custom_args[0]
 
 ###
 
