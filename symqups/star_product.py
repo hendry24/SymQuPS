@@ -7,8 +7,8 @@ from ._internal.cache import sub_cache
 from ._internal.multiprocessing import mp_helper
 
 from .objects.base import Base
-from .objects.scalars import alpha, alphaD
-from .objects.operators import annihilateOp, createOp
+from .objects.scalars import alpha, alphaD, StateFunction
+from .objects.operators import annihilateOp, createOp, densityOp
 
 from .manipulations import qp2alpha, Commutator
 
@@ -120,11 +120,12 @@ def _star_base(f : sp.Expr, g : sp.Expr) -> sp.Expr:
                                    {sp.Add : treat_add,
                                     (sp.Mul, 
                                      sp.Pow, 
-                                     PhaseSpaceVariable) 
+                                     PhaseSpaceVariable,
+                                     StateFunction) 
                                      : _star_Bopp_monomial_A_times_B(to_Bopp, other, sgn)}
                                    )
-    
-    return _deprime(primed_out).expand()
+    primed_out : sp.Expr
+    return _deprime(primed_out.doit().expand())
 
 class Star(sp.Expr, UnBoppable, Defined):
     """
@@ -169,8 +170,8 @@ class Star(sp.Expr, UnBoppable, Defined):
         
         unevaluated_args = []
         
-        out = args[0]
-        for k, arg in enumerate(args[1:]):
+        out = sp.Integer(1)
+        for k, arg in enumerate(args):
             try:
                 if arg.has(qpType):
                     arg = qp2alpha(arg)
@@ -251,7 +252,8 @@ def _dual_star_dBopp_monomial_A_times_B(A : sp.Expr, B : sp.Expr) -> sp.Expr:
 
 def _dual_star_base(F : sp.Expr, G : sp.Expr) -> sp.Expr:
     
-    if not(F.has(PhaseSpaceVariableOperator) and G.has(PhaseSpaceVariableOperator)):
+    if not(F.has(PhaseSpaceVariableOperator, densityOp) 
+           and G.has(PhaseSpaceVariableOperator, densityOp)):
         return F*G
     
     if F.is_polynomial(annihilateOp, createOp):
@@ -275,7 +277,8 @@ def _dual_star_base(F : sp.Expr, G : sp.Expr) -> sp.Expr:
                              {sp.Add : treat_add,
                              (sp.Mul,
                               sp.Pow,
-                              PhaseSpaceVariableOperator) 
+                              PhaseSpaceVariableOperator,
+                              densityOp) 
                               : _dual_star_dBopp_monomial_A_times_B(to_dBopp, other)}
                               )
 

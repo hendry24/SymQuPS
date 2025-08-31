@@ -24,6 +24,8 @@ from . import s as CahillGlauberS
 
 class sOrdering(sp.Expr, HilbertSpaceObject):
     
+    is_commutative = False
+    
     def __new__(cls, expr : sp.Expr, s : sp.Number | None = None, lazy : bool = False) -> sp.Expr:
         expr = qp2alpha(sp.sympify(expr)) 
         

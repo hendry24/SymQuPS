@@ -106,8 +106,6 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
         expr = qp2alpha(sp.sympify(expr))
         if not(expr.has(Operator)) and not(isinstance(expr, NotAScalar)):
             return expr
-        if expr.is_polynomial(annihilateOp, createOp) and not(expr.has(densityOp)):
-            expr = normal_ordered_equivalent(expr)
         return operation_routine(expr,
                                 "CG_transform",
                                 [],
