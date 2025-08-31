@@ -3,7 +3,7 @@ import sympy as sp
 from .. import s as CahillGlauberS
 from .base import Base
 from .._internal.grouping import (qpType, alphaType, PhaseSpaceVariable, 
-                                  PhaseSpaceObject, UnBoppable, PrimedPSO)
+                                  PhaseSpaceObject, UnBoppable)
 from .._internal.cache import sub_cache
 from .._internal.basic_routines import treat_sub, invalid_input
 

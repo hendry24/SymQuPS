@@ -5,7 +5,6 @@ import warnings
 
 from ._internal.grouping import HilbertSpaceObject
 from ._internal.cache import sub_cache
-from ._internal.multiprocessing import mp_helper
 from ._internal.basic_routines import operation_routine, default_treat_add
 from ._internal.operator_handling import (separate_operator,
                                            is_universal,

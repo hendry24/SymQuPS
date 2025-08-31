@@ -59,6 +59,9 @@ class HilbertSpaceObject(UnBoppable):
     """
     pass
 
+class PhaseSpaceVariableOperator(HilbertSpaceObject):
+    pass
+
 ###
 
 class NotAnOperator(ObjectGroup):

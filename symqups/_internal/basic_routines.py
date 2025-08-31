@@ -86,7 +86,7 @@ def invalid_input(inpt : object, name : str) -> None:
     raise ValueError(msg)
 
 def operation_routine(expr : sp.Expr,
-                       name : str | callable,
+                       name : Union[str, Callable],
                        screen_types : Sequence[type],
                        deep_screen_types : Sequence[type],
                        return_if_expr_does_not_have : Dict[Union[type, Sequence[type]], 

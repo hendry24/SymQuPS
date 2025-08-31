@@ -18,20 +18,18 @@ class AutoSortedUniqueList(list):
         
     def _refresh(self, sub):
         
-        from ..objects.scalars import t, q, p, alpha, alphaD, W, _Primed, _DerivativeSymbol
-        from ..objects.operators import qOp, pOp, annihilateOp, createOp, _CommutatorSymbol
-        from .. import zeta, hbar, s
+        from ..objects.scalars import t, q, p, alpha, alphaD, W 
+        from ..objects.operators import qOp, pOp, annihilateOp, createOp
         
+        from .. import zeta, hbar
         zeta = zeta.val
         hbar = hbar.val
-        CGs = s.val
+        
+        ###
         
         W._set_args((t(), *[cls(s) for s in self for cls in (alpha, alphaD)]))
         
         ###
-        
-        def der(x):
-            return _DerivativeSymbol(_Primed(x))
         
         qq = q(sub)
         pp = p(sub)
@@ -57,57 +55,20 @@ class AutoSortedUniqueList(list):
         
         ###
         
-        def der(x):
-            return _DerivativeSymbol(_Primed(x))
-        
-        ###
-        
         for k, v in [[qq, sp.sqrt(hbar)/sp.sqrt(2) * (1/zeta) * (a + ad)],
                      [pp, sp.sqrt(hbar)/sp.sqrt(2) * (zeta/sp.I) * (a - ad)]]:
             qp2alpha_subs_dict._set_item(k, v)
-            qp2alpha_subs_dict._set_item(_Primed(k), _Primed(v))
-            
             qp2alpha_subs_dict._set_item(sc2op_subs_dict[k], 
-                                         v.subs({a:aop, ad:adop}))
+                                         v.xreplace({a:aop, ad:adop}))
 
         ###
         
         for k, v in [[a, (zeta*qq + sp.I*(1/zeta)*pp)/sp.sqrt(2*hbar)],
                      [ad, (zeta*qq - sp.I*(1/zeta)*pp)/sp.sqrt(2*hbar)]]:
-            alpha2qp_subs_dict._set_item(k, v)
-            alpha2qp_subs_dict._set_item(_Primed(k), _Primed(v))
-            
+            alpha2qp_subs_dict._set_item(k, v)            
             alpha2qp_subs_dict._set_item(sc2op_subs_dict[k], 
-                                         v.subs({qq:qop, pp:pop}))
-            
-        ###
-        
-        for Bopp_dict, sgn in [[Bopp_r_dict, 1],
-                               [Bopp_l_dict, -1]]:
-            Bopp_dict : ProtectedDict
-            
-            Bopp_dict._set_item(qq, qq 
-                                    + sgn * sp.I*hbar/2 * der(pp) 
-                                    + (CGs*hbar/2) * (1/zeta**2) * der(qq))
-            Bopp_dict._set_item(pp, pp
-                                    - sgn * sp.I*hbar/2 * der(qq)
-                                    + (CGs*hbar/2) * zeta**2 * der(pp))
-            Bopp_dict._set_item(a,  a 
-                                    + (CGs+sgn)/2 * der(ad))
-            Bopp_dict._set_item(ad, ad
-                                    + (CGs-sgn)/2 * der(a))
-            
-        ###
-        
-        # NOTE: The dual-star-product is commutative.
-        
-        dBopp_dict._set_item(aop,
-                             aop - (CGs+1)/2 * _CommutatorSymbol(aop))
-        # dBopp_dict._set_item(adop,
-        #                      adop - (1-CGs)/2 * _CommutatorSymbol(adop))
-        dBopp_dict._set_item(adop,
-                             adop + (CGs-1)/2 * _CommutatorSymbol(adop))
-            
+                                         v.xreplace({qq:qop, pp:pop}))
+                        
     def _refresh_all(self):
         for sub in self:
             self._refresh(sub)
@@ -135,13 +96,10 @@ class ProtectedDict(dict):
         super().__setitem__(key, value)
               
 global op2sc_subs_dict, sc2op_subs_dict, qp2alpha_subs_dict
-global alpha2qp_subs_dict, Bopp_r_dict, Bopp_l_dict, sub_cache
+global alpha2qp_subs_dict, sub_cache
 qp2alpha_subs_dict = ProtectedDict()
 alpha2qp_subs_dict = ProtectedDict()
 op2sc_subs_dict = ProtectedDict()
 sc2op_subs_dict = ProtectedDict()
-Bopp_r_dict = ProtectedDict()
-Bopp_l_dict = ProtectedDict()
-dBopp_dict = ProtectedDict()
 
 sub_cache = AutoSortedUniqueList()

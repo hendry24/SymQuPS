@@ -1,18 +1,17 @@
 import sympy as sp
-import sympy.physics.quantum as spq
-from typing import Tuple
 
 from ._internal.multiprocessing import mp_helper
 from ._internal.basic_routines import operation_routine
 from ._internal.grouping import (PhaseSpaceVariable, PhaseSpaceObject, Defined, 
-                                 HilbertSpaceObject, NotAnOperator, NotAScalar)
+                                 HilbertSpaceObject, NotAnOperator, NotAScalar,
+                                 PhaseSpaceVariableOperator)
 
 from .objects.scalars import W, StateFunction, alpha
 from .objects.operators import Operator, densityOp, rho, annihilateOp, createOp
 
 from .star_product import Star, dStar
 from .ordering import sOrdering
-from .manipulations import qp2alpha, op2sc, alpha2qp, sc2op, express
+from .manipulations import qp2alpha, op2sc, alpha2qp, sc2op, Commutator, express, normal_ordered_equivalent
 from .utils import get_N
 
 from . import s as CahillGlauberS
@@ -57,28 +56,23 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
         def treat_add(A : sp.Expr) -> sp.Expr:
             return sp.Add(*mp_helper(A.args, CGTransform))
         
-        def treat_substitutable(A : sp.Expr) -> sp.Expr:
-            if isinstance(A, densityOp):
-                return (pi.val)**get_N() * W
-            return op2sc(A)
-        
         def treat_mul(A : sp.Expr) -> sp.Expr:
             return Star(*mp_helper(A.args, CGTransform))
             
         def treat_sOrdering(A : sOrdering) -> sp.Expr:
             if (A.args[1] != CahillGlauberS.val):
-                if not(A.args[0].is_polynomial(Operator)):
+                if not(A.args[0].is_polynomial(PhaseSpaceVariableOperator)):
                     return make(A)
-                return CGTransform(A.express(CahillGlauberS.val))
+                return CGTransform(A.express(CahillGlauberS.val, False))
             
             # In the following A has the same s-value as the transform,
             # so we can simply discard the braces and replace the operators
             # by the corresponding phase-space variables, since the CG transform
             # of an s-ordered operator is a straightforward replacement.
-            return treat_substitutable(A.args[0])
+            return op2sc(A.args[0])
         
         def treat_function(A : sp.Function) -> sp.Expr:
-            if rho in A.atoms(Operator):
+            if A.has(densityOp):
                 return make(A)
 
             # The CG transform of any function in only one of 'annihilateOp'
@@ -99,7 +93,7 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             if (is_evaluable(A)
                 or (CahillGlauberS.val==0
                     and is_evaluable(alpha2qp(A)))):
-                return treat_substitutable(A)
+                return op2sc(A)
             
             return make(A)
         
@@ -112,18 +106,21 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
         expr = qp2alpha(sp.sympify(expr))
         if not(expr.has(Operator)) and not(isinstance(expr, NotAScalar)):
             return expr
+        if expr.is_polynomial(annihilateOp, createOp) and not(expr.has(densityOp)):
+            expr = normal_ordered_equivalent(expr)
         return operation_routine(expr,
                                 "CG_transform",
                                 [],
                                 [],
-                                {},
+                                {(PhaseSpaceVariableOperator, densityOp) : expr},
                                 {sp.Add : treat_add,
                                  sp.Mul : treat_mul,
                                  sp.Function : treat_function,
-                                 (Operator, sp.Pow) : treat_substitutable,
+                                 (PhaseSpaceVariableOperator, sp.Pow) : lambda A: op2sc(A),
+                                 densityOp : (pi.val)**get_N() * W,
                                  sOrdering : treat_sOrdering,
                                  iCGTransform : lambda A: A.args[0],
-                                 spq.Commutator : lambda A: CGTransform(A.doit()),
+                                 Commutator : lambda A: CGTransform(A.doit()),
                                  dStar : treat_dStar})
         
     def _latex(self, printer):
@@ -156,7 +153,7 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
             der_args[1] = (diff_var, der_args[1][1] - 1) 
             # sp.Derivative(f, (x, 0)) is valid and returns f.
             # When this happens, the recursion into 'treat_der" stops.
-            return spq.Commutator(comm_left, iCGTransform(sp.Derivative(*der_args)))
+            return Commutator(comm_left, iCGTransform(sp.Derivative(*der_args)))
         
         def treat_pow(A : sp.Pow) -> sp.Expr:
             if (isinstance(A.args[0], sp.Derivative)
@@ -166,7 +163,7 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
             
         def treat_mul(A : sp.Mul) -> sp.Expr:
             if not(A.has(StateFunction)):
-                return treat_substitutable(A)
+                return sOrdering(sc2op(A))
             
             # Here we assume that W only appears once in a given term. That is,
             # no complex terms like W*Derivative(W, alpha). If these are found,
@@ -185,25 +182,19 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
                     arg_no_W *= arg
             
             # NOTE: This collection process should generally make evaluations
-            # faster as we only need to call 'dStar' once.        
+            # faster as we only need to call 'dStar' once.
             
-            # arg_no_W_iCG = express(sOrdering(sc2op(arg_no_W)), 1, True)
+            arg_no_W_iCG = express(sOrdering(sc2op(arg_no_W)), 1, True)
                         # Any 't' produces equally many terms except on some edge cases, so we
                         # choose 't=1' quite arbitrarily, though it may prove to be useful
                         # in normal-ordered cases, which should be the most popular out of the three.
             arg_with_W_iCG = iCGTransform(arg_with_W)
             
-            return dStar(sc2op(arg_no_W), arg_with_W_iCG)
-        
-        def treat_W(A : StateFunction) -> sp.Expr:
-            return rho/(pi.val)**get_N()
-        
+            return dStar(arg_no_W_iCG, arg_with_W_iCG)
+            
         def treat_foo(A: sp.Function) -> sp.Expr:
             if A.has(StateFunction):
                 return make(A)
-            return treat_substitutable(A)
-        
-        def treat_substitutable(A: sp.Expr) -> sp.Expr:
             return sOrdering(sc2op(A))
         
         def treat_Star(A : Star) -> sp.Expr:
@@ -219,11 +210,11 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
                                 [Operator],
                                 {(PhaseSpaceVariable, StateFunction) : expr},
                                 {sp.Add : treat_add,
-                                 StateFunction : treat_W,
                                  sp.Derivative : treat_der,
                                  sp.Pow : treat_pow,
                                  sp.Mul : treat_mul,
-                                 PhaseSpaceVariable : treat_substitutable,
+                                 PhaseSpaceVariable : lambda A: sc2op(A),
+                                 StateFunction : rho/(pi.val)**get_N(),
                                  sp.Function : treat_foo,
                                  CGTransform : lambda A: A.args[0],
                                  Star : treat_Star}

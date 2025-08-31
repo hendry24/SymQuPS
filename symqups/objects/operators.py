@@ -1,8 +1,7 @@
-import sympy as sp
 import typing
 
 from .base import Base
-from .._internal.grouping import HilbertSpaceObject, qpType, alphaType, UnDBoppable
+from .._internal.grouping import HilbertSpaceObject, qpType, alphaType, UnDBoppable, PhaseSpaceVariableOperator
 from .._internal.cache import sub_cache
 from .._internal.basic_routines import treat_sub
 
@@ -47,21 +46,21 @@ class HermitianOp(Operator):
     
 ###
 
-class qOp(HermitianOp, qpType):
+class qOp(HermitianOp, qpType, PhaseSpaceVariableOperator):
     base = r"\hat{q}"
     
-class pOp(HermitianOp, qpType):
+class pOp(HermitianOp, qpType, PhaseSpaceVariableOperator):
     base = r"\hat{p}"
 
 ###
  
-class annihilateOp(Operator, alphaType):
+class annihilateOp(Operator, alphaType, PhaseSpaceVariableOperator):
     base = r"\hat{a}"
     
     def dagger(self):
         return createOp(sub = self.sub)
     
-class createOp(Operator, alphaType):
+class createOp(Operator, alphaType, PhaseSpaceVariableOperator):
     base = r"\hat{a}^{\dagger}"
         
     def dagger(self):
