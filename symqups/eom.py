@@ -1,31 +1,32 @@
 import sympy as sp
-import sympy.physics.quantum as spq
+from typing import Sequence
 from functools import cached_property
 
-from ._internal.grouping import _AddOnlyExpr
+from ._internal.grouping import _AddOnlyExpr, HilbertSpaceObject
+from ._internal.operator_handling import separate_operator
 
-from .objects import scalars
-from .objects.operators import rho
+from .objects.scalars import W, t
+from .objects.operators import rho, Operator
 
-from .manipulations import dagger
+from .manipulations import dagger, Commutator
 from .cg import CGTransform
 from .utils import derivative_not_in_num, collect_by_derivative
+
+from . import hbar, pi
 
 __all__ = ["LindbladMasterEquation"]
     
 class _LindbladDissipator(_AddOnlyExpr):
-    def __new__(cls, rate = 1, operator_1 = 1, operator_2 = None):
-        rate = sp.sympify(rate)
+    def __new__(cls, coef = 1, operator_1 = 1, operator_2 = None):        
+        operator_2 = operator_2 if (operator_2 is not None) else operator_1        
         
-        operator_1 = sp.sympify(operator_1)
+        if not(operator_1.has(Operator)) and not(operator_2.has(Operator)):
+            return sp.Integer(0)
         
-        operator_2 = operator_2 if (operator_2 is not None) else operator_1
-        operator_2 = sp.sympify(operator_2)
-        
-        return super().__new__(cls, rate, operator_1, operator_2)
+        return super().__new__(cls, coef, operator_1, operator_2)
     
     @property
-    def rate(self):
+    def coef(self):
         return self.args[0]
     
     @property
@@ -43,20 +44,30 @@ class _LindbladDissipator(_AddOnlyExpr):
             op_str = r"{%s},{%s}" % (sp.latex(self.operator_1), sp.latex(self.operator_2))
 
         return r"{{%s}\mathcal{D}\left({%s}\right)\left[\rho\right]}" \
-                % (sp.latex(self.rate), op_str)
+                % (sp.latex(self.coef) if (self.coef != 1) else "", 
+                   op_str)
     
-    def expand(self, **kwargs):
+    def define(self):
+        
         P = self.operator_1
         
         Q = self.operator_2
         Qd = dagger(Q)
         
         out = (2*P*rho*Qd - rho*Qd*P - Qd*P*rho)
-        rate_mul = self.rate / 2
+        coef_mul = self.coef / 2
         with sp.evaluate(False): # force pretty printing
-            out = rate_mul * out
+            out = coef_mul * out
+        
         return out
-    
+        
+###
+
+class StateFunctionEvo(sp.Equality):
+    pass
+
+###
+
 class LindbladMasterEquation(sp.Basic):
     """
     The Lindblad master equation. 
@@ -65,57 +76,75 @@ class LindbladMasterEquation(sp.Basic):
     ----------
     
     """
-    neat_display = True
-    
-    def __new__(cls, 
-                H : sp.Expr,
-                dissipators : list[list[sp.Expr, sp.Expr]] = []):
+    def __new__(cls, H : sp.Expr = sp.Integer(0), *dissipators, **options):
         H = sp.sympify(H)
         dissipators = sp.sympify(dissipators)
-        return super().__new__(cls, H, dissipators)
-    
-    @property
-    def H(self):
-        return self.args[0]
-    
-    @cached_property
-    def dissipators(self):
-        out = []
-        for inpt in self.args[1]:
-            if len(inpt) == 2:
-                inpt.append(None) # or inpt[1], same outcome
-            elif len(inpt) == 3:
-                pass
+        
+        lhs = sp.Derivative(rho, t())
+        
+        dissip_lst = []
+        for dissip in dissipators:
+            if isinstance(dissip, Sequence):
+                match len(dissip):
+                    case 2:
+                        coef, oper_1 = dissip
+                        oper_2 = oper_1
+                    case 3:
+                        coef, oper_1, oper_2 = dissip
+                    case default:
+                        msg = "Invalid sequence dissipator specified length."
+                        msg += f"Must be either 2 or 3, but got {len(dissip)}."
+                        raise ValueError(msg)
             else:
-                raise ValueError(r"Invalid dissipator specifier : {%s}"
-                                 % (inpt))
-            rate, operator_1, operator_2 = inpt
-            out.append(_LindbladDissipator(rate=rate, 
-                                          operator_1=operator_1, 
-                                          operator_2=operator_2))
-        return out
+                sqrt_coef, oper_1 = separate_operator(dissip)
+                coef = sqrt_coef**2
+                oper_2 = oper_1
+            
+            dissip_obj = _LindbladDissipator(coef, oper_1, oper_2)
+            if dissip_obj == 0:
+                continue
+            dissip_lst.append(dissip_obj)
+            
+        rhs = sp.Add(-sp.I/hbar.val * Commutator(H, rho),
+                     *dissip_lst)
+        
+        obj = super().__new__(cls, lhs, rhs, **options)
+        
+        obj._H = H
+        obj._dissipators = dissip_lst
+        obj._lhs = lhs
+        obj._rhs = rhs
+        obj._equality = sp.Equality(lhs, rhs)
+        
+        return obj
     
     @property
-    def lhs(self):
-        return sp.Derivative(rho, scalars.t())
-
+    def H(self) -> sp.Expr:
+        return self._H
+    
+    @property
+    def dissipators(self) -> list:
+        return self._dissipators
+    
+    @property
+    def lhs(self) -> sp.Derivative:
+        return self._lhs
+    
     @property
     def rhs(self) -> sp.Expr:
-        out = -sp.I/scalars.hbar * spq.Commutator(self.H, rho)
-        for dissip in self.dissipators:
-            out += dissip
-        return out
-    
-    @cached_property
-    def CG_transform(self):
-        lhs = sp.Derivative(scalars.W, scalars.t())
-        rhs = CGTransform(self.rhs.doit().expand())
-                                # By calling expand, we effectively call .expand of _LindbladDissipator
-
-            # Collect first to reduce the number of terms. 
-        if self.neat_display:
-            rhs = derivative_not_in_num(collect_by_derivative(rhs, lhs.args[0]))
-        return sp.Equality(lhs, rhs)
+        return self._rhs
     
     def _latex(self, printer):
-        return sp.latex(sp.Equality(self.lhs, self.rhs))
+        return sp.latex(self._equality)
+
+    @cached_property
+    def CG_transform(self):
+        lhs = sp.Derivative(W, t())
+        
+        rhs = self.H.doit()
+        for dissip in self.dissipators:
+            rhs += dissip.define()
+        
+        rhs = CGTransform(rhs/pi.val)
+
+        return StateFunctionEvo(lhs, rhs)

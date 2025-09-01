@@ -123,7 +123,7 @@ class StateFunction(sp.Expr, PhaseSpaceObject, UnBoppable):
             case 1:
                 return r"P"
             case default:
-                return r"W_{s=%s}" % sp.latex(CahillGlauberS.val)
+                return r"W_{s}"
     
 global W
 W = StateFunction(t())

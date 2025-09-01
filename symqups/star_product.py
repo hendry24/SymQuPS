@@ -93,17 +93,20 @@ def _star_Bopp_monomial_A_times_B(A : sp.Expr, B : sp.Expr, sgn : int) -> sp.Exp
     
 def _star_base(f : sp.Expr, g : sp.Expr) -> sp.Expr:
         
-    if not(f.has(PhaseSpaceVariable) and g.has(PhaseSpaceVariable)):
+    if not(f.has(PhaseSpaceVariable)) or not(g.has(PhaseSpaceVariable)):
         return f*g
+    
+    if f.has(UnBoppable) and g.has(UnBoppable):
+        raise _CannotBoppFlag
     
     if f.is_polynomial(alpha, alphaD):
         to_Bopp = f
         sgn = 1
         other = g
     elif g.is_polynomial(alpha, alphaD):
-        to_Bopp = f
+        to_Bopp = g
         sgn = -1
-        other = g
+        other = f
     else:
         raise _CannotBoppFlag
     
@@ -227,7 +230,7 @@ def _dual_star_dBopp_monomial_A_times_B(A : sp.Expr, B : sp.Expr) -> sp.Expr:
                 n = 1
                 
             sub = list(arg.atoms(createOp))[0].sub
-            ad = createOp(sub)
+            a, ad = annihilateOp(sub), createOp(sub)
             
             for _ in range(n):
                 out = ad*out + sp.Rational(1,2)*(s-1) * Commutator(ad, out)
@@ -240,7 +243,7 @@ def _dual_star_dBopp_monomial_A_times_B(A : sp.Expr, B : sp.Expr) -> sp.Expr:
                 n = 1
                 
             sub = list(arg.atoms(annihilateOp))[0].sub
-            a = annihilateOp(sub)
+            a, ad = annihilateOp(sub), createOp(sub)
             
             for _ in range(n):
                 out = a*out - sp.Rational(1,2)*(s+1) * Commutator(a, out)
@@ -256,6 +259,9 @@ def _dual_star_base(F : sp.Expr, G : sp.Expr) -> sp.Expr:
            and G.has(PhaseSpaceVariableOperator, densityOp)):
         return F*G
     
+    if F.has(UnDBoppable) and G.has(UnDBoppable):
+        raise _CannotDBoppFlag
+    
     if F.is_polynomial(annihilateOp, createOp):
         to_dBopp = F
         other = G
@@ -269,7 +275,7 @@ def _dual_star_base(F : sp.Expr, G : sp.Expr) -> sp.Expr:
         return sp.Add(*mp_helper(A.args, functools.partial(_dual_star_dBopp_monomial_A_times_B, 
                                                            B=other)))
     
-    return operation_routine(to_dBopp,
+    out = operation_routine(to_dBopp,
                              dStar,
                              [],
                              [PhaseSpaceObject],
@@ -281,6 +287,9 @@ def _dual_star_base(F : sp.Expr, G : sp.Expr) -> sp.Expr:
                               densityOp) 
                               : _dual_star_dBopp_monomial_A_times_B(to_dBopp, other)}
                               )
+    
+    out : sp.Expr
+    return out.doit().expand()
 
 class dStar(sp.Expr, UnDBoppable, HilbertSpaceObject, Defined):
     @staticmethod
@@ -310,7 +319,7 @@ class dStar(sp.Expr, UnDBoppable, HilbertSpaceObject, Defined):
                 if arg.has(qpType):
                     arg = qp2alpha(arg)
                 out = _dual_star_base(out, arg)
-            except _CannotBoppFlag:
+            except _CannotDBoppFlag:
                 if out != 1:
                     undboppable_args.append(out)
                 out = arg

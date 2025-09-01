@@ -52,8 +52,7 @@ def derivative_not_in_num(A : sp.Expr) -> sp.Expr:
     if isinstance(A, sp.Add):
         return sp.Add(*mp_helper(A.args, derivative_not_in_num), evaluate=False)
     
-    der_lst = list(A.find(sp.Derivative))
-    if not(der_lst):
+    if not A.has(sp.Derivative):
         return A
     
     """
@@ -62,10 +61,17 @@ def derivative_not_in_num(A : sp.Expr) -> sp.Expr:
     get the first one since it is the outermost.  
     """
 
-    Q_args_without_der = list(A.args)
-    Q_args_without_der.remove(der_lst[0])
+    args_without_der = list(A.args)
+    der_args = []
+    for arg in A.args:
+        if isinstance(arg, sp.Derivative):
+            args_without_der.remove(arg)
+            der_args.append(arg)
+    non_der = sp.Mul(*args_without_der)
+    der = sp.Mul(*der_args)
     
-    return sp.Mul(sp.Mul(*Q_args_without_der), der_lst[0], evaluate=False)
+    with sp.evaluate(False):
+        return sp.Mul(non_der, der)
     
 def collect_by_derivative(A : sp.Expr, 
                           f : None | UndefinedFunction = None) -> sp.Expr:

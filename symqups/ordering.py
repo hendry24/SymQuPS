@@ -2,8 +2,9 @@ import sympy as sp
 from itertools import permutations
 from typing import Tuple
 import warnings
+import functools
 
-from ._internal.grouping import HilbertSpaceObject
+from ._internal.grouping import HilbertSpaceObject, UnDBoppable
 from ._internal.cache import sub_cache
 from ._internal.basic_routines import operation_routine, default_treat_add
 from ._internal.operator_handling import (separate_operator,
@@ -22,7 +23,7 @@ from . import s as CahillGlauberS
 
 ###
 
-class sOrdering(sp.Expr, HilbertSpaceObject):
+class sOrdering(sp.Expr, HilbertSpaceObject, UnDBoppable):
     
     is_commutative = False
     
@@ -48,7 +49,7 @@ class sOrdering(sp.Expr, HilbertSpaceObject):
         s = sp.sympify(s)
         if s is None:
             s = CahillGlauberS.val
-
+    
         def has_ordering_ambiguity(A : sp.Expr) -> bool:
             if any(A.has(annihilateOp(sub)) and A.has(createOp(sub))
                    for sub in sub_cache):
@@ -56,7 +57,9 @@ class sOrdering(sp.Expr, HilbertSpaceObject):
             return False
         
         def treat_add(A : sp.Expr) -> sp.Expr:
-            return default_treat_add(A, sOrdering)
+            return default_treat_add(A.args, functools.partial(sOrdering,
+                                                               s=s,
+                                                               lazy=lazy))
                     
         def treat_pow(A : sp.Expr) -> sp.Expr:
             if A.is_polynomial(Operator):
