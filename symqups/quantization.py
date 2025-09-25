@@ -27,14 +27,9 @@ def naive_quantize(expr : sp.Expr) -> sp.Expr:
     return sc2op(_prepare_for_quantization(expr))
 
 def s_quantize(expr : sp.Expr) -> sp.Expr:
-    '''
-    Return the totally-symmetric (Weyl) ordering of the
-    input expression, most generally a polynomial in 
-    (q,p) or (alpha, alphaD).
-    '''
     expr = _prepare_for_quantization(expr)
     return operation_routine(expr,
-                             "s_quantize",
+                             s_quantize,
                              (),
                              (Operator),
                              {PhaseSpaceObject : expr},

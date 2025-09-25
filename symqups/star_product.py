@@ -2,22 +2,19 @@ import sympy as sp
 import functools
 
 from ._internal.basic_routines import operation_routine
-from ._internal.grouping import UnBoppable, UnDBoppable, PhaseSpaceVariable, Defined, qpType, HilbertSpaceObject, PhaseSpaceVariableOperator, PhaseSpaceObject
+from ._internal.grouping import UnBoppable, PhaseSpaceVariable, Defined, qpType, HilbertSpaceObject, alphaType
 from ._internal.cache import sub_cache
 from ._internal.multiprocessing import mp_helper
+from ._internal.preprocessing import preprocess_class
 
 from .objects.base import Base
 from .objects.scalars import alpha, alphaD, StateFunction
-from .objects.operators import annihilateOp, createOp, densityOp
 
-from .manipulations import qp2alpha, Commutator
+from .manipulations import qp2alpha
 
 from . import s as CahillGlauberS
 
 ###
-
-# Star product
-##############
 
 class _Primed(Base):
     def _get_symbol_name_and_assumptions(cls, psv):
@@ -25,7 +22,7 @@ class _Primed(Base):
     
     def __new__(cls, psv : PhaseSpaceVariable):
 
-        def make(A : PhaseSpaceVariable):
+        def make(A : alphaType):
             return super(_Primed, cls).__new__(cls, A)
         
         def prime_expr(A : sp.Expr) -> sp.Expr:
@@ -39,7 +36,7 @@ class _Primed(Base):
                                  {_Primed : prime_expr},
                                  {PhaseSpaceVariable : make})
         
-def _deprime(expr : sp.Expr):
+def _deprime(expr : sp.Expr) -> sp.Expr:
     subs_dict = {_Primed(x) : x for sub in sub_cache for x in (alpha(sub), alphaD(sub))}
     return expr.xreplace(subs_dict)
 
@@ -89,7 +86,7 @@ def _star_Bopp_monomial_A_times_B(A : sp.Expr, B : sp.Expr, sgn : int) -> sp.Exp
         else:
             non_psv *= arg
             
-    return non_psv*out
+    return _deprime((non_psv*out).doit().expand())
     
 def _star_base(f : sp.Expr, g : sp.Expr) -> sp.Expr:
         
@@ -115,21 +112,20 @@ def _star_base(f : sp.Expr, g : sp.Expr) -> sp.Expr:
                                                            B=other, 
                                                            sgn=sgn)))
     
-    primed_out = operation_routine(to_Bopp,
-                                   Star,
-                                   [],
-                                   [HilbertSpaceObject],
-                                   {},
-                                   {sp.Add : treat_add,
-                                    (sp.Mul, 
-                                     sp.Pow, 
-                                     PhaseSpaceVariable,
-                                     StateFunction) 
-                                     : _star_Bopp_monomial_A_times_B(to_Bopp, other, sgn)}
-                                   )
-    primed_out : sp.Expr
-    return _deprime(primed_out.doit().expand())
+    return operation_routine(to_Bopp,
+                             Star,
+                             [],
+                             [HilbertSpaceObject],
+                             {},
+                             {sp.Add : treat_add,
+                              (sp.Mul, 
+                               sp.Pow, 
+                               PhaseSpaceVariable,
+                               StateFunction) 
+                                : _star_Bopp_monomial_A_times_B(to_Bopp, other, sgn)}
+                            )
 
+@preprocess_class
 class Star(sp.Expr, UnBoppable, Defined):
     """
     The s-parameterized star-product `A(q,p) ★ B(q,p) ★ ...` (or the `alpha` equivalent), 
@@ -140,7 +136,7 @@ class Star(sp.Expr, UnBoppable, Defined):
 
     *args
         The factors of the star-product, ordered from first to last. Since the algorithm
-        utilizes the Bopp shift, only one operand be a non-polynomial.
+        utilizes the Bopp shift, only one operand can be a non-polynomial.
 
     References
     ----------
@@ -161,9 +157,12 @@ class Star(sp.Expr, UnBoppable, Defined):
         out = r"f\left(\bm{\alpha},\overline{\bm{\alpha}}\right)"
         out += r"\mathbin{\star_s}"
         out += r"g\left(\bm{\alpha},\overline{\bm{\alpha}}\right)"
-        out += r"= f\left(\bm{\alpha}+\frac{s+1}{2}\partial_{\bm{\alpha}'},"
-        out += r"\overline{\bm{\alpha}} + \frac{s-1}{2}\partial_{\overline{\bm{\alpha}}'}\right)"
-        out += r"g\left(\bm{\alpha}',\overline{\bm{\alpha}}'\right)"
+        out += r"= f\left(\bm{\alpha}, \overline{\bm{\alpha}}\right)"
+        out += r"\exp\left( \frac{s+1}{2} \overset{\leftarrow}{\partial_{\bm{\alpha}}}"
+        out += r"\overset{\rightarrow}{\partial_{\overline{\bm{\alpha}}}}"
+        out += r"+ \frac{s-1}{2} \overset{\leftarrow}{\partial_{\overline{\bm{\alpha}}}}"
+        out += r"\overset{\rightarrow}{\partial_{\bm{\alpha}}} \right)"
+        out += r"g \left(\bm{\alpha}, \overline{\bm{\alpha}} \right)"
         return sp.Symbol(out)
     definition = _definition()
     
@@ -195,144 +194,4 @@ class Star(sp.Expr, UnBoppable, Defined):
         out = r"\left({%s}\right)" % sp.latex(self.args[0])
         for arg in self.args[1:]:
             out += r"\star_s \left({%s}\right)" % sp.latex(arg)
-        return out
-    
-# Dual star product
-###################
-
-class _CannotDBoppFlag(TypeError):
-    pass
-
-def _dual_star_dBopp_monomial_A_times_B(A : sp.Expr, B : sp.Expr) -> sp.Expr:
-    
-    s = CahillGlauberS.val
-    
-    if A.is_Mul:
-        args = A.args
-    else:
-        args = [A]
-        
-    non_psvo = sp.Integer(1)
-    out = B
-    
-    # NOTE: Since operator products are not commutative, we need
-    # to work from the rightmost argument or A.
-    
-    # NOTE: The dual star product is commutative so we only have one
-    # variant of dBopp, i.e. we can always dBopp toward the right direction.
-    
-    for arg in reversed(args):
-        if arg.has(createOp):
-            
-            if arg.is_Pow:
-                n = arg.args[1]
-            else:
-                n = 1
-                
-            sub = list(arg.atoms(createOp))[0].sub
-            a, ad = annihilateOp(sub), createOp(sub)
-            
-            for _ in range(n):
-                out = ad*out + sp.Rational(1,2)*(s-1) * Commutator(ad, out)
-                
-        elif arg.has(annihilateOp):
-            
-            if arg.is_Pow:
-                n = arg.args[1]
-            else:
-                n = 1
-                
-            sub = list(arg.atoms(annihilateOp))[0].sub
-            a, ad = annihilateOp(sub), createOp(sub)
-            
-            for _ in range(n):
-                out = a*out - sp.Rational(1,2)*(s+1) * Commutator(a, out)
-
-        else:
-            non_psvo *= arg
-            
-    return non_psvo*out
-
-def _dual_star_base(F : sp.Expr, G : sp.Expr) -> sp.Expr:
-    
-    if not(F.has(PhaseSpaceVariableOperator, densityOp) 
-           and G.has(PhaseSpaceVariableOperator, densityOp)):
-        return F*G
-    
-    if F.has(UnDBoppable) and G.has(UnDBoppable):
-        raise _CannotDBoppFlag
-    
-    if F.is_polynomial(annihilateOp, createOp):
-        to_dBopp = F
-        other = G
-    elif G.is_polynomial(annihilateOp, createOp):
-        to_dBopp = G
-        other = F
-    else:
-        raise _CannotDBoppFlag
-    
-    def treat_add(A : sp.Add) -> sp.Expr:
-        return sp.Add(*mp_helper(A.args, functools.partial(_dual_star_dBopp_monomial_A_times_B, 
-                                                           B=other)))
-    
-    out = operation_routine(to_dBopp,
-                             dStar,
-                             [],
-                             [PhaseSpaceObject],
-                             {},
-                             {sp.Add : treat_add,
-                             (sp.Mul,
-                              sp.Pow,
-                              PhaseSpaceVariableOperator,
-                              densityOp) 
-                              : _dual_star_dBopp_monomial_A_times_B(to_dBopp, other)}
-                              )
-    
-    out : sp.Expr
-    return out.doit().expand()
-
-class dStar(sp.Expr, UnDBoppable, HilbertSpaceObject, Defined):
-    @staticmethod
-    def _definition():
-        out = r"f\left(\hat{\bm{a}},\hat{\bm{a}}^\dagger\right)"
-        out += r"\mathbin{\widetilde{\star}_s}"
-        out += r"g\left(\hat{\bm{a}},\hat{\bm{a}}^\dagger\right)"
-        out += r"= f\left(\hat{\bm{a}}-\frac{1+s}{2}\left[\hat{\bm{a}},\cdot\right],"
-        out += r"\hat{\bm{a}}^\dagger - \frac{1-s}{2}\left[\hat{\bm{a}}^\dagger, \cdot\right]\right)"
-        out += r"g\left(\hat{\bm{a}},\hat{\bm{a}}^\dagger\right)"
-        return sp.Symbol(out)
-    definition = _definition()
-    
-    def __new__(cls, *args) -> sp.Expr:
-        if not(args):
-            return sp.Integer(1)
-        
-        # NOTE: dStar of two polynomials equals the s-ordering of their product,
-        # since the iCGTransform of a product of two polynomials is that product,
-        # converted into operators, and s-ordered. This helps shortcut the evaluation.
-        
-        undboppable_args = []
-        
-        out = sp.Integer(1)
-        for k,arg in enumerate(args):
-            try:
-                if arg.has(qpType):
-                    arg = qp2alpha(arg)
-                out = _dual_star_base(out, arg)
-            except _CannotDBoppFlag:
-                if out != 1:
-                    undboppable_args.append(out)
-                out = arg
-                if k == (len(args)-1):
-                    undboppable_args.append(arg)
-                    
-        if undboppable_args:
-            return super().__new__(cls, *undboppable_args)
-    
-        return out
-    
-    def _latex(self, printer):
-        out = r"\left({%s}\right)" % sp.latex(self.args[0])
-        for arg in self.args[1:]:
-            out += r"\widetilde{\star}_s \left({%s}\right)" % sp.latex(arg)
         return out

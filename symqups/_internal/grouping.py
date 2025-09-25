@@ -39,21 +39,15 @@ class PhaseSpaceVariable(PhaseSpaceObject):
 
 ###
 
-class UnBoppable(ObjectGroup):
+class CannotBoppShift(ObjectGroup):
     """
     This object cannot be Bopp-shifted.
     """
     pass
 
-class UnDBoppable(ObjectGroup):
-    """
-    This object cannot be dual-Bopp-shifted.
-    """
-    pass
-
 ###
 
-class HilbertSpaceObject(UnBoppable):
+class HilbertSpaceObject(ObjectGroup):
     """
     This object lives in the Hilbert Space.
     """

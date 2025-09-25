@@ -1,6 +1,6 @@
 import sympy as sp
 
-class AutoSortedUniqueList(list):
+class SubCache(list):
     def __init__(self, *args) -> None:
         if args:
             raise ValueError("Must be empty on initialization.")
@@ -68,10 +68,26 @@ class AutoSortedUniqueList(list):
             alpha2qp_subs_dict._set_item(k, v)            
             alpha2qp_subs_dict._set_item(sc2op_subs_dict[k], 
                                          v.xreplace({qq:qop, pp:pop}))
-                        
+        ###
+        
+        from ..star import _Primed
+        
+        for x in [a, ad, aop, adop]:
+            px = _Primed(x)
+            primed_subs_dict._set_item(x, px)
+            deprime_subs_dict._set_item(px, x)
+            
     def _refresh_all(self):
         for sub in self:
             self._refresh(sub)
+            
+    def _get_alphaType_scalar(self):
+        from ..objects.scalars import alpha, alphaD
+        return [cls(sub) for sub in self for cls in [alpha, alphaD]]
+    
+    def _get_alphaType_oper(self):
+        from ..objects.operators import annihilateOp, createOp
+        return [cls(sub) for sub in self for cls in [annihilateOp, createOp]]
         
     def append(self, item):
         raise NotImplementedError
@@ -96,10 +112,12 @@ class ProtectedDict(dict):
         super().__setitem__(key, value)
               
 global op2sc_subs_dict, sc2op_subs_dict, qp2alpha_subs_dict
-global alpha2qp_subs_dict, sub_cache
+global alpha2qp_subs_dict, primed_dict, deprimed_dict, sub_cache
 qp2alpha_subs_dict = ProtectedDict()
 alpha2qp_subs_dict = ProtectedDict()
 op2sc_subs_dict = ProtectedDict()
 sc2op_subs_dict = ProtectedDict()
+primed_subs_dict = ProtectedDict()
+deprime_subs_dict = ProtectedDict()
 
-sub_cache = AutoSortedUniqueList()
+sub_cache = SubCache()

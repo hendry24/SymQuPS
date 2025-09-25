@@ -4,7 +4,7 @@ from typing import Tuple
 import warnings
 import functools
 
-from ._internal.grouping import HilbertSpaceObject, UnDBoppable
+from ._internal.grouping import HilbertSpaceObject, UnOperBoppable
 from ._internal.cache import sub_cache
 from ._internal.basic_routines import operation_routine, default_treat_add
 from ._internal.operator_handling import (separate_operator,
@@ -23,7 +23,7 @@ from . import s as CahillGlauberS
 
 ###
 
-class sOrdering(sp.Expr, HilbertSpaceObject, UnDBoppable):
+class sOrdering(sp.Expr, HilbertSpaceObject, UnOperBoppable):
     
     is_commutative = False
     

@@ -7,8 +7,14 @@ pi = m.piTranscendentalNumber()
 
 del m
 
-from .utils import enable_Mul_patch
-enable_Mul_patch()
+###
+# PATCHES 
+
+import sympy as sp
+from ._internal.patches import patched_Mul_flatten, patched_Expr_diff
+
+sp.Mul.flatten = patched_Mul_flatten
+sp.Expr.diff = patched_Expr_diff
 
 ###
 

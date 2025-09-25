@@ -17,20 +17,6 @@ def get_N():
 
 ###
 
-def enable_Mul_patch():
-    import sympy as sp
-    from ._internal.operator_handling import patched_Mul_flatten
-
-    sp.Mul.flatten = patched_Mul_flatten
-
-def disable_Mul_patch():
-    import sympy as sp
-    from ._internal.operator_handling import original_Mul_flatten
-
-    sp.Mul.flatten = original_Mul_flatten
-
-###
-
 def get_random_poly(objects, coeffs=[1], max_pow=3, dice_throw=10) -> sp.Expr:
     """
     Make a random polynomial in 'objects'.

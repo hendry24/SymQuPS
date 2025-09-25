@@ -1,7 +1,8 @@
 import typing
+import sympy as sp
 
 from .base import Base
-from .._internal.grouping import HilbertSpaceObject, qpType, alphaType, UnDBoppable, PhaseSpaceVariableOperator
+from .._internal.grouping import HilbertSpaceObject, qpType, alphaType, UnOperBoppable, PhaseSpaceVariableOperator
 from .._internal.cache import sub_cache
 from .._internal.basic_routines import treat_sub
 
@@ -34,7 +35,7 @@ class Operator(Base, HilbertSpaceObject):
     
     @property
     def _diff_wrt(self):
-        msg = "No differentiation with respect to 'Operator'."
+        msg = "Differentiation with respect to this 'Operator' is undefined."
         raise NotImplementedError(msg)
 
 ###
@@ -60,15 +61,23 @@ class annihilateOp(Operator, alphaType, PhaseSpaceVariableOperator):
     def dagger(self):
         return createOp(sub = self.sub)
     
+    @property
+    def _diff_wrt(self):
+        return True
+    
 class createOp(Operator, alphaType, PhaseSpaceVariableOperator):
     base = r"\hat{a}^{\dagger}"
         
     def dagger(self):
         return annihilateOp(sub = self.sub)
     
+    @property
+    def _diff_wrt(self):
+        return True
+    
 ###
 
-class densityOp(HermitianOp, UnDBoppable):
+class densityOp(HermitianOp, UnOperBoppable):
     base = r"\rho"
     has_sub = False
     

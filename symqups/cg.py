@@ -5,11 +5,12 @@ from ._internal.basic_routines import operation_routine
 from ._internal.grouping import (PhaseSpaceVariable, PhaseSpaceObject, Defined, 
                                  HilbertSpaceObject, NotAnOperator, NotAScalar,
                                  PhaseSpaceVariableOperator)
+from ._internal.cache import sub_cache
 
 from .objects.scalars import W, StateFunction, alpha
 from .objects.operators import Operator, densityOp, rho, annihilateOp, createOp
 
-from .star_product import Star, dStar
+from .star_product import Star
 from .ordering import sOrdering
 from .manipulations import qp2alpha, op2sc, alpha2qp, sc2op, Commutator, express, normal_ordered_equivalent
 from .utils import get_N
@@ -48,10 +49,12 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
         return sp.Equality(lhs, rhs)
     definition = _definition()
     
-    def __new__(cls, expr : sp.Expr):
+    def __new__(cls, expr : sp.Expr, *_vars):
         """
         oper -> quantum ps vars
         """
+        if not(_vars):
+            _vars = sub_cache._get_alphaType_scalar()
         
         def treat_add(A : sp.Expr) -> sp.Expr:
             return sp.Add(*mp_helper(A.args, CGTransform))
@@ -101,7 +104,7 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             return sp.Mul(*mp_helper(A.args, CGTransform))
             
         def make(A : sp.Expr):
-            return super(CGTransform, cls).__new__(cls, A)
+            return super(CGTransform, cls).__new__(cls, A, *_vars)
             
         expr = qp2alpha(sp.sympify(expr))
         if not(expr.has(Operator)) and not(isinstance(expr, NotAScalar)):
@@ -135,7 +138,10 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
         return sp.Equality(lhs, rhs)
     definition = _definition()
     
-    def __new__(cls, expr : sp.Expr, lazy=False) -> sp.Expr:
+    def __new__(cls, expr : sp.Expr, lazy=False, *_vars) -> sp.Expr:
+        if not(_vars):
+            _vars = sub_cache._get_alphaType_oper()
+        
         def treat_add(A : sp.Add) -> sp.Expr:
             return sp.Add(*mp_helper(A.args, iCGTransform))
         
@@ -199,7 +205,7 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
             return sp.Mul(*mp_helper(A.args, iCGTransform))
         
         def make(A : sp.Expr) -> iCGTransform:
-            return super(iCGTransform, cls).__new__(cls, A)
+            return super(iCGTransform, cls).__new__(cls, A, *_vars)
         
         expr = qp2alpha(sp.sympify(expr))
         return operation_routine(expr, 
