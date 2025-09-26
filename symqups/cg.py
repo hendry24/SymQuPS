@@ -54,8 +54,14 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
         oper -> quantum ps vars
         """
         if expr.is_Equality:
-            return sp.Equality(CGTransform(expr.lhs, *_vars),
-                               CGTransform(expr.rhs, *_vars))
+            from .eom import LindbladMasterEquation
+            lhs = expr.lhs
+            rhs = expr.rhs
+            if isinstance(expr, LindbladMasterEquation):
+                lhs /= pi.val
+                rhs /= pi.val
+            return sp.Equality(CGTransform(lhs),
+                               CGTransform(rhs)).doit().expand()
         
         if not(_vars):
             _vars = sub_cache._get_alphaType_scalar()
@@ -106,6 +112,9 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
         
         def treat_HattedStar(A : HattedStar) -> sp.Expr:
             return sp.Mul(*mp_helper(A.args, CGTransform))
+        
+        def treat_der(A : sp.Derivative):
+            return sp.Derivative(CGTransform(A.args[0]), *A.args[1:])
             
         def make(A : sp.Expr):
             return super(CGTransform, cls).__new__(cls, A, *_vars)
@@ -114,7 +123,7 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
         if not(expr.has(Operator)) and not(isinstance(expr, NotAScalar)):
             return expr
         return operation_routine(expr,
-                                "CG_transform",
+                                CGTransform,
                                 [],
                                 [],
                                 {(PhaseSpaceVariableOperator, densityOp) : expr},
@@ -125,8 +134,9 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
                                  densityOp : (pi.val)**get_N() * W,
                                  sOrdering : treat_sOrdering,
                                  iCGTransform : lambda A: A.args[0],
-                                 Commutator : lambda A: CGTransform(A.doit()),
-                                 HattedStar : treat_HattedStar}
+                                 Commutator : lambda A: CGTransform(A.doit().expand()),
+                                 HattedStar : treat_HattedStar,
+                                 sp.Derivative : treat_der}
                                 )
         
     def _latex(self, printer):
@@ -207,7 +217,7 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
         
         expr = qp2alpha(sp.sympify(expr))
         return operation_routine(expr, 
-                                "iCG_transform",
+                                iCGTransform,
                                 [],
                                 [Operator],
                                 {(PhaseSpaceVariable, StateFunction) : expr},

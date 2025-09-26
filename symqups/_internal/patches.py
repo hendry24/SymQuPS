@@ -7,6 +7,7 @@ from .cache import sub_cache
 from .grouping import NotAnOperator, Acting
 from .operator_handling import get_oper_sub, is_universal
 
+from ..objects.scalars import t
 from ..objects.operators import Operator, createOp, annihilateOp
 from ..manipulations import Commutator
 
@@ -170,7 +171,7 @@ def patched_Mul_flatten(seq : Sequence) -> Tuple[list, list, list]:
 global original_Derivative
 original_Derivative = sp.Derivative
 
-class PatchedDerivative(sp.Expr):
+class PatchedDerivative(original_Derivative):
     # HACK: We patch sympy.Derivative such that derivative w.r.t annihilateOp
     # and createOp is handled correctly for Operator, which are symbols that 
     # by default gives 0 when "differentiated" w.r.t them by sympy's logic.
@@ -202,4 +203,4 @@ class PatchedDerivative(sp.Expr):
         if not(other_vars):
             return expr
             
-        return original_Derivative(expr, *other_vars, **kwargs)
+        return super().__new__(cls, expr, *other_vars, **kwargs)

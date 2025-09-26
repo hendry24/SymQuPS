@@ -1,4 +1,5 @@
 import typing
+import sympy as sp
 
 from .base import Base
 from .._internal.grouping import HilbertSpaceObject, qpType, alphaType, PhaseSpaceVariableOperator, CannotBoppShift
@@ -38,10 +39,7 @@ class Operator(Base, HilbertSpaceObject):
         raise NotImplementedError(msg)
     
     def diff(self, *symbols, **assumptions):
-        print("yeha")
-        if any(s.has(annihilateOp, createOp) for s in symbols):
-            return None
-        return "yeah"
+        return sp.Derivative(self, *symbols, **assumptions)
 
 ###
 
