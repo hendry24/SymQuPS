@@ -76,6 +76,9 @@ class LindbladMasterEquation(sp.Basic):
     ----------
     
     """
+    
+    is_Equality = True
+    
     def __new__(cls, H : sp.Expr = sp.Integer(0), *dissipators, **options):
         H = sp.sympify(H)
         dissipators = sp.sympify(dissipators)

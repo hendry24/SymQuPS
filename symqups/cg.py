@@ -20,9 +20,9 @@ from . import pi
 
 ###
 
-_kernel_string = r"\Delta_s\left(\bm{\alpha}\right) = "
+_kernel_string = r"\mathcal{T}_s\left(\bm{\alpha}\right) = "
 _kernel_string += r"\int_{\mathbb{R}^{2N}}\mathrm{d}\bm{\beta}"
-_kernel_string += r"\exp\left(-\frac{1+s}{1-s}\left|\bm{\beta}\right|^2\right)"
+_kernel_string += r"\exp\left(\frac{s}{2}\left|\bm{\beta}\right|^2\right)"
 _kernel_string += r"\exp\left(\bm{\beta}\cdot\bm{\hat{a}}^\dagger -\overline{\bm{\beta}}\cdot\hat{\bm{a}}\right)"
 _kernel_string +=  r"\exp\left(\bm{\alpha}\cdot\overline{\bm{\beta}} - \overline{\bm{\alpha}}\cdot\bm{\beta} \right)"
 
@@ -45,7 +45,7 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
     @staticmethod
     def _definition():
         lhs = sp.Symbol(_CGT_str(r"\hat{A}"))
-        rhs = sp.Symbol(r"\mathrm{tr}\left(\hat{A}\Delta_s\left(\bm{\alpha}\right)\right), \quad %s" % _kernel_string)
+        rhs = sp.Symbol(r"\mathrm{tr}\left(\hat{A}\mathcal{T}_{-s}\left(\bm{\alpha}\right)\right), \quad %s" % _kernel_string)
         return sp.Equality(lhs, rhs)
     definition = _definition()
     
@@ -53,6 +53,10 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
         """
         oper -> quantum ps vars
         """
+        if expr.is_Equality:
+            return sp.Equality(CGTransform(expr.lhs, *_vars),
+                               CGTransform(expr.rhs, *_vars))
+        
         if not(_vars):
             _vars = sub_cache._get_alphaType_scalar()
         
@@ -122,7 +126,8 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
                                  sOrdering : treat_sOrdering,
                                  iCGTransform : lambda A: A.args[0],
                                  Commutator : lambda A: CGTransform(A.doit()),
-                                 HattedStar : treat_HattedStar})
+                                 HattedStar : treat_HattedStar}
+                                )
         
     def _latex(self, printer):
         return r"\mathcal{W}_{s={%s}}\left[{%s}\right]" % (sp.latex(CahillGlauberS.val),
@@ -134,11 +139,15 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
     @staticmethod
     def _definition():
         lhs = sp.Symbol(_iCGT_str(r"f\left(\bm{\alpha}\right)"))
-        rhs = sp.Symbol(r"\int \frac{\mathrm{d}\bm{\alpha}}{\pi^N} f\left(\bm{\alpha}\right) \Delta_{-s}\left(\bm{\alpha}\right), \quad %s" % _kernel_string)
+        rhs = sp.Symbol(r"\int_{\mathbb{R}^{2N}} \frac{\mathrm{d}\bm{\alpha}}{\pi^N} f\left(\bm{\alpha}\right) \mathcal{T}_{s}\left(\bm{\alpha}\right), \quad %s" % _kernel_string)
         return sp.Equality(lhs, rhs)
     definition = _definition()
     
     def __new__(cls, expr : sp.Expr, lazy=False, *_vars) -> sp.Expr:
+        if expr.is_Equality:
+            return sp.Equality(iCGTransform(expr.lhs, lazy, *_vars),
+                               iCGTransform(expr.rhs, lazy, *_vars))
+            
         if not(_vars):
             _vars = sub_cache._get_alphaType_oper()
         
@@ -156,7 +165,7 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
             
         def treat_mul(A : sp.Mul) -> sp.Expr:
             if not(A.has(StateFunction)):
-                return sOrdering(sc2op(A))
+                return sOrdering(sc2op(A), lazy=lazy)
             
             # Here we assume that W only appears once in a given term. That is,
             # no complex terms like W*Derivative(W, alpha). If these are found,

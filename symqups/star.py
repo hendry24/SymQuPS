@@ -26,7 +26,7 @@ class _Primed(Base):
     
     def __new__(cls, 
                 psv : PhaseSpaceVariable | PhaseSpaceVariableOperator):
-        
+    
         def make(A):
             return super(_Primed, cls).__new__(cls, A)
         
@@ -37,9 +37,10 @@ class _Primed(Base):
                                  _Primed,
                                  [],
                                  [],
-                                 {_Primed : prime_expr},
+                                 {},
                                  {(PhaseSpaceVariable, 
-                                   PhaseSpaceVariableOperator) : make})
+                                   PhaseSpaceVariableOperator) : make,
+                                  sp.Expr : prime_expr})
         
 def _deprime(expr : sp.Expr):
     return expr.xreplace(deprime_subs_dict)
@@ -48,9 +49,9 @@ class _CannotBoppFlag(TypeError):
     pass
 
 def _Bopp_monomial_A_times_B(A : sp.Expr,
-                            B : sp.Expr,
-                            left : bool,
-                            hatted : bool):
+                             B : sp.Expr,
+                             left : bool,
+                             hatted : bool):
     s = CahillGlauberS.val
     
     if A.is_Mul:
@@ -70,10 +71,12 @@ def _Bopp_monomial_A_times_B(A : sp.Expr,
     
     if left:
         lr_sgn = -1
+        iter_through = args
     else:
         lr_sgn = 1
+        iter_through = reversed(args)
     
-    for arg in reversed(args):
+    for arg in iter_through:
         if arg.has(a):
             if arg.is_Pow:
                 n = arg.args[1]
@@ -83,8 +86,13 @@ def _Bopp_monomial_A_times_B(A : sp.Expr,
             sub = list(arg.atoms(a))[0].sub
             
             for _ in range(n):
-                out = (a(sub) * out 
-                       + space_sgn*sp.Rational(1,2)*(s+lr_sgn)*sp.Derivative(out, _Primed(ad(sub))))
+                if left:
+                    new_out = out*a(sub)
+                else:
+                    new_out = a(sub)*out   
+                new_out += space_sgn*sp.Rational(1,2)*(s+lr_sgn)*sp.Derivative(out, _Primed(ad(sub)))
+                
+                out = new_out
         
         elif arg.has(ad):
             if arg.is_Pow:
@@ -95,8 +103,13 @@ def _Bopp_monomial_A_times_B(A : sp.Expr,
             sub = list(arg.atoms(ad))[0].sub
             
             for _ in range(n):
-                out = (ad(sub)*out 
-                       + space_sgn*sp.Rational(1,2)*(s-lr_sgn)*sp.Derivative(out, _Primed(a(sub))))
+                if left:
+                    new_out = out*ad(sub)
+                else:
+                    new_out = ad(sub)*out
+                new_out += space_sgn*sp.Rational(1,2)*(s-lr_sgn)*sp.Derivative(out, _Primed(a(sub)))
+                
+                out = new_out
                 
         else:
             non_psv *= arg

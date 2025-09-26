@@ -70,9 +70,9 @@ def express(expr : sp.Expr, t=1, explicit=True) -> sp.Expr:
 
 ###
 
-class Commutator(sp.Expr, HilbertSpaceObject):
+class Commutator(spq.Commutator, HilbertSpaceObject):
     def __new__(cls, A : sp.Expr, B : sp.Expr):
-        return spq.Commutator(A, B)
+        return super().__new__(cls, A, B)
 
 # Normal-ordered equivalent
 ###########################
