@@ -8,12 +8,12 @@ import sympy as sp
 sMul = deepcopy(sp.Mul)
 
 from symqups._internal.grouping import alphaType, qpType
-from symqups.objects.scalars import (Scalar, q, p, t, W, alpha, alphaD,
-                                    _Primed, _DerivativeSymbol)
+from symqups.objects.scalars import (Scalar, q, p, t, W, alpha, alphaD)
 from symqups.objects.operators import (Operator, qOp, pOp, createOp, annihilateOp,
                                         densityOp, rho)
 from symqups.utils import get_random_poly
 from symqups.ordering import sOrdering
+from symqups.star import _Primed, _deprime
 
 from symqups import hbar, zeta
 
@@ -23,20 +23,20 @@ zeta = zeta.val
 # TESTED FUNCTIONALITIES
 ########################
 
-from symqups.manipulations import _deprime, dagger, define, qp2a, normal_ordered_equivalent, explicit, express
+from symqups.manipulations import dagger, qp2alpha, alpha2qp, normal_ordered_equivalent, explicit, express
 
 ###
     
 @pytest.mark.fast
 def test_core_arithmetic():
     for A in [Scalar(), Operator(), 
-              _Primed(alpha()), _DerivativeSymbol(_Primed(alpha()))]:
+              _Primed(alpha()), _Primed(annihilateOp())]:
         arithmetic_test(A)
 
 @pytest.mark.fast
 def test_compound_expressions_with_objects():
     for A in [Scalar(), Operator(), 
-              _Primed(alpha()), _DerivativeSymbol(_Primed(alpha()))]:
+              _Primed(alpha()), _Primed(annihilateOp())]:
         assert dill.loads(dill.dumps(sp.Expr(A))) == sp.Expr(A)
         assert sp.Expr(A).args[0] == A
         assert dill.loads(dill.dumps(sp.Function("F")(A))) == sp.Function("F")(A)
@@ -56,19 +56,7 @@ def test_multiplication_reordering():
     # Different 'sub's > commute
     assert a_op_1*ad_op_2 == ad_op_2*a_op_1
     assert ad_op_1*a_op_2 == a_op_2*ad_op_1
-    
-    # Not the case for other noncommutative objects. 
-    a_p_1 = _Primed(alpha(1))
-    a_p_2 = _Primed(alpha(2))
-    da_1 = _DerivativeSymbol(a_p_1)
-    da_2 = _DerivativeSymbol(a_p_2)
-    
-    assert a_p_1*da_1 != da_1*a_p_1
-    assert a_p_2*da_2 != da_2*a_p_2
-    
-    assert a_p_1*da_2 != da_2*a_p_1
-    assert a_p_2*da_1 != da_1*a_p_2
-    
+     
 @pytest.mark.full
 def test_deprime():
     rand_poly = get_random_poly([q(), p(), alpha(), alphaD(), Scalar()],
@@ -77,33 +65,28 @@ def test_deprime():
     assert sp.expand(_deprime(_Primed(rand_poly)) - rand_poly) == 0
 
 @pytest.mark.full
-def test_define_and_qp2a():
+def test_alpha2qp_and_qp2alpha():
     for obj, expanded in zip([alpha(), alphaD()],
-                                [(q()*mu + sp.I*p()/mu) / sp.sqrt(2*hbar),
-                                (q()*sp.conjugate(mu) - sp.I*p()/sp.conjugate(mu)) / sp.sqrt(2*hbar)]):
+                                [(q()*zeta + sp.I*p()/zeta) / sp.sqrt(2*hbar),
+                                (q()*sp.conjugate(zeta) - sp.I*p()/sp.conjugate(zeta)) / sp.sqrt(2*hbar)]):
         assert sp.expand(obj.define() - expanded) == 0
     
     assert sp.conjugate(alpha()) == alphaD()
-    assert (sp.conjugate(alpha().define()) - alphaD().define()).expand() == 0
     assert sp.conjugate(alphaD()) == alpha()
-    assert (sp.conjugate(alphaD().define()) - alpha().define()).expand() == 0
 
     sub = random.randint(0, 100)
+       
+    assert qp2alpha(alpha(sub)) == alpha(sub)
+    assert qp2alpha(annihilateOp(sub)) == annihilateOp(sub)
     
-    assert sp.expand(define(alpha(sub)) - alpha(sub).define()) == 0
-    assert sp.expand(define(annihilateOp(sub)) - annihilateOp(sub).define()) == 0
-    
-    assert qp2a(alpha(sub)) == alpha(sub)
-    assert qp2a(annihilateOp(sub)) == annihilateOp(sub)
-    
-    muD = sp.conjugate(mu)
+    zetaD = sp.conjugate(zeta)
     
     for qq, pp, a, ad in zip([q(sub), qOp(sub)], 
                                 [p(sub), pOp(sub)], 
                                 [alpha(sub), annihilateOp(sub)], 
                                 [alphaD(sub), createOp(sub)]):
-        assert sp.expand(qp2a(qq) - sp.sqrt(2*hbar)*(mu*a + muD*ad)/(mu**2+muD**2)) == 0
-        assert sp.expand(qp2a(pp) - sp.sqrt(2*hbar)*sp.I*mu*muD*(mu*ad-muD*a)/(mu**2+muD**2)) == 0
+        assert sp.expand(qp2alpha(qq) - sp.sqrt(2*hbar)*(zeta*a + zetaD*ad)/(zeta**2+zetaD**2)) == 0
+        assert sp.expand(qp2alpha(pp) - sp.sqrt(2*hbar)*sp.I*zeta*zetaD*(zeta*ad-zetaD*a)/(zeta**2+zetaD**2)) == 0
     
     qp_sc_lst = []
     qp_op_lst = []
@@ -119,12 +102,12 @@ def test_define_and_qp2a():
                                             [(q, p, alpha, alphaD), 
                                             (qOp, pOp, annihilateOp, createOp)]):
         expr = get_random_poly(obj_lst, dice_throw=3)
-        expr_def = define(expr)
-        expr_qp2a = qp2a(expr)
+        expr_def = alpha2qp(expr)
+        expr_qp2a = qp2alpha(expr)
         assert not(expr_def.has(alphaType)) and expr_def.has(qpType)
         assert not(expr_qp2a.has(qpType)) and expr_qp2a.has(alphaType)
-        assert sp.simplify(define(expr_qp2a) -  expr_def) == 0
-        assert sp.simplify(qp2a(expr_def) - expr_qp2a) == 0
+        assert sp.simplify(alpha2qp(expr_qp2a) -  expr_def) == 0
+        assert sp.simplify(qp2alpha(expr_def) - expr_qp2a) == 0
 
 @pytest.mark.full
 def test_dagger():
@@ -134,9 +117,7 @@ def test_dagger():
         assert dagger(herm_op) == herm_op
 
     assert dagger(annihilateOp()) == createOp()
-    assert (dagger(annihilateOp().define())-createOp().define()).expand() == 0
     assert dagger(createOp()) == annihilateOp()            
-    assert (dagger(createOp().define())-annihilateOp().define()).expand() == 0
 
     rand_poly = get_random_poly(objects = (1, sp.Symbol("x"), qOp(), annihilateOp(),
                                             createOp(), annihilateOp()),

@@ -4,7 +4,7 @@ import sympy as sp
 from symqups import s
 from symqups.objects.scalars import q, p, alpha, alphaD, W
 from symqups.objects.operators import Operator, qOp, pOp, annihilateOp, createOp
-from symqups.manipulations import qp2a
+from symqups.manipulations import qp2alpha
 from symqups.ordering import sOrdering
 
 from symqups.quantization import s_quantize
@@ -37,7 +37,7 @@ def test_s_quantize():
     assert s_quantize(sp.exp(x)) == sp.exp(x)
 
     assert s_quantize(a) == a_op
-    assert s_quantize(qq) == qp2a(q_op)
+    assert s_quantize(qq) == qp2alpha(q_op)
     
     assert s_quantize(a+ad) == (a_op+ad_op)
     assert s_quantize(2*ad) == 2*ad_op

@@ -13,7 +13,7 @@ from symqups import s as CahillGlauberS
 # TESTED FUNCTIONALITIES
 # ======================
 
-from symqups.cg import CG_transform, iCG_transform
+from symqups.cg import CGTransform, iCGTransform
 
 ###
 
@@ -41,25 +41,25 @@ def template(inputs, outputs, foo):
     assert sp.simplify(sp.expand(foo(p_in) - qp2alpha(p_out))) == 0
     
 @pytest.mark.fast
-def test_CG_transform():
+def test_CGTransform():
     template([qOp(), pOp(), annihilateOp(), createOp()],
              [q(), p(), alpha(), alphaD()],
-             CG_transform)
+             CGTransform)
     
-    A = CG_transform(sOrdering(annihilateOp()*createOp()))
+    A = CGTransform(sOrdering(annihilateOp()*createOp()))
     B = alpha()*alphaD()
     assert sp.simplify(A-B) == 0
 
-    A = CG_transform(sOrdering(annihilateOp()*createOp(), s=m))
+    A = CGTransform(sOrdering(annihilateOp()*createOp(), s=m))
     B = alpha()*alphaD()
     assert sp.simplify(A-B) != 0
 
 @pytest.mark.fast
-def test_iCG_transform():
+def test_iCGTransform():
     template([q(), p(), alpha(), alphaD()],
              [qOp(), pOp(), annihilateOp(), createOp()],
-             iCG_transform)
+             iCGTransform)
     
-    A = express(iCG_transform(alpha()*alphaD()), 1, explicit=True)
+    A = express(iCGTransform(alpha()*alphaD()), 1, explicit=True)
     B = express(sOrdering(annihilateOp()*createOp()), 1, explicit=True)
     assert sp.simplify(A-B) == 0
