@@ -1,14 +1,24 @@
 import sympy as sp
 import functools
-from collections.abc import Mapping
-from sympy.core.function import UndefinedFunction
 from pickle import PicklingError
 
 def preprocess_func(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        args = [sp.sympify(arg) for arg in args]
-        kwargs = {k : sp.sympify(v) for k,v in kwargs.items()}
+        
+        sympified_args = []
+        for arg in args:
+            try:
+                sympified_args.append(sp.sympify(arg))
+            except:
+                sympified_args.append(arg)
+            
+        sympified_kwargs = {}
+        for k,v in kwargs.items():
+            try:
+                sympified_kwargs[k] = sp.sympify(v)
+            except:
+                sympified_kwargs[k] = v
         
         # HACK: The multiprocessing implementation has an issue
         # where the first call in a session involving objects
@@ -16,9 +26,9 @@ def preprocess_func(func):
         # that does not occur when we call the second time.
         
         try:
-            return func(*args, **kwargs)
+            return func(*sympified_args, **sympified_kwargs)
         except PicklingError:
-            return func(*args, **kwargs)
+            return func(*sympified_args, **sympified_kwargs)
 
     return wrapper
 

@@ -1,48 +1,60 @@
-def _hatted_star_dBopp_monomial_A_times_B(A : sp.Expr, B : sp.Expr) -> sp.Expr:
+import sympy as sp
+
+from ._internal.grouping import (
+    HilbertSpaceObject, PhaseSpaceObject, NotAnOperator, Acting,
+    NotAScalar
+)
+from ._internal.preprocessing import preprocess_class
+
+from .objects.base import Base
+from .objects.operators import annihilateOp, createOp
+
+from .manipulations import dagger
+
+from . import s as CahillGlauberS
+
+@preprocess_class
+class _BoppActor(Base, Acting):
+    Hilbert : bool
     
-    s = CahillGlauberS.val
+    def _get_symbol_name_and_assumptions(cls, base, target, left):
+        dir = "L" if left else "R"
+        return r"\hat{\mathcal{B}}_{%s}^{%s}" % (sp.latex(base), dir), {"commutative":True}
     
-    if A.is_Mul:
-        args = A.args
-    else:
-        args = [A]
+    def __new__(cls,
+                base : annihilateOp|createOp, 
+                target : sp.Expr|None = None,
+                left : bool = False):
+        obj = super().__new__(cls, base, target, left)
+        obj._base = base
+        obj._left = left
         
-    non_psvo = sp.Integer(1)
-    out = B
+        if target is None:
+            return obj
+        
+        return obj.act(target)
     
-    # NOTE: Since operator products are not commutative, we need
-    # to work from the rightmost argument or A.
+    @property
+    def base(self):
+        return self._base
     
-    # NOTE: The hatted star product is commutative so we only have one
-    # variant of dBopp, i.e. we can always dBopp toward the right direction.
+    @property
+    def left(self):
+        return self._left
     
-    for arg in reversed(args):
-        if arg.has(createOp):
-            
-            if arg.is_Pow:
-                n = arg.args[1]
-            else:
-                n = 1
-                
-            sub = list(arg.atoms(createOp))[0].sub
-            a, ad = annihilateOp(sub), createOp(sub)
-            
-            for _ in range(n):
-                out = _commutativeOp(ad)*out + sp.Rational(1,2)*(s-1) * Commutator(ad, out)
-                
-        elif arg.has(annihilateOp):
-            
-            if arg.is_Pow:
-                n = arg.args[1]
-            else:
-                n = 1
-                
-            sub = list(arg.atoms(annihilateOp))[0].sub
-            a, ad = annihilateOp(sub), createOp(sub)
-            
-            for _ in range(n):
-                out = _commutativeOp(a)*out - sp.Rational(1,2)*(s+1) * Commutator(a, out)
+    def act(self, target : sp.Expr):
+        s = CahillGlauberS.val
+        sgn = -1 if isinstance(self.base, annihilateOp) else 1
+        space_sgn = -1 if self.Hilbert else 1
+        if self.left:
+            return target*self.base + space_sgn * sp.Rational(1,2)*(s+sgn)*sp.Derivative(target, dagger(self.base))
         else:
-            non_psvo *= arg
-            
-    return _detilde(non_psvo*out.doit().expand())
+            return self.base*target + space_sgn * sp.Rational(1,2)*(s-sgn)*sp.Derivative(target, dagger(self.base))
+
+class HilbertSpaceBoppSuperoperator(_BoppActor, HilbertSpaceObject, NotAnOperator):
+    Hilbert = True
+HSBS = HilbertSpaceBoppSuperoperator
+    
+class PhaseSpaceBoppOperator(_BoppActor, PhaseSpaceObject, NotAScalar):
+    Hilbert = False
+PSBO = PhaseSpaceBoppOperator

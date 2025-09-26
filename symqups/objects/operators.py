@@ -1,8 +1,7 @@
 import typing
-import sympy as sp
 
 from .base import Base
-from .._internal.grouping import HilbertSpaceObject, qpType, alphaType, UnOperBoppable, PhaseSpaceVariableOperator
+from .._internal.grouping import HilbertSpaceObject, qpType, alphaType, PhaseSpaceVariableOperator, CannotBoppShift
 from .._internal.cache import sub_cache
 from .._internal.basic_routines import treat_sub
 
@@ -37,6 +36,12 @@ class Operator(Base, HilbertSpaceObject):
     def _diff_wrt(self):
         msg = "Differentiation with respect to this 'Operator' is undefined."
         raise NotImplementedError(msg)
+    
+    def diff(self, *symbols, **assumptions):
+        print("yeha")
+        if any(s.has(annihilateOp, createOp) for s in symbols):
+            return None
+        return "yeah"
 
 ###
 
@@ -77,7 +82,7 @@ class createOp(Operator, alphaType, PhaseSpaceVariableOperator):
     
 ###
 
-class densityOp(HermitianOp, UnOperBoppable):
+class densityOp(HermitianOp, CannotBoppShift):
     base = r"\rho"
     has_sub = False
     

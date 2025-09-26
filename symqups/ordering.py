@@ -4,7 +4,7 @@ from typing import Tuple
 import warnings
 import functools
 
-from ._internal.grouping import HilbertSpaceObject, UnOperBoppable
+from ._internal.grouping import HilbertSpaceObject, CannotBoppShift
 from ._internal.cache import sub_cache
 from ._internal.basic_routines import operation_routine, default_treat_add
 from ._internal.operator_handling import (separate_operator,
@@ -13,6 +13,7 @@ from ._internal.operator_handling import (separate_operator,
                                             collect_alpha_type_oper_from_monomial_by_sub,
                                             separate_term_by_polynomiality,
                                             separate_term_oper_by_sub)
+from ._internal.preprocessing import preprocess_class
 
 from .objects.scalars import q, p, alpha, alphaD
 from .objects.operators import Operator, annihilateOp, createOp
@@ -23,7 +24,8 @@ from . import s as CahillGlauberS
 
 ###
 
-class sOrdering(sp.Expr, HilbertSpaceObject, UnOperBoppable):
+@preprocess_class
+class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
     
     is_commutative = False
     

@@ -1,5 +1,8 @@
 import sympy as sp
 
+from .._internal.preprocessing import preprocess_class
+
+@preprocess_class
 class Base(sp.Symbol):
     """
     Base object for the package, essentially a modified `sympy.Symbol` supporting extra accessible

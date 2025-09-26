@@ -2,9 +2,9 @@ import sympy as sp
 from typing import Sequence, Tuple
 from functools import cmp_to_key
 
-from .basic_routines import screen_type
+from .basic_routines import screen_type, deep_screen_type
 from .cache import sub_cache
-from .grouping import NotAnOperator
+from .grouping import NotAnOperator, Acting
 from .operator_handling import get_oper_sub, is_universal
 
 from ..objects.operators import Operator, createOp, annihilateOp
@@ -21,7 +21,15 @@ original_Mul_flatten = sp.Mul.flatten
 
 def patched_Mul_flatten(seq : Sequence) -> Tuple[list, list, list]: 
 
-    # This patch reorders the noncommuting 'Operator' objects according
+    for arg in seq:
+        if isinstance(arg, Acting):
+            s = "Multiplication of 'Acting' objects is not implemneted."
+            s += " Please use them to 'act' on something first. The following "
+            s += "'Acting' object is found: "
+            s += str(type(arg))
+            raise TypeError(s)
+
+    # The following code reorders the noncommuting 'Operator' objects according
     # to sympy's canonical ordering of 'sub_cache', resulting in
     # prettier outputs in multipartite cases.
     #
@@ -45,10 +53,10 @@ def patched_Mul_flatten(seq : Sequence) -> Tuple[list, list, list]:
     # which case the implementation below will be confused because it expects
     # to get at least one 'sub' value. 
     # if (all(not(item.has(Operator)) for item in seq)
-        # or any(item.has(NotAnOperator) for item in seq) 
-        # or any(not(isinstance(atom, Operator)) for item in seq 
-        #        for atom in item.atoms() if getattr(atom, "is_commutative") is False)):
-        # return original_Mul_flatten(seq)
+    #     or any(item.has(NotAnOperator) for item in seq) 
+    #     or any(not(isinstance(atom, Operator)) for item in seq 
+    #            for atom in item.atoms() if getattr(atom, "is_commutative") is False)):
+    #     return original_Mul_flatten(seq)
         
     # NOTE: The above seems unnecessary and only intorduces overhead. We shall keep this here
     # just in case it turns out useful. Below, we have opted to skip the patch if 
@@ -151,35 +159,47 @@ def patched_Mul_flatten(seq : Sequence) -> Tuple[list, list, list]:
         _, reordered_nc_part_reflattened, _ = original_Mul_flatten(reordered_nc_part)
         
         return c_part, reordered_nc_part_reflattened, order_symbol
-    
-    except:
         
+    except:
+
         return c_part, nc_part, order_symbol
     
-### Expr.diff
-global original_Expr_diff
-original_Expr_diff = sp.Expr.diff
-
-def patched_Expr_diff(self, *symbols, **kwargs):
-    a_lst = []
-    ad_lst = []
-    others = []
-    for s in symbols:
-        if isinstance(s, annihilateOp):
-            a_lst.append(s)
-        elif isinstance(s, createOp):
-            ad_lst.append(s)
-        else:
-            others.append(s)
-
-    out = self
-    # Derivative w.r.t. ladders is commutative.
-    for a in a_lst:
-        out = Commutator(out, createOp(a.sub))
-    for ad in ad_lst:
-        out = Commutator(annihilateOp(ad.sub), out)
     
-    if not(others):
-        return out
-     
-    return original_Expr_diff(out, *others, **kwargs)
+###
+
+global original_Derivative
+original_Derivative = sp.Derivative
+
+class PatchedDerivative(sp.Expr):
+    # HACK: We patch sympy.Derivative such that derivative w.r.t annihilateOp
+    # and createOp is handled correctly for Operator, which are symbols that 
+    # by default gives 0 when "differentiated" w.r.t them by sympy's logic.
+    def __new__(cls, expr, *variables, **kwargs):
+        a_lst = []
+        ad_lst = []
+        other_vars  = []
+        for var in variables:
+            if isinstance(var, tuple):
+                if var[0].has(annihilateOp):
+                    a_lst += [var[0]]*var[1]
+                elif var[0].has(createOp):
+                    ad_lst += [var[0]]*var[1]
+                else:
+                    other_vars.append(var)
+            
+            if var.has(annihilateOp):
+                a_lst.append(var)
+            elif var.has(createOp):
+                ad_lst.append(var) 
+            else:
+                other_vars.append(var)
+                
+        for a in a_lst:
+            expr = Commutator(expr, createOp(a.sub))
+        for ad in ad_lst:
+            expr = Commutator(annihilateOp(ad.sub), expr)
+            
+        if not(other_vars):
+            return expr
+            
+        return original_Derivative(expr, *other_vars, **kwargs)

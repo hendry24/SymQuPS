@@ -2,7 +2,7 @@ import sympy as sp
 from typing import Sequence
 from functools import cached_property
 
-from ._internal.grouping import _AddOnlyExpr, HilbertSpaceObject
+from ._internal.grouping import _AddOnlyExpr
 from ._internal.operator_handling import separate_operator
 
 from .objects.scalars import W, t

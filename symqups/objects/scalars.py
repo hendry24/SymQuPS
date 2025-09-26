@@ -3,7 +3,7 @@ import sympy as sp
 from .. import s as CahillGlauberS
 from .base import Base
 from .._internal.grouping import (qpType, alphaType, PhaseSpaceVariable, 
-                                  PhaseSpaceObject, UnBoppable)
+                                  PhaseSpaceObject, CannotBoppShift)
 from .._internal.cache import sub_cache
 from .._internal.basic_routines import treat_sub, invalid_input
 
@@ -83,7 +83,7 @@ class alphaD(Scalar, PhaseSpaceVariable, alphaType):
 
 ###
 
-class StateFunction(sp.Expr, PhaseSpaceObject, UnBoppable):
+class StateFunction(sp.Expr, PhaseSpaceObject, CannotBoppShift):
     """
     The state function object.
     

@@ -6,7 +6,7 @@ class ObjectGroup(sp.Basic):
     """
     def __new__(cls, *args, **kwargs):
         if cls in [ObjectGroup, qpType, alphaType,
-                   PhaseSpaceObject, UnBoppable,
+                   PhaseSpaceObject, CannotBoppShift,
                    HilbertSpaceObject]:
             raise TypeError("For grouping only. Instantiation is prohibited.")
         return super().__new__(cls, *args, **kwargs)
@@ -71,8 +71,25 @@ class NotAScalar(ObjectGroup):
     pass
 
 ###
+
+class Acting(ObjectGroup):
+    """
+    This object has to act on something first via its
+    'act' method. The multiplication is not implemented
+    so it must 'act' on something first.
+    """
+    def act(self):
+        return NotImplementedError()
     
-class Defined(sp.Basic):
+    def __mul__(self, other):
+        return sp.Mul(self, other)
+    
+    def __rmul__(self, other):
+        return self.__mul__(other)
+
+###
+    
+class Defined(ObjectGroup):
     """
     This object has the `definition` class property.
     """

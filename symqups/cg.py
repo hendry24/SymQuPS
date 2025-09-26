@@ -7,13 +7,13 @@ from ._internal.grouping import (PhaseSpaceVariable, PhaseSpaceObject, Defined,
                                  PhaseSpaceVariableOperator)
 from ._internal.cache import sub_cache
 
-from .objects.scalars import W, StateFunction, alpha
-from .objects.operators import Operator, densityOp, rho, annihilateOp, createOp
+from .objects.scalars import W, StateFunction, alpha, alphaD
+from .objects.operators import Operator, densityOp, rho
 
-from .star_product import Star
+from .star import Star, HattedStar
 from .ordering import sOrdering
-from .manipulations import qp2alpha, op2sc, alpha2qp, sc2op, Commutator, express, normal_ordered_equivalent
-from .utils import get_N
+from .manipulations import qp2alpha, op2sc, alpha2qp, sc2op, Commutator, express
+from .utils import get_N, _treat_der_template
 
 from . import s as CahillGlauberS
 from . import pi
@@ -100,7 +100,7 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             
             return make(A)
         
-        def treat_dStar(A : dStar) -> sp.Expr:
+        def treat_HattedStar(A : HattedStar) -> sp.Expr:
             return sp.Mul(*mp_helper(A.args, CGTransform))
             
         def make(A : sp.Expr):
@@ -122,7 +122,7 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
                                  sOrdering : treat_sOrdering,
                                  iCGTransform : lambda A: A.args[0],
                                  Commutator : lambda A: CGTransform(A.doit()),
-                                 dStar : treat_dStar})
+                                 HattedStar : treat_HattedStar})
         
     def _latex(self, printer):
         return r"\mathcal{W}_{s={%s}}\left[{%s}\right]" % (sp.latex(CahillGlauberS.val),
@@ -146,18 +146,7 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
             return sp.Add(*mp_helper(A.args, iCGTransform))
         
         def treat_der(A : sp.Derivative) -> sp.Expr:
-            der_args = list(A.args)
-            
-            diff_var = der_args[1][0] # leftmost derivative.
-            if isinstance(diff_var, alpha):
-                comm_left = -createOp(diff_var.sub)
-            else:
-                comm_left = annihilateOp(diff_var.sub)
-            
-            der_args[1] = (diff_var, der_args[1][1] - 1) 
-            # sp.Derivative(f, (x, 0)) is valid and returns f.
-            # When this happens, the recursion into 'treat_der" stops.
-            return Commutator(comm_left, iCGTransform(sp.Derivative(*der_args)))
+            return _treat_der_template(A, alpha, alphaD)
         
         def treat_pow(A : sp.Pow) -> sp.Expr:
             if (isinstance(A.args[0], sp.Derivative)
@@ -194,7 +183,7 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
                         # in normal-ordered cases, which should be the most popular out of the three.
             arg_with_W_iCG = iCGTransform(arg_with_W)
             
-            return dStar(arg_no_W_iCG, arg_with_W_iCG)
+            return HattedStar(arg_no_W_iCG, arg_with_W_iCG)
             
         def treat_foo(A: sp.Function) -> sp.Expr:
             if A.has(StateFunction):
@@ -245,7 +234,7 @@ def _property_1():
         rhs += r"=\mu" + _iCGT_str(r"f") + "+" + r"\nu" + _iCGT_str(r"g")
         rhs += r",\quad \mu,\nu\in\mathbb{C}"
         return _make_eq(lhs, rhs)
-    
+
 class CGTransformProperties:
     
     def __init__(self):

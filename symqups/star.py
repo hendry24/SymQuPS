@@ -2,6 +2,7 @@ import sympy as sp
 import functools
 
 from ._internal.grouping import (
+    PhaseSpaceObject, HilbertSpaceObject,
     PhaseSpaceVariable, PhaseSpaceVariableOperator,
     CannotBoppShift, Defined, qpType
 )
@@ -107,11 +108,11 @@ def _star_base(F : sp.Expr,
                hatted : bool):
     
     if hatted:
-        var_group = PhaseSpaceVariableOperator
+        var_group = HilbertSpaceObject
         a, ad = annihilateOp, createOp
         state = densityOp
     else:
-        var_group = PhaseSpaceVariable
+        var_group = PhaseSpaceObject
         a, ad = alpha, alphaD
         state = StateFunction
     
@@ -200,11 +201,12 @@ class _StarTemplate(sp.Expr, CannotBoppShift, Defined):
             if k != 0:
                 out += oper
             out += r"\left({%s}\right)" % sp.latex(arg)
+        return out
     
 class Star(_StarTemplate):
     def __new__(cls, *args : sp.Expr):
-        return _StarTemplate(*args, hatted=False)
+        return super().__new__(cls, *args, hatted=False)
 
 class HattedStar(_StarTemplate):
     def __new__(cls, *args : sp.Expr):
-        return _StarTemplate(*args, hatted=True)
+        return super().__new__(cls, *args, hatted=True)

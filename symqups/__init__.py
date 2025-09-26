@@ -11,10 +11,12 @@ del m
 # PATCHES 
 
 import sympy as sp
-from ._internal.patches import patched_Mul_flatten, patched_Expr_diff
+from ._internal.patches import patched_Mul_flatten, PatchedDerivative
 
 sp.Mul.flatten = patched_Mul_flatten
-sp.Expr.diff = patched_Expr_diff
+sp.Derivative = PatchedDerivative
+
+del sp, patched_Mul_flatten, PatchedDerivative
 
 ###
 

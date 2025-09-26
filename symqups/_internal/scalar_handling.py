@@ -1,11 +1,8 @@
 import sympy as sp
 from typing import Tuple
 
-from .basic_routines import screen_type
 from .cache import sub_cache
 from .grouping import PhaseSpaceVariable
-
-from ..objects.scalars import Scalar
 
 def collect_psv_in_monomial_by_sub(expr: sp.Expr) -> Tuple[sp.Expr, dict]:
     others = sp.Number(1)

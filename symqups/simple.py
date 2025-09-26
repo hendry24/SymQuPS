@@ -6,12 +6,6 @@ from . import s
 
 ###
 
-from . import disable_Mul_patch
-disable_Mul_patch()
-del disable_Mul_patch
-
-###
-
 from .objects.scalars import q, p, alpha, alphaD, W
 q = q()
 p = p()
@@ -39,5 +33,5 @@ from .manipulations import (alpha2qp, qp2alpha, sc2op, op2sc, dagger,
                             explicit, express, normal_ordered_equivalent)
 from .ordering import sOrdering
 from .quantization import naive_quantize, s_quantize
-from .star_product import Bopp, Star
+from .star import Star, HattedStar
 from .utils import get_random_poly, collect_by_derivative
