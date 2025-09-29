@@ -5,6 +5,7 @@ import functools
 
 from ._internal.multiprocessing import mp_helper
 from ._internal.cache import sub_cache
+from ._internal.preprocessing import preprocess_func
 
 from .objects import scalars
 from .objects.operators import annihilateOp, createOp
@@ -21,6 +22,7 @@ def get_N():
 
 ###
 
+@preprocess_func
 def get_random_poly(objects, coeffs=[1], max_pow=3, dice_throw=10) -> sp.Expr:
     """
     Make a random polynomial in 'objects'.
@@ -31,13 +33,12 @@ def get_random_poly(objects, coeffs=[1], max_pow=3, dice_throw=10) -> sp.Expr:
     
 ###
 
+@preprocess_func
 def derivative_not_in_num(A : sp.Expr) -> sp.Expr:
     """
     Rewrite the expression such that the phase-space coordinates and derivatives with respect
     to them are not written on the numerator.
     """
-    
-    A = sp.sympify(A)
     
     if isinstance(A, sp.Add):
         return sp.Add(*mp_helper(A.args, derivative_not_in_num), evaluate=False)
@@ -63,6 +64,7 @@ def derivative_not_in_num(A : sp.Expr) -> sp.Expr:
     with sp.evaluate(False):
         return sp.Mul(non_der, der)
     
+@preprocess_func
 def collect_by_derivative(A : sp.Expr, 
                           f : None | UndefinedFunction = None) -> sp.Expr:
     """
@@ -136,6 +138,7 @@ def _treat_der_template(A : sp.Derivative, a, ad):
     
     return out
 
+@preprocess_func
 def opder2comm(expr : sp.Expr) -> sp.Expr:
 
     return expr.replace(lambda e: isinstance(e, sp.Derivative),

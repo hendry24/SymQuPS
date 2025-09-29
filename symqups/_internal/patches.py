@@ -1,14 +1,15 @@
 import sympy as sp
+from sympy.printing.latex import LatexPrinter
 from typing import Sequence, Tuple
 from functools import cmp_to_key
 
 from .basic_routines import screen_type, deep_screen_type
 from .cache import sub_cache
 from .grouping import NotAnOperator, Acting
-from .operator_handling import get_oper_sub, is_universal
+from .operator_handling import get_oper_sub, is_universal, separate_operator
 
 from ..objects.scalars import t
-from ..objects.operators import Operator, createOp, annihilateOp
+from ..objects.operators import densityOp, createOp, annihilateOp
 from ..manipulations import Commutator
 
 # HACK: Monkey patching sympy's core implementation to do something
@@ -176,31 +177,59 @@ class PatchedDerivative(original_Derivative):
     # and createOp is handled correctly for Operator, which are symbols that 
     # by default gives 0 when "differentiated" w.r.t them by sympy's logic.
     def __new__(cls, expr, *variables, **kwargs):
+        
+        ###
         a_lst = []
         ad_lst = []
+        t_order = 0
         other_vars  = []
         for var in variables:
-            if isinstance(var, tuple):
+            if isinstance(var, (tuple, sp.Tuple)):
                 if var[0].has(annihilateOp):
                     a_lst += [var[0]]*var[1]
                 elif var[0].has(createOp):
                     ad_lst += [var[0]]*var[1]
+                elif var[0].has(t):
+                    t_order += var[1]
                 else:
                     other_vars.append(var)
             
-            if var.has(annihilateOp):
-                a_lst.append(var)
-            elif var.has(createOp):
-                ad_lst.append(var) 
             else:
-                other_vars.append(var)
+                if var.has(annihilateOp):
+                    a_lst.append(var)
+                elif var.has(createOp):
+                    ad_lst.append(var) 
+                elif var.has(t):
+                    t_order += 1
+                else:
+                    other_vars.append(var)
+        
+        ###
                 
         for a in a_lst:
             expr = Commutator(expr, createOp(a.sub))
         for ad in ad_lst:
             expr = Commutator(annihilateOp(ad.sub), expr)
-            
+        
+        ###
+        
+        if t_order > 0:
+            if expr.has(densityOp):
+                return super().__new__(cls, PatchedDerivative(expr, *other_vars), 
+                                    (t(), t_order), evaluate=False)
+            else:
+                other_vars.append((t(), t_order))
+        
+        ###
+        
         if not(other_vars):
             return expr
-            
+        
         return super().__new__(cls, expr, *other_vars, **kwargs)
+            
+    
+###
+
+def apply_patches():
+    sp.Mul.flatten = patched_Mul_flatten
+    sp.Derivative = PatchedDerivative

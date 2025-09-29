@@ -27,7 +27,7 @@ del annihilateOp, createOp
 ###
 
 from ._internal.multiprocessing import MP_CONFIG
-from .cg import CG_transform, iCG_transform
+from .cg import CGTransform, iCGTransform
 from .eom import LindbladMasterEquation
 from .manipulations import (alpha2qp, qp2alpha, sc2op, op2sc, dagger, 
                             explicit, express, normal_ordered_equivalent)

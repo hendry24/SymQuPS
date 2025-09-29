@@ -7,13 +7,13 @@ from ._internal.grouping import (
 from ._internal.preprocessing import preprocess_class
 
 from .objects.base import Base
+from .objects.scalars import alpha, alphaD
 from .objects.operators import annihilateOp, createOp
 
 from .manipulations import dagger
 
 from . import s as CahillGlauberS
 
-@preprocess_class
 class _BoppActor(Base, Acting):
     Hilbert : bool
     
@@ -22,7 +22,7 @@ class _BoppActor(Base, Acting):
         return r"\hat{\mathcal{B}}_{%s}^{%s}" % (sp.latex(base), dir), {"commutative":True}
     
     def __new__(cls,
-                base : annihilateOp|createOp, 
+                base : annihilateOp|createOp|alpha|alphaD, 
                 target : sp.Expr|None = None,
                 left : bool = False):
         obj = super().__new__(cls, base, target, left)
@@ -44,7 +44,7 @@ class _BoppActor(Base, Acting):
     
     def act(self, target : sp.Expr):
         s = CahillGlauberS.val
-        sgn = -1 if isinstance(self.base, annihilateOp) else 1
+        sgn = -1 if isinstance(self.base, (annihilateOp, alpha)) else 1
         space_sgn = -1 if self.Hilbert else 1
         if self.left:
             return target*self.base + space_sgn * sp.Rational(1,2)*(s+sgn)*sp.Derivative(target, dagger(self.base))

@@ -10,13 +10,9 @@ del m
 ###
 # PATCHES 
 
-import sympy as sp
-from ._internal.patches import patched_Mul_flatten, PatchedDerivative
-
-sp.Mul.flatten = patched_Mul_flatten
-sp.Derivative = PatchedDerivative
-
-del sp, patched_Mul_flatten, PatchedDerivative
+from ._internal.patches import apply_patches
+apply_patches()
+del apply_patches
 
 ###
 

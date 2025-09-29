@@ -1,15 +1,18 @@
 import sympy as sp
 
 from ._internal.multiprocessing import mp_helper
-from ._internal.basic_routines import operation_routine
+from ._internal.basic_routines import operation_routine, is_nonconstant_polynomial
 from ._internal.grouping import (PhaseSpaceVariable, PhaseSpaceObject, Defined, 
                                  HilbertSpaceObject, NotAnOperator, NotAScalar,
                                  PhaseSpaceVariableOperator)
 from ._internal.cache import sub_cache
+from ._internal.preprocessing import preprocess_class
+from ._internal.operator_handling import separate_operator
 
 from .objects.scalars import W, StateFunction, alpha, alphaD
-from .objects.operators import Operator, densityOp, rho
+from .objects.operators import Operator, densityOp, rho, annihilateOp, createOp
 
+from .bopp import HSBS, PSBO
 from .star import Star, HattedStar
 from .ordering import sOrdering
 from .manipulations import qp2alpha, op2sc, alpha2qp, sc2op, Commutator, express
@@ -40,6 +43,7 @@ def _iCGT_str(x : str, var : bool = False) -> str:
 
 ###
 
+@preprocess_class
 class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
     
     @staticmethod
@@ -55,6 +59,7 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
         """
         if expr.is_Equality:
             from .eom import LindbladMasterEquation
+            
             lhs = expr.lhs
             rhs = expr.rhs
             if isinstance(expr, LindbladMasterEquation):
@@ -70,7 +75,69 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             return sp.Add(*mp_helper(A.args, CGTransform))
         
         def treat_mul(A : sp.Expr) -> sp.Expr:
-            return Star(*mp_helper(A.args, CGTransform))
+            
+            # Starting from the leftmost factor, we find a nonpolynomial factor
+            # sandwiched between polynomial factors. We then apply left- and
+            # right-directed PBSOs to this nonpoly factor. Subsequently, if 
+            # there are still leftovers, then the order is nonpoly-poly-nonpoly-...
+            # in this case, we can only apply PBSO leftward. We collect these
+            # un-PBSO-able expressions and output their star product. 
+            
+            coef, oper = separate_operator(A)
+            if isinstance(oper, sp.Mul):
+                oper_args = oper.args
+            else:
+                oper_args = [oper]
+            
+            nonpoly_idx = []
+            for k, arg in enumerate(oper_args):
+                if not(is_nonconstant_polynomial(arg, 
+                                                 annihilateOp, 
+                                                 createOp)):
+                    nonpoly_idx.append(k)
+            
+            def apply_PBSO(mono, target, left):
+                base, exp = mono.as_base_exp()
+                for _ in range(exp):
+                    target = PSBO(op2sc(base), target, left)
+                return target
+            
+            if not(nonpoly_idx):
+                out = coef
+                for arg in oper_args:
+                    out = apply_PBSO(arg, out, True)
+                return out
+            
+            ###
+            
+            out = CGTransform(oper_args[nonpoly_idx[0]])
+            for arg in reversed(oper.args[:nonpoly_idx[0]]):
+                out = apply_PBSO(arg, out, False)
+                
+            end_idx = nonpoly_idx[1] if len(nonpoly_idx)>1 else None
+            for arg in oper_args[nonpoly_idx[0]+1 : end_idx]:
+                out = apply_PBSO(arg, out, True)
+                
+            if end_idx is None:
+                return coef * out
+            
+            ###
+            
+            out_star_factors = [out]
+            
+            ###
+            # We redo the checks since relying fully on nonpoly_idx makes
+            # the code hard to read.
+            temp = CGTransform(oper_args[nonpoly_idx[1]])
+            for arg in oper_args[nonpoly_idx[1]+1:]:
+                if arg.is_polynomial(annihilateOp, createOp):
+                    temp = apply_PBSO(arg, temp, True)
+                else:
+                    out_star_factors.append(temp)
+                    temp = CGTransform(arg)
+            out_star_factors.append(temp)
+            
+            return coef * Star(*out_star_factors)
             
         def treat_sOrdering(A : sOrdering) -> sp.Expr:
             if (A.args[1] != CahillGlauberS.val):
@@ -118,14 +185,12 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             
         def make(A : sp.Expr):
             return super(CGTransform, cls).__new__(cls, A, *_vars)
-            
-        expr = qp2alpha(sp.sympify(expr))
-        if not(expr.has(Operator)) and not(isinstance(expr, NotAScalar)):
-            return expr
+        
+        expr = qp2alpha(sp.sympify(expr).doit().expand())
         return operation_routine(expr,
                                 CGTransform,
                                 [],
-                                [],
+                                [PhaseSpaceObject],
                                 {(PhaseSpaceVariableOperator, densityOp) : expr},
                                 {sp.Add : treat_add,
                                  sp.Mul : treat_mul,
@@ -145,6 +210,7 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
     
 ###
 
+@preprocess_class
 class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
     @staticmethod
     def _definition():
@@ -174,35 +240,47 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
             return sc2op(A)            
             
         def treat_mul(A : sp.Mul) -> sp.Expr:
-            if not(A.has(StateFunction)):
+            if A.is_polynomial(alpha, alphaD):
                 return sOrdering(sc2op(A), lazy=lazy)
             
-            # Here we assume that W only appears once in a given term. That is,
-            # no complex terms like W*Derivative(W, alpha). If these are found,
-            # then we keep it unevaluated, since there would be two
-            # un-CBopp-able 'StateFunction's to deal with. Might as well not waste
-            # resources.
-            
-            arg_no_W = sp.Number(1)
-            arg_with_W = sp.Number(1)
+            coefs = []
+            monomials = []
+            others = []
+            # NOTE: We assume that commuting polynomials are ordered
+            # to the left of nonpolynomials, regardless of subscript.
             for arg in A.args:
-                if arg.has(StateFunction):
-                    if arg_with_W.has(W):
-                        return make(A)
-                    arg_with_W *= arg
+                if is_nonconstant_polynomial(arg,
+                                             alpha,
+                                             alphaD):
+                    monomials.append(arg)
                 else:
-                    arg_no_W *= arg
+                    if arg.has(alpha, alphaD):
+                        others.append(arg)
+                    else:
+                        coefs.append(arg)
+                        
+            # Here, 'others' may contain nonpolynomial functions in
+            # the PSV like exp(alpha) and is generally a Mul object.
+            # Since it is not really meaningful to make a long string of hatted
+            # star products, we shall keep 'others' unevaluated if
+            # it is a composite expression like Mul, Pow, etc. Since anything
+            # other than unevaluated Mul is already dealt with by other 'treat'
+            # functions, we only check if 'others' is a Mul itself to avoid
+            # infinite recursions.
             
-            # NOTE: This collection process should generally make evaluations
-            # faster as we only need to call 'dStar' once.
+            if len(others) == 1:
+                out = iCGTransform(others[0])
+            else:
+                out = make(sp.Mul(*others))
+                # Since we can collect all nonpolynomials together, it would avoid
+                # clutter to keep the nonpolynomial part unevaluated.
             
-            arg_no_W_iCG = express(sOrdering(sc2op(arg_no_W)), 1, True)
-                        # Any 't' produces equally many terms except on some edge cases, so we
-                        # choose 't=1' quite arbitrarily, though it may prove to be useful
-                        # in normal-ordered cases, which should be the most popular out of the three.
-            arg_with_W_iCG = iCGTransform(arg_with_W)
-            
-            return HattedStar(arg_no_W_iCG, arg_with_W_iCG)
+            for mono in monomials:
+                base, exp = mono.as_base_exp()
+                for _ in range(exp):
+                    out = HSBS(sc2op(base), out) # direction does not matter.
+                            
+            return sp.Mul(*coefs, out)
             
         def treat_foo(A: sp.Function) -> sp.Expr:
             if A.has(StateFunction):
@@ -215,11 +293,11 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
         def make(A : sp.Expr) -> iCGTransform:
             return super(iCGTransform, cls).__new__(cls, A, *_vars)
         
-        expr = qp2alpha(sp.sympify(expr))
+        expr = qp2alpha(sp.sympify(expr.doit().expand()))
         return operation_routine(expr, 
                                 iCGTransform,
                                 [],
-                                [Operator],
+                                [HilbertSpaceObject],
                                 {(PhaseSpaceVariable, StateFunction) : expr},
                                 {sp.Add : treat_add,
                                  sp.Derivative : treat_der,

@@ -127,3 +127,9 @@ def default_treat_add(A : sp.Expr, foo : callable) -> sp.Expr:
     'A.args'.
     """
     return sp.Add(*mp_helper(A, foo))
+
+def is_nonconstant_polynomial(A, *gens):
+    for gen in gens:
+        if A.has(gen) and A.is_polynomial(gen):
+            return True
+    return False

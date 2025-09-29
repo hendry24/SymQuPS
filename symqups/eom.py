@@ -4,18 +4,19 @@ from functools import cached_property
 
 from ._internal.grouping import _AddOnlyExpr
 from ._internal.operator_handling import separate_operator
+from ._internal.preprocessing import preprocess_class
 
 from .objects.scalars import W, t
 from .objects.operators import rho, Operator
 
 from .manipulations import dagger, Commutator
 from .cg import CGTransform
-from .utils import derivative_not_in_num, collect_by_derivative
 
 from . import hbar, pi
 
 __all__ = ["LindbladMasterEquation"]
-    
+
+
 class _LindbladDissipator(_AddOnlyExpr):
     def __new__(cls, coef = 1, operator_1 = 1, operator_2 = None):        
         operator_2 = operator_2 if (operator_2 is not None) else operator_1        
@@ -60,14 +61,10 @@ class _LindbladDissipator(_AddOnlyExpr):
             out = coef_mul * out
         
         return out
-        
-###
-
-class StateFunctionEvo(sp.Equality):
-    pass
 
 ###
 
+@preprocess_class
 class LindbladMasterEquation(sp.Basic):
     """
     The Lindblad master equation. 
@@ -78,11 +75,8 @@ class LindbladMasterEquation(sp.Basic):
     """
     
     is_Equality = True
-    
-    def __new__(cls, H : sp.Expr = sp.Integer(0), *dissipators, **options):
-        H = sp.sympify(H)
-        dissipators = sp.sympify(dissipators)
         
+    def __new__(cls, H : sp.Expr = sp.Integer(0), *dissipators, **options):
         lhs = sp.Derivative(rho, t())
         
         dissip_lst = []
@@ -139,15 +133,3 @@ class LindbladMasterEquation(sp.Basic):
     
     def _latex(self, printer):
         return sp.latex(self._equality)
-
-    @cached_property
-    def CG_transform(self):
-        lhs = sp.Derivative(W, t())
-        
-        rhs = self.H.doit()
-        for dissip in self.dissipators:
-            rhs += dissip.define()
-        
-        rhs = CGTransform(rhs/pi.val)
-
-        return StateFunctionEvo(lhs, rhs)

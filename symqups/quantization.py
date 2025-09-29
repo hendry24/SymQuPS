@@ -1,18 +1,17 @@
 import sympy as sp
 
-from .objects.operators import Operator
-
-from ._internal.grouping import qpType, PhaseSpaceObject
+from ._internal.grouping import qpType, PhaseSpaceObject, HilbertSpaceObject
 from ._internal.basic_routines import deep_screen_type, operation_routine
+from ._internal.preprocessing import preprocess_func
 
 from .manipulations import qp2alpha, sc2op
 
 from .ordering import sOrdering
 
+@preprocess_func
 def _prepare_for_quantization(expr : sp.Expr) -> sp.Expr:
-    expr = sp.sympify(expr)
     
-    deep_screen_type(expr, Operator, "_prepare_for_quantization")
+    deep_screen_type(expr, HilbertSpaceObject, "_prepare_for_quantization")
     
     if expr.has(qpType):
         expr = qp2alpha(expr)
@@ -31,7 +30,7 @@ def s_quantize(expr : sp.Expr) -> sp.Expr:
     return operation_routine(expr,
                              s_quantize,
                              (),
-                             (Operator),
+                             (HilbertSpaceObject),
                              {PhaseSpaceObject : expr},
                              {(sp.Add, sp.Mul, sp.Pow, sp.Function, PhaseSpaceObject) 
                               : sOrdering(naive_quantize(expr))}

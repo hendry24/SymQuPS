@@ -6,6 +6,8 @@ from .._internal.grouping import HilbertSpaceObject, qpType, alphaType, PhaseSpa
 from .._internal.cache import sub_cache
 from .._internal.basic_routines import treat_sub
 
+from .scalars import t
+
 # NOTE: 'import .._internal.operator_handling' will result
 # in circular imports. 
 
@@ -84,8 +86,8 @@ class densityOp(HermitianOp, CannotBoppShift):
     base = r"\rho"
     has_sub = False
     
-    def __new__(cls, sub=None):
-        return super().__new__(cls, sub)
+    def __new__(cls, _sub=None):
+        return super().__new__(cls, _sub)
     
 global rho
 rho = densityOp()

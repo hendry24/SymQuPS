@@ -7,12 +7,14 @@ from ._internal.cache import ( op2sc_subs_dict, sc2op_subs_dict,
                               alpha2qp_subs_dict, qp2alpha_subs_dict, ProtectedDict)
 from ._internal.multiprocessing import mp_helper
 from ._internal.grouping import qpType, alphaType, HilbertSpaceObject
+from ._internal.preprocessing import preprocess_func, preprocess_class
 
 from .objects.scalars import Scalar
 from .objects.operators import annihilateOp, createOp, Operator
     
 ###
 
+@preprocess_func
 def _subs_template(expr : sp.Expr, subs_dict : ProtectedDict, lookup_atoms : tuple[type]) -> sp.Expr:
     # Since SymPy traverses the recursion tree for '.subs', the execution
     # will become heavier the larger the substitution dictionary is for the same
@@ -36,6 +38,7 @@ def sc2op(expr : sp.Expr) -> sp.Expr:
 
 ###
 
+@preprocess_func
 def dagger(expr : sp.Expr) -> sp.Expr:
     
     def treat_add(A : sp.Expr):
@@ -57,12 +60,14 @@ def dagger(expr : sp.Expr) -> sp.Expr:
                              sp.Pow : treat_pow,
                              sp.Mul : treat_mul}
                             )
-    
+
+@preprocess_func
 def explicit(expr: sp.Expr) -> sp.Expr:
     from .ordering import sOrdering
     return expr.replace(lambda A: isinstance(A, sOrdering),
                         lambda A: A.explicit())
-    
+
+@preprocess_func
 def express(expr : sp.Expr, t=1, explicit=True) -> sp.Expr:
     from .ordering import sOrdering
     return expr.replace(lambda A: isinstance(A, sOrdering),
@@ -70,6 +75,7 @@ def express(expr : sp.Expr, t=1, explicit=True) -> sp.Expr:
 
 ###
 
+@preprocess_class
 class Commutator(spq.Commutator, HilbertSpaceObject):
     def __new__(cls, A : sp.Expr, B : sp.Expr):
         return super().__new__(cls, A, B)
@@ -153,7 +159,7 @@ def _eval_Blasiak(A : sp.Expr) -> sp.Expr:
     
     return sp.expand(out) 
 
-
+@preprocess_func
 def normal_ordered_equivalent(expr : sp.Expr) -> sp.Expr:
     """
     Returns the normal-ordered **equivalent** of the input, provided
