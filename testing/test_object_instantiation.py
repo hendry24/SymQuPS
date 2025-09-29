@@ -58,21 +58,6 @@ class TestObjectInstantiation:
         q(r"newly_added_sub")
         assert "newly_added_sub" in sp.latex(W.args)
         
-    # def test_Primed(self):
-    #     assert not(isinstance(_Primed(Scalar()), _Primed))
-    #     for obj in [alpha(), alphaD(), q(), p()]:
-    #         assert isinstance(_Primed(obj), _Primed)
-    #         assert _Primed(obj).base == obj
-    #     assert (_Primed(2*alpha()*sp.Symbol("x"))
-    #             == 2*sp.Symbol("x")*_Primed(alpha()))
-        
-    #     assert not(isinstance(_Primed(W), _Primed))
-    #     for arg in _Primed(W).args:
-    #         if arg == t():
-    #             continue
-    #         if not(isinstance(arg, _Primed)):
-    #             raise TypeError("_Primed(W) phase space variables must be _Primed.")
-
     def test_Operator(self):
         for sub in [None, "1", 1, sp.Number(1), sp.Symbol("1")]:
             obj = Operator(sub)
