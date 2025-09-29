@@ -112,6 +112,8 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             
             out = CGTransform(oper_args[nonpoly_idx[0]])
             for arg in reversed(oper.args[:nonpoly_idx[0]]):
+                    # Right-directed PBSO means we have to start from
+                    # the rightmost operator. 
                 out = apply_PBSO(arg, out, False)
                 
             end_idx = nonpoly_idx[1] if len(nonpoly_idx)>1 else None

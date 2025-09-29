@@ -121,12 +121,12 @@ def operation_routine(expr : sp.Expr,
         
     invalid_input(expr, name)
     
-def default_treat_add(A : sp.Expr, foo : callable) -> sp.Expr:
+def default_treat_add(summands : tuple[sp.Expr], foo : callable) -> sp.Expr:
     """
     Default 'sp.Add' treatment, where 'foo' is applied to each of
-    'A.args'.
+    'summands'.
     """
-    return sp.Add(*mp_helper(A, foo))
+    return sp.Add(*mp_helper(summands, foo))
 
 def is_nonconstant_polynomial(A, *gens):
     for gen in gens:

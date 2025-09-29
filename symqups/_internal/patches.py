@@ -215,6 +215,9 @@ class PatchedDerivative(original_Derivative):
         
         if t_order > 0:
             if expr.has(densityOp):
+                # HACK: This forces the time derivative for expressions containing
+                # densityOp to stay unevaluated. Might want to change this if
+                # chain/product rule evaluation is desired. 
                 return super().__new__(cls, PatchedDerivative(expr, *other_vars), 
                                     (t(), t_order), evaluate=False)
             else:

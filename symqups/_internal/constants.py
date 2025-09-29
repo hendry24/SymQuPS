@@ -3,21 +3,26 @@ from sympy.core.sympify import CantSympify
 import warnings
 
 from .grouping import _ReadOnlyExpr
+from .preprocessing import preprocess_class
+
 from ..objects.base import Base
 
+@preprocess_class
 class Constant(CantSympify, _ReadOnlyExpr, Base):
     """
-    Base class for package parameters. Set its value by setting the `.val`
+    Base class for package constants. Set its value by setting the `.val`
     attribute.
     """
-    name = "Parameter"
+    name = "Constant"
     default_value = NotImplemented
     
-    def _get_symbol_name_and_assumptions(cls, val):
+    def _get_symbol_name_and_assumptions(cls):
         return cls.name, {"commutative" : True}
         
     def __new__(cls):
-        return super().__new__(cls, cls.default_value)
+        obj = super().__new__(cls)
+        obj.val = cls.default_value
+        return obj
         
     @property
     def val(self):
@@ -27,8 +32,8 @@ class Constant(CantSympify, _ReadOnlyExpr, Base):
             return self._val
 
     @val.setter
-    def val(self, value):
-        self._val = sp.sympify(value)
+    def val(self, value):        
+        self._val = value
         
         from .cache import sub_cache
         sub_cache._refresh_all()
@@ -38,7 +43,7 @@ class Constant(CantSympify, _ReadOnlyExpr, Base):
     
 class CahillGlauberSParameter(Constant):
     name = "Cahill-Glauber s parameter"
-    default_value = sp.Number(0)
+    default_value = sp.Symbol("s")
         
     @Constant.val.setter
     def val(self, value):
@@ -58,19 +63,46 @@ class CahillGlauberSParameter(Constant):
             
     def _latex(self, printer):
         return r"\text{%s,}\quad s = %s" % (self.name, sp.latex(self.val))
+
+class PositiveRealConstant(Constant):
     
-class ReducedPlanckConstant(Constant):
+    @Constant.val.setter
+    def val(self, value):
+        value = sp.sympify(value)
+        if isinstance(value, sp.Symbol):
+            if value.is_real is None:
+                value = sp.Symbol(value.name, real=True)
+            elif value.is_real is False:
+                msg = f"Symbolic value for {self.__class__.__name__} must be real."
+                raise AttributeError(msg)
+            
+        elif not(hasattr(value, "is_positive")) or not(value.is_positive):
+            msg = f"Invalid value for {self.__class__.__name__}. Value must be a real 'Symbol' or "
+            msg += f"a positive number."
+        
+        super(PositiveRealConstant,
+              PositiveRealConstant).val.__set__(self, value)
+
+###
+
+class ReducedPlanckConstant(PositiveRealConstant):
     name = r"\hbar"
     default_value = sp.Symbol(r"hbar")
     
-class AlphaScalingParameter(Constant):
+class AlphaScalingParameter(PositiveRealConstant):
     name = r"\zeta"
     default_value = sp.Symbol(r"zeta")
-    
+
+###
+
 class piTranscendentalNumber(Constant):
     name = r"\pi"
     default_value = sp.Symbol(r"pi")
     
     @Constant.val.setter
     def val(self, value):
-        raise NotImplementedError("Cannot set the value of 'pi'.")
+        if "_val" in self.__dict__:
+            raise NotImplementedError("Cannot set the value of 'pi'.")
+        else:
+            super(piTranscendentalNumber,
+                  piTranscendentalNumber).val.__set__(self, value)

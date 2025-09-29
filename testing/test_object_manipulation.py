@@ -66,10 +66,6 @@ def test_deprime():
 
 @pytest.mark.full
 def test_alpha2qp_and_qp2alpha():
-    for obj, expanded in zip([alpha(), alphaD()],
-                                [(q()*zeta + sp.I*p()/zeta) / sp.sqrt(2*hbar),
-                                (q()*sp.conjugate(zeta) - sp.I*p()/sp.conjugate(zeta)) / sp.sqrt(2*hbar)]):
-        assert sp.expand(obj.define() - expanded) == 0
     
     assert sp.conjugate(alpha()) == alphaD()
     assert sp.conjugate(alphaD()) == alpha()

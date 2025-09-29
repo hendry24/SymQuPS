@@ -42,7 +42,7 @@ def sc2op(expr : sp.Expr) -> sp.Expr:
 def dagger(expr : sp.Expr) -> sp.Expr:
     
     def treat_add(A : sp.Expr):
-        return default_treat_add(A, dagger)
+        return default_treat_add(A.args, dagger)
     
     def treat_pow(A : sp.Expr):
         return dagger(A.args[0]) ** A.args[1]
