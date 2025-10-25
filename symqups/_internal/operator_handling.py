@@ -1,7 +1,7 @@
 import sympy as sp
 from typing import Sequence, Tuple
 
-from .basic_routines import screen_type
+from .basic_routines import screen_type, is_nonconstant_polynomial
 from .cache import sub_cache
 
 from ..objects.operators import Operator, createOp, annihilateOp
@@ -71,43 +71,6 @@ def separate_operator(expr: sp.Expr) -> Tuple[sp.Expr, sp.Expr]:
     # so they go into non_operator.
     
     return non_operator, operator
-
-def separate_term_by_polynomiality(expr : sp.Expr, 
-                                   polynomials_in : tuple[Operator] = (createOp, annihilateOp)
-                                   ) -> list[sp.Expr] :
-    """
-    Subsequent elements of the output has alternating polynomiality in the 'polynomials_in'.
-    """
-    expr = sp.sympify(expr)
-    
-    if not(isinstance(polynomials_in, Sequence)):
-        polynomials_in = [polynomials_in]
-    
-    screen_type(expr, sp.Add, "_separate_term_oper_by_polynomiality")
-    
-    if not(isinstance(expr, sp.Mul)):
-        return [expr]
-    
-    out = []
-    factor = sp.Number(1)
-    for arg in expr.args:
-        if arg.is_polynomial(*polynomials_in) == factor.is_polynomial(*polynomials_in):
-            factor *= arg
-        else:
-            if factor != 1:
-                out.append(factor)
-            factor = arg
-    
-    # The polynomiality may change at the last argument. If so, then 'factor'
-    # contains the last argument when the loop ends which has not been added
-    # to 'out' yet. Otherwise, 'factor' has not been appended to 'out' since
-    # the last ddetected polynomial change. So in any case, at the end of
-    # the loop, 'factor' contains the leftover arguments not appended yet to 'out',
-    # but it would never be unity. 
-    
-    out.append(factor)
-        
-    return out
 
 def collect_alpha_type_oper_from_monomial_by_sub(expr : sp.Expr) -> Tuple[sp.Expr, dict, dict]:
     expr = sp.sympify(expr)

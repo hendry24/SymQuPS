@@ -1,7 +1,8 @@
 import sympy as sp
 
 from ._internal.multiprocessing import mp_helper
-from ._internal.basic_routines import operation_routine, is_nonconstant_polynomial
+from ._internal.basic_routines import (operation_routine, is_nonconstant_polynomial,
+                                       separate_term_by_polynomiality)
 from ._internal.grouping import (PhaseSpaceVariable, PhaseSpaceObject, Defined, 
                                  HilbertSpaceObject, NotAnOperator, NotAScalar,
                                  PhaseSpaceVariableOperator)
@@ -15,7 +16,8 @@ from .objects.operators import Operator, densityOp, rho, annihilateOp, createOp
 from .bopp import HSBS, PSBO
 from .star import Star, HattedStar
 from .ordering import sOrdering
-from .manipulations import qp2alpha, op2sc, alpha2qp, sc2op, Commutator, express
+from .manipulations import (qp2alpha, op2sc, alpha2qp, sc2op, Commutator, express,
+                            normal_ordered_equivalent)
 from .utils import get_N, _treat_der_template
 
 from . import s as CahillGlauberS
@@ -96,19 +98,16 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
                                                  createOp)):
                     nonpoly_idx.append(k)
             
+            if not(nonpoly_idx):
+                return CGTransform(express(sOrdering(normal_ordered_equivalent(A),1)))
+            
+            ###
+
             def apply_PBSO(mono, target, left):
                 base, exp = mono.as_base_exp()
                 for _ in range(exp):
                     target = PSBO(op2sc(base), target, left)
                 return target
-            
-            if not(nonpoly_idx):
-                out = coef
-                for arg in oper_args:
-                    out = apply_PBSO(arg, out, True)
-                return out
-            
-            ###
             
             out = CGTransform(oper_args[nonpoly_idx[0]])
             for arg in reversed(oper.args[:nonpoly_idx[0]]):
@@ -122,8 +121,6 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
                 
             if end_idx is None:
                 return coef * out
-            
-            ###
             
             out_star_factors = [out]
             
@@ -242,8 +239,8 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
             return sc2op(A)            
             
         def treat_mul(A : sp.Mul) -> sp.Expr:
-            if A.is_polynomial(alpha, alphaD):
-                return sOrdering(sc2op(A), lazy=lazy)
+            if is_nonconstant_polynomial(A, alpha, alphaD):
+                return sOrdering(sc2op(A), lazy=lazy)                                                                                               
             
             coefs = []
             monomials = []

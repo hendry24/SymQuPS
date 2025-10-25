@@ -23,12 +23,12 @@ def get_N():
 ###
 
 @preprocess_func
-def get_random_poly(objects, coeffs=[1], max_pow=3, n_terms = 3) -> sp.Expr:
+def get_random_poly(objects, coeffs=[1], min_pow =0, max_pow=3, n_terms=3) -> sp.Expr:
     """
     Make a random polynomial in 'objects'.
     """
     return sp.Add(*[sp.Mul(*[random.choice(coeffs)*random.choice(objects)
-                             for _ in range(max_pow)])
+                             for _ in range(random.randint(min_pow, max_pow))])
                     for _ in range(n_terms)])
     
 ###
