@@ -23,13 +23,13 @@ def get_N():
 ###
 
 @preprocess_func
-def get_random_poly(objects, coeffs=[1], max_pow=3, dice_throw=10) -> sp.Expr:
+def get_random_poly(objects, coeffs=[1], max_pow=3, n_terms = 3) -> sp.Expr:
     """
     Make a random polynomial in 'objects'.
     """
-    return sp.Add(*[sp.Mul(*[random.choice(coeffs)*random.choice(objects)**random.randint(0, max_pow)
-                             for _ in range(dice_throw)])
-                    for _ in range(dice_throw)])
+    return sp.Add(*[sp.Mul(*[random.choice(coeffs)*random.choice(objects)
+                             for _ in range(max_pow)])
+                    for _ in range(n_terms)])
     
 ###
 

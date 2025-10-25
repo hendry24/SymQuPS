@@ -334,7 +334,7 @@ def _property_1():
         rhs += r",\quad \mu,\nu\in\mathbb{C}"
         return _make_eq(lhs, rhs)
 
-class CGTransformProperties:
+class CGProps:
     
     def __init__(self):
         self.desclist = ["CG transform of the density matrix.",
