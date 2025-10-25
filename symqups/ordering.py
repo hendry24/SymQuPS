@@ -6,12 +6,13 @@ import functools
 
 from ._internal.grouping import HilbertSpaceObject, CannotBoppShift
 from ._internal.cache import sub_cache
-from ._internal.basic_routines import operation_routine, default_treat_add
+from ._internal.basic_routines import (operation_routine, 
+                                       default_treat_add, 
+                                       separate_term_by_polynomiality)
 from ._internal.operator_handling import (separate_operator,
                                            is_universal,
                                            get_oper_sub,
                                             collect_alpha_type_oper_from_monomial_by_sub,
-                                            separate_term_by_polynomiality,
                                             separate_term_oper_by_sub)
 from ._internal.preprocessing import preprocess_class
 

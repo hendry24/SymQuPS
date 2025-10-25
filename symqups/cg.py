@@ -77,6 +77,9 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             return sp.Add(*mp_helper(A.args, CGTransform))
         
         def treat_mul(A : sp.Expr) -> sp.Expr:
+
+            if A.is_polynomial(annihilateOp, createOp):
+                return CGTransform(express(sOrdering(normal_ordered_equivalent(A),1), CahillGlauberS.val))
             
             # Starting from the leftmost factor, we find a nonpolynomial factor
             # sandwiched between polynomial factors. We then apply left- and
@@ -85,6 +88,29 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             # in this case, we can only apply PBSO leftward. We collect these
             # un-PBSO-able expressions and output their star product. 
             
+            first_nonpoly_found = False
+            bopp_left = []
+            for arg in A.args:
+                if arg.has(annihilateOp, createOp):
+                    if arg.is_polynomial(annihilateOp, createOp):
+                        bopp_left.append(first_nonpoly_found)  # once a nonpolynomial is found, we always bopp to the left
+                    else:
+                        if not(first_nonpoly_found): # repeated assignments would be heavier. 
+                            first_nonpoly_found = True
+                        bopp_left.append("np")
+                else:
+                    bopp_left.append("c")
+            
+            coefs = []
+            star_args = []
+            for k, arg in enumerate(A.args):
+                match bopp_left[k]:
+                    case "c":
+                        coefs.append(arg)
+                    
+                 
+            ###
+                                
             coef, oper = separate_operator(A)
             if isinstance(oper, sp.Mul):
                 oper_args = oper.args
@@ -97,10 +123,7 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
                                                  annihilateOp, 
                                                  createOp)):
                     nonpoly_idx.append(k)
-            
-            if not(nonpoly_idx):
-                return CGTransform(express(sOrdering(normal_ordered_equivalent(A),1)))
-            
+                        
             ###
 
             def apply_PBSO(mono, target, left):
