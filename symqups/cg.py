@@ -68,7 +68,7 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
                 lhs /= pi.val
                 rhs /= pi.val
             return sp.Equality(CGTransform(lhs),
-                               CGTransform(rhs)).doit().expand()
+                               CGTransform(rhs))
         
         if not(_vars):
             _vars = sub_cache._get_alphaType_scalar()
@@ -104,15 +104,18 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
                     next_nonpoly = arg
                 else:
                     x = CGTransform(nonpoly)
-                    for o in bopp_r: # this will not loop after the first nonpoly
-                                        # since bopp_r would be empty.
+                    for o in reversed(bopp_r): 
+                        # This will not loop after the first nonpoly
+                        # since bopp_r would be empty. NOTE: Reverse
+                        # the list since we apply right-directed PSBOs
+                        # starting with the rightmost operator. 
                         b, e = o.as_base_exp()
                         for _ in range(e):
-                            x = PSBO(op2sc(b), x, False).doit().expand()
+                            x = PSBO(op2sc(b), x, False)
                     for o in bopp_l:
                         b, e = o.as_base_exp()
                         for _ in range(e):
-                            x = PSBO(op2sc(b), x, True).doit().expand()
+                            x = PSBO(op2sc(b), x, True)
                     
                     out_star_factors.append(x)
                     new_bopp_r = [] # emptying list is O(n), so we avoid that
@@ -190,11 +193,14 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
         
         def treat_der(A : sp.Derivative):
             return sp.Derivative(CGTransform(A.args[0]), *A.args[1:])
+        
+        def treat_commutator(A : Commutator):
+            return CGTransform(A.args[0]*A.args[1] - A.args[1]*A.args[0])
             
         def make(A : sp.Expr):
             return super(CGTransform, cls).__new__(cls, A, *_vars)
         
-        expr = qp2alpha(sp.sympify(expr).doit().expand())
+        expr = qp2alpha(sp.sympify(expr).expand())
         return operation_routine(expr,
                                 CGTransform,
                                 [],
@@ -207,7 +213,7 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
                                  densityOp : (pi.val)**get_N() * W,
                                  sOrdering : treat_sOrdering,
                                  iCGTransform : lambda A: A.args[0],
-                                 Commutator : lambda A: CGTransform(A.doit().expand()),
+                                 Commutator : treat_commutator,
                                  HattedStar : treat_HattedStar,
                                  sp.Derivative : treat_der}
                                 )
