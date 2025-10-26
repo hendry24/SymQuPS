@@ -88,79 +88,56 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             # in this case, we can only apply PBSO leftward. We collect these
             # un-PBSO-able expressions and output their star product. 
             
-            first_nonpoly_found = False
-            bopp_left = []
+            coefs = []
+            out_star_factors = []
+            bopp_r = []
+            bopp_l = []
+            nonpoly = None
             for arg in A.args:
                 if arg.has(annihilateOp, createOp):
                     if arg.is_polynomial(annihilateOp, createOp):
-                        bopp_left.append(first_nonpoly_found)  # once a nonpolynomial is found, we always bopp to the left
+                        if nonpoly is None:
+                            bopp_r.append(arg)
+                        else:
+                            bopp_l.append(arg)
+                   
                     else:
-                        if not(first_nonpoly_found): # repeated assignments would be heavier. 
-                            first_nonpoly_found = True
-                        bopp_left.append("np")
-                else:
-                    bopp_left.append("c")
-            
-            coefs = []
-            star_args = []
-            for k, arg in enumerate(A.args):
-                match bopp_left[k]:
-                    case "c":
-                        coefs.append(arg)
-                    
-                 
-            ###
-                                
-            coef, oper = separate_operator(A)
-            if isinstance(oper, sp.Mul):
-                oper_args = oper.args
-            else:
-                oper_args = [oper]
-            
-            nonpoly_idx = []
-            for k, arg in enumerate(oper_args):
-                if not(is_nonconstant_polynomial(arg, 
-                                                 annihilateOp, 
-                                                 createOp)):
-                    nonpoly_idx.append(k)
                         
-            ###
-
-            def apply_PBSO(mono, target, left):
-                base, exp = mono.as_base_exp()
-                for _ in range(exp):
-                    target = PSBO(op2sc(base), target, left)
-                return target
-            
-            out = CGTransform(oper_args[nonpoly_idx[0]])
-            for arg in reversed(oper.args[:nonpoly_idx[0]]):
-                    # Right-directed PBSO means we have to start from
-                    # the rightmost operator. 
-                out = apply_PBSO(arg, out, False)
-                
-            end_idx = nonpoly_idx[1] if len(nonpoly_idx)>1 else None
-            for arg in oper_args[nonpoly_idx[0]+1 : end_idx]:
-                out = apply_PBSO(arg, out, True)
-                
-            if end_idx is None:
-                return coef * out
-            
-            out_star_factors = [out]
-            
-            ###
-            # We redo the checks since relying fully on nonpoly_idx makes
-            # the code hard to read.
-            temp = CGTransform(oper_args[nonpoly_idx[1]])
-            for arg in oper_args[nonpoly_idx[1]+1:]:
-                if arg.is_polynomial(annihilateOp, createOp):
-                    temp = apply_PBSO(arg, temp, True)
+                        if nonpoly is None:
+                            nonpoly = arg
+                        else:
+                            x = nonpoly
+                            for o in bopp_r: # this will not loop after the first nonpoly
+                                             # since bopp_r would be empty.
+                                b, e = o.as_base_exp()
+                                for _ in range(e):
+                                    x = PSBO(op2sc(b), x, False)
+                            for o in bopp_l:
+                                b, e = o.as_base_exp()
+                                for _ in range(e):
+                                    x = PSBO(op2sc(b), x, True)
+                            
+                            out_star_factors.append(x)
+                            bopp_r = []
+                            bopp_l = []
+                            nonpoly = arg
                 else:
-                    out_star_factors.append(temp)
-                    temp = CGTransform(arg)
-            out_star_factors.append(temp)
+                    coefs.append(arg)
+                            
+            # Loop may end with nonpoly or poly in the operators. If it
+            # ends with a nonpoly, then we just append that nonpoly into
+            # the out_star_factors (bopp_l would be empty since there is no
+            # iteration after nonpoly). Otherwise, we apply left-directed PSBOs
+            # to the last nonpoly found.
+            x = nonpoly
+            for o in bopp_l:
+                b, e = o.as_base_exp()
+                for _ in range(e):
+                    x = PSBO(op2sc(b), x, True)
+            out_star_factors.append(x)
             
-            return coef * Star(*out_star_factors)
-            
+            return sp.Mul(*coefs, Star(*out_star_factors))
+                        
         def treat_sOrdering(A : sOrdering) -> sp.Expr:
             if (A.args[1] != CahillGlauberS.val):
                 if not(A.args[0].is_polynomial(PhaseSpaceVariableOperator)):
