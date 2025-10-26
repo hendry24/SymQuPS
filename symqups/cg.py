@@ -78,8 +78,10 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
         
         def treat_mul(A : sp.Expr) -> sp.Expr:
 
-            if A.is_polynomial(annihilateOp, createOp):
-                return CGTransform(express(sOrdering(normal_ordered_equivalent(A),1), CahillGlauberS.val))
+            if (A.is_polynomial(annihilateOp, createOp) and
+                all(isinstance(atom, PhaseSpaceVariableOperator) 
+                    for atom in A.atoms(Operator))):
+                return op2sc(express(sOrdering(normal_ordered_equivalent(A), 1), CahillGlauberS.val, False))
             
             # Starting from the leftmost factor, we find a nonpolynomial factor
             # sandwiched between polynomial factors. We then apply left- and
@@ -90,9 +92,35 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             
             coefs = []
             out_star_factors = []
+            #
             bopp_r = []
             bopp_l = []
             nonpoly = None
+            
+            def do_when_nonpoly_found(arg):
+                if nonpoly is None:
+                    new_bopp_r = bopp_r
+                    new_bopp_l = bopp_l
+                    next_nonpoly = arg
+                else:
+                    x = CGTransform(nonpoly)
+                    for o in bopp_r: # this will not loop after the first nonpoly
+                                        # since bopp_r would be empty.
+                        b, e = o.as_base_exp()
+                        for _ in range(e):
+                            x = PSBO(op2sc(b), x, False).doit().expand()
+                    for o in bopp_l:
+                        b, e = o.as_base_exp()
+                        for _ in range(e):
+                            x = PSBO(op2sc(b), x, True).doit().expand()
+                    
+                    out_star_factors.append(x)
+                    new_bopp_r = [] # emptying list is O(n), so we avoid that
+                    new_bopp_l = []
+                    next_nonpoly = arg
+
+                return new_bopp_r, new_bopp_l, next_nonpoly
+            
             for arg in A.args:
                 if arg.has(annihilateOp, createOp):
                     if arg.is_polynomial(annihilateOp, createOp):
@@ -102,39 +130,20 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
                             bopp_l.append(arg)
                    
                     else:
-                        
-                        if nonpoly is None:
-                            nonpoly = arg
-                        else:
-                            x = nonpoly
-                            for o in bopp_r: # this will not loop after the first nonpoly
-                                             # since bopp_r would be empty.
-                                b, e = o.as_base_exp()
-                                for _ in range(e):
-                                    x = PSBO(op2sc(b), x, False)
-                            for o in bopp_l:
-                                b, e = o.as_base_exp()
-                                for _ in range(e):
-                                    x = PSBO(op2sc(b), x, True)
-                            
-                            out_star_factors.append(x)
-                            bopp_r = []
-                            bopp_l = []
-                            nonpoly = arg
+                        bopp_r, bopp_l, nonpoly = do_when_nonpoly_found(arg)
+
                 else:
-                    coefs.append(arg)
+                    if arg.has(Operator):
+                        bopp_r, bopp_l, nonpoly = do_when_nonpoly_found(arg)
+                    else:
+                        coefs.append(arg)
                             
             # Loop may end with nonpoly or poly in the operators. If it
             # ends with a nonpoly, then we just append that nonpoly into
             # the out_star_factors (bopp_l would be empty since there is no
             # iteration after nonpoly). Otherwise, we apply left-directed PSBOs
             # to the last nonpoly found.
-            x = nonpoly
-            for o in bopp_l:
-                b, e = o.as_base_exp()
-                for _ in range(e):
-                    x = PSBO(op2sc(b), x, True)
-            out_star_factors.append(x)
+            do_when_nonpoly_found(sp.Number(1)) # argument does not matter
             
             return sp.Mul(*coefs, Star(*out_star_factors))
                         

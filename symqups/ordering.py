@@ -40,14 +40,6 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
             msg += "Input may contain 'densityOp' which never goes in "
             msg += "the ordering braces."
             raise ValueError(msg)
-        
-        if expr.has(q, p, alpha, alphaD):
-            msg = "The input 'expr' has the phase-space 'Scalar' objects "
-            msg += "('q', 'p', 'alpha', 'alphaD'). Here, they are treated "
-            msg += "as plain scalars, and this warning is raised in case "
-            msg += "these objects are mistakenly used instead of the 'Operator' "
-            msg += "counterparts."
-            warnings.warn(msg, stacklevel=2)
             
         s = sp.sympify(s)
         if s is None:
@@ -146,7 +138,7 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
             return super(sOrdering, cls).__new__(cls, A, s)
            
         return operation_routine(sp.expand(sp.sympify(expr)),
-                                  "symqups.sOrdering",
+                                  sOrdering,
                                   [],
                                   [],
                                   {Operator : expr},
