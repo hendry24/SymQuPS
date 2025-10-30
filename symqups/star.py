@@ -89,7 +89,7 @@ def _Bopp_monomial_A_times_B(A : sp.Expr,
                 if left:
                     new_out = out*a(sub)
                 else:
-                    new_out = a(sub)*out   
+                    new_out = a(sub)*out
                 new_out += space_sgn*sp.Rational(1,2)*(s+lr_sgn)*sp.Derivative(out, _Primed(ad(sub)))
                 
                 out = new_out

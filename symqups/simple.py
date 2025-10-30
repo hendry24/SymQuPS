@@ -30,7 +30,7 @@ from ._internal.multiprocessing import MP_CONFIG
 from .cg import CGTransform, iCGTransform
 from .eom import LindbladMasterEquation
 from .manipulations import (alpha2qp, qp2alpha, sc2op, op2sc, dagger, 
-                            explicit, express, normal_ordered_equivalent)
+                            explicit_sOrdering, express_sOrdering, normal_ordered_equivalent)
 from .ordering import sOrdering
 from .quantization import naive_quantize, s_quantize
 from .star import Star, HattedStar

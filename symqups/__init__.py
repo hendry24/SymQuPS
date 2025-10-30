@@ -27,7 +27,7 @@ from .bopp import HilbertSpaceBoppSuperoperator, PhaseSpaceBoppOperator
 from .cg import CGTransform, iCGTransform, CGProps
 from .eom import LindbladMasterEquation
 from .manipulations import (
-    alpha2qp, qp2alpha, sc2op, op2sc, dagger, explicit, express,
+    alpha2qp, qp2alpha, sc2op, op2sc, dagger, explicit_sOrdering, express_sOrdering,
     normal_ordered_equivalent
 )
 from .ordering import sOrdering, normal_order, weyl_order, antinormal_order

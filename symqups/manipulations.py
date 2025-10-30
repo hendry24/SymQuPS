@@ -62,13 +62,13 @@ def dagger(expr : sp.Expr) -> sp.Expr:
                             )
 
 @preprocess_func
-def explicit(expr: sp.Expr) -> sp.Expr:
+def explicit_sOrdering(expr: sp.Expr) -> sp.Expr:
     from .ordering import sOrdering
     return expr.replace(lambda A: isinstance(A, sOrdering),
                         lambda A: A.explicit())
 
 @preprocess_func
-def express(expr : sp.Expr, t=1, explicit=True) -> sp.Expr:
+def express_sOrdering(expr : sp.Expr, t=1, explicit=True) -> sp.Expr:
     from .ordering import sOrdering
     return expr.replace(lambda A: isinstance(A, sOrdering),
                         lambda A: A.express(t=t, explicit=explicit))
@@ -192,3 +192,10 @@ def normal_ordered_equivalent(expr : sp.Expr) -> sp.Expr:
                              {sp.Add : treat_add,
                               sp.Mul : treat_mul,
                               (Operator, sp.Pow, sp.Function) : expr})
+    
+###
+
+def s_ordered_equivalent(expr : sp.Expr) -> sp.Expr:
+    from .ordering import sOrdering
+    from . import s 
+    return express_sOrdering(sOrdering(normal_ordered_equivalent(expr), 1), s.val, False)

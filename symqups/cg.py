@@ -16,7 +16,7 @@ from .objects.operators import Operator, densityOp, rho, annihilateOp, createOp
 from .bopp import HSBS, PSBO
 from .star import Star, HattedStar
 from .ordering import sOrdering
-from .manipulations import (qp2alpha, op2sc, alpha2qp, sc2op, Commutator, express,
+from .manipulations import (qp2alpha, op2sc, alpha2qp, sc2op, Commutator, express_sOrdering,
                             normal_ordered_equivalent)
 from .utils import get_N, _treat_der_template
 
@@ -81,14 +81,25 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             if (A.is_polynomial(annihilateOp, createOp) and
                 all(isinstance(atom, PhaseSpaceVariableOperator) 
                     for atom in A.atoms(Operator))):
-                return op2sc(express(sOrdering(normal_ordered_equivalent(A), 1), CahillGlauberS.val, False))
+                return op2sc(express_sOrdering(sOrdering(normal_ordered_equivalent(A), 1), CahillGlauberS.val, False))
             
             # Starting from the leftmost factor, we find a nonpolynomial factor
             # sandwiched between polynomial factors. We then apply left- and
-            # right-directed PBSOs to this nonpoly factor. Subsequently, if 
+            # right-directed PSBOs to this nonpoly factor. Subsequently, if 
             # there are still leftovers, then the order is nonpoly-poly-nonpoly-...
             # in this case, we can only apply PBSO leftward. We collect these
-            # un-PBSO-able expressions and output their star product. 
+            # un-PBSO-able expressions and output their star product. `Star` will
+            # deal with whatever possible evaluation left over, such as when we
+            # have a product between a polynomial and an s-ordering bracket.
+            #
+            # However, a cascade of PSBO calls would get expensive quickly since 
+            # we would have a derivative, inside a sum, inside a derivative, and so on.
+            # It will get even heavier when we call `.doit` to evaluate all the cascaded
+            # chain rules. To work around this, we can make use of `normal_ordered_equivalent`
+            # to obtain a series expansion where each term goes like
+            #       (normal-ordered poly)(nonpoly)(normal-ordered poly)(nonpoly)...
+            # whence we can use binomial expansion to get an explicit series where the chain
+            # rule has been applied. We make it normal-ordered so that we need not track `
             
             coefs = []
             out_star_factors = []
@@ -96,6 +107,14 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             bopp_r = []
             bopp_l = []
             nonpoly = None
+            
+            # NOTE: While it is tempting to go with an explicit series by
+            # writing the normal-ordered equivalent of the input then evaluting
+            # the normal-ordered "bopp monomials" for each term using explicit series,
+            # this implementation may unnecessary slow down the algorithm for the 
+            # general use case (low number of operators), since we would have a very 
+            # long series. As such, sticking to a cascade of PSBO applications may 
+            # be a better design choice. Might want to recheck this in the future. 
             
             def do_when_nonpoly_found(arg):
                 if nonpoly is None:
@@ -254,19 +273,21 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
             return sc2op(A)            
             
         def treat_mul(A : sp.Mul) -> sp.Expr:
-            if is_nonconstant_polynomial(A, alpha, alphaD):
+            if (is_nonconstant_polynomial(A, alpha, alphaD) and
+                not(A.has(StateFunction))):
                 return sOrdering(sc2op(A), lazy=lazy)                                                                                               
             
             coefs = []
-            monomials = []
+            m_dict = {sub : 0 for sub in sub_cache}
+            n_dict = {sub : 0 for sub in sub_cache}
             others = []
-            # NOTE: We assume that commuting polynomials are ordered
-            # to the left of nonpolynomials, regardless of subscript.
             for arg in A.args:
-                if is_nonconstant_polynomial(arg,
-                                             alpha,
-                                             alphaD):
-                    monomials.append(arg)
+                if is_nonconstant_polynomial(arg, alphaD):
+                    b, e = arg.as_base_exp()
+                    m_dict[b.sub] += e
+                elif is_nonconstant_polynomial(arg, alpha):
+                    b, e = arg.as_base_exp()
+                    n_dict[b.sub] += e
                 else:
                     if arg.has(alpha, alphaD):
                         others.append(arg)
@@ -282,19 +303,41 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
             # functions, we only check if 'others' is a Mul itself to avoid
             # infinite recursions.
             
-            if len(others) == 1:
-                out = iCGTransform(others[0])
+            # Since the HSBSs commute, we can just write out the explicit
+            # series rather than letting sympy do it with the `.doit' method.`
+            
+            if len(others) == 0:
+                F = 1
+            elif len(others) == 1:
+                F = iCGTransform(others[0])
             else:
-                out = make(sp.Mul(*others))
+                F = make(sp.Mul(*others))
                 # Since we can collect all nonpolynomials together, it would avoid
                 # clutter to keep the nonpolynomial part unevaluated.
             
-            for mono in monomials:
-                base, exp = mono.as_base_exp()
-                for _ in range(exp):
-                    out = HSBS(sc2op(base), out) # direction does not matter.
-                            
-            return sp.Mul(*coefs, out)
+            out_summands = []
+            for sub in sub_cache:
+                m = m_dict[sub]
+                n = n_dict[sub]
+                ad = createOp(sub)
+                a = annihilateOp(sub)
+                k1 = (1-CahillGlauberS.val)/2
+                k2 = (1+CahillGlauberS.val)/2
+                for j in range(m+1):
+                    for k in range(n+1):
+                        factors = [sp.binomial(m,j),
+                                   sp.binomial(n,k),
+                                   k1**(n+j-k),
+                                   k2**(m-j+k),
+                                   ad**(m-j),
+                                   a**(n-k),
+                                   F,
+                                   a**k,
+                                   ad**j
+                                   ]
+                        out_summands.append(sp.Mul(*coefs, *factors))
+                        
+            return sp.Add(*out_summands)
             
         def treat_foo(A: sp.Function) -> sp.Expr:
             if A.has(StateFunction):
