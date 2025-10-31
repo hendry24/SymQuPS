@@ -95,7 +95,7 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
                     if poly:
                         out_star_factors.append(op2sc(s_ordered_equivalent(sp.Mul(*poly))))
                         poly = []
-                    out_star_factors.append(arg)
+                    out_star_factors.append(CGTransform(arg))
                 else:
                     coef_factors.append(arg)
             

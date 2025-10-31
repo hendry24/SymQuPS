@@ -86,44 +86,35 @@ def _HattedStar_Bopp_monomial_A_times_B(A : sp.Expr, B : sp.Expr, left : bool):
     else:
         lr_sgn = 1
         iter_through = reversed(args)
-    
-    # NOTE: Unlike the star product, the order of the Bopp shift matters, so
-    # there is no generally eeasy "totally explicit" series we can use. Instead,
-    # we opt to use the explicit formula for the given factor, nested inside the
-    # explicit formula for the subsequent factor, and so on...
-    #
-    # A possible improvement may be achieved by expanding A in some series whose
-    # bopp-shift operation on B has a known "toally explicit" form, e.g., a normal-ordered
-    # form. However, implementing the expansion will produce extra cost, and we would
-    # need to loop over bopp-shift applications over a series. 
+        
+    xi_a = -sp.Rational(1,2) * (s + lr_sgn)
+    xi_ad = -sp.Rational(1,2) * (s - lr_sgn)
+    # xi_a is the coefficient attached to the Bopp shift of a,
+    # likewise for xi_ad
     
     coef_factors = []
-    bopped_series_summands = []
+    op = []
+    op_bopp = []
     for arg in iter_through:
-        
         if arg.has(annihilateOp, createOp):
             b, e = arg.as_base_exp()
+            op.append(b)
             
-            if isinstance(b, annihilateOp):
-                xi = -sp.Rational(1,2) * (s + lr_sgn)
-            elif isinstance(b, createOp):
-                xi = -sp.Rational(1,2) * (s - lr_sgn)
-            else:
-                raise TypeError("Invalid type. Contact dev.")
-            
-            for j in range(e+1):
-                der = sp.Derivative(B, (dagger(b), j)).doit()
-                y = sp.Mul(sp.binomial(e, j),
-                            b**(e-j),
-                            xi**j,
-                            der)
-                bopped_series_summands.append(y)
+            xi = xi_a if isinstance(b, annihilateOp) else xi_ad
+            op_bopp.append([(xi, (dagger(b), e))])
+        
         else:
             coef_factors.append(arg)
             
-    return sp.Add(*[sp.Mul(*coef_factors, summand) 
-                    for summand in bopped_series_summands])
-
+    expansion_combos = itertools.product(*[(x,y) 
+                                           for x,y in zip(op, op_bopp)])
+    
+    for combo in expansion_combos:
+        term_factors = []
+        for o in combo:
+            if isinstance(o, list):
+                
+    
 ###
 
 def _star_base(F : sp.Expr, 
@@ -166,7 +157,6 @@ def _star_base(F : sp.Expr,
                                  )
                       )
     
-    
     return operation_routine(Bopp_shifted,
                              _StarTemplate,
                              [],
@@ -177,9 +167,9 @@ def _star_base(F : sp.Expr,
                                sp.Pow,
                                var_group,
                                state) 
-                              : bopp_monomial(Bopp_shifted,
-                                              B=other,
-                                              left=left)
+                              : lambda A: bopp_monomial(A,
+                                                        B=other,
+                                                        left=left)
                               }
                              )
 
