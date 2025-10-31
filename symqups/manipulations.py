@@ -168,7 +168,7 @@ def normal_ordered_equivalent(expr : sp.Expr) -> sp.Expr:
     
     This function implements Blasiak's explicit formulae to obtain
     the normal-ordered equivalent of a monomial in the creation/annihilation
-    operators, similar to [`pybolano`](https://github.com/hendry24/pybolano).
+    operators, similar to [`pyBoLaNO`](https://github.com/hendry24/pybolano).
     """
     
     def treat_add(A : sp.Expr) -> sp.Expr:

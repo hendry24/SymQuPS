@@ -7,6 +7,7 @@ from .basic_routines import screen_type, deep_screen_type
 from .cache import sub_cache
 from .grouping import NotAnOperator, Acting
 from .operator_handling import get_oper_sub, is_universal, separate_operator
+from .multiprocessing import mp_helper
 
 from ..objects.scalars import t
 from ..objects.operators import densityOp, createOp, annihilateOp
@@ -179,6 +180,7 @@ class PatchedDerivative(original_Derivative):
     def __new__(cls, expr, *variables, **kwargs):
         
         ###
+        
         a_lst = []
         ad_lst = []
         t_order = 0

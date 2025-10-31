@@ -16,8 +16,8 @@ from .objects.operators import Operator, densityOp, rho, annihilateOp, createOp
 from .bopp import HSBS, PSBO
 from .star import Star, HattedStar
 from .ordering import sOrdering
-from .manipulations import (qp2alpha, op2sc, alpha2qp, sc2op, Commutator, express_sOrdering,
-                            normal_ordered_equivalent)
+from .manipulations import (qp2alpha, op2sc, alpha2qp, sc2op, Commutator,
+                            s_ordered_equivalent)
 from .utils import get_N, _treat_der_template
 
 from . import s as CahillGlauberS
@@ -81,7 +81,7 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             if (A.is_polynomial(annihilateOp, createOp) and
                 all(isinstance(atom, PhaseSpaceVariableOperator) 
                     for atom in A.atoms(Operator))):
-                return op2sc(express_sOrdering(sOrdering(normal_ordered_equivalent(A), 1), CahillGlauberS.val, False))
+                return op2sc(s_ordered_equivalent(A))
             
             # Starting from the leftmost factor, we find a nonpolynomial factor
             # sandwiched between polynomial factors. We then apply left- and
@@ -99,7 +99,7 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             # to obtain a series expansion where each term goes like
             #       (normal-ordered poly)(nonpoly)(normal-ordered poly)(nonpoly)...
             # whence we can use binomial expansion to get an explicit series where the chain
-            # rule has been applied. We make it normal-ordered so that we need not track `
+            # rule has been applied. 
             
             coefs = []
             out_star_factors = []
@@ -168,6 +168,7 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             do_when_nonpoly_found(sp.Number(1)) # argument does not matter
             
             return sp.Mul(*coefs, Star(*out_star_factors))
+        
                         
         def treat_sOrdering(A : sOrdering) -> sp.Expr:
             if (A.args[1] != CahillGlauberS.val):
