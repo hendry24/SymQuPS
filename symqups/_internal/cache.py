@@ -68,14 +68,6 @@ class SubCache(list):
             alpha2qp_subs_dict._set_item(k, v)            
             alpha2qp_subs_dict._set_item(sc2op_subs_dict[k], 
                                          v.xreplace({qq:qop, pp:pop}))
-        ###
-        
-        from ..star import _Primed
-        
-        for x in [a, ad, aop, adop]:
-            px = _Primed(x)
-            primed_subs_dict._set_item(x, px)
-            deprime_subs_dict._set_item(px, x)
             
     def _refresh_all(self):
         for sub in self:
@@ -112,12 +104,10 @@ class ProtectedDict(dict):
         super().__setitem__(key, value)
               
 global op2sc_subs_dict, sc2op_subs_dict, qp2alpha_subs_dict
-global alpha2qp_subs_dict, primed_dict, deprimed_dict, sub_cache
+global alpha2qp_subs_dict, sub_cache
 qp2alpha_subs_dict = ProtectedDict()
 alpha2qp_subs_dict = ProtectedDict()
 op2sc_subs_dict = ProtectedDict()
 sc2op_subs_dict = ProtectedDict()
-primed_subs_dict = ProtectedDict()
-deprime_subs_dict = ProtectedDict()
 
 sub_cache = SubCache()

@@ -77,99 +77,33 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             return sp.Add(*mp_helper(A.args, CGTransform))
         
         def treat_mul(A : sp.Expr) -> sp.Expr:
-
+        
             if (A.is_polynomial(annihilateOp, createOp) and
                 all(isinstance(atom, PhaseSpaceVariableOperator) 
                     for atom in A.atoms(Operator))):
                 return op2sc(s_ordered_equivalent(A))
             
-            # Starting from the leftmost factor, we find a nonpolynomial factor
-            # sandwiched between polynomial factors. We then apply left- and
-            # right-directed PSBOs to this nonpoly factor. Subsequently, if 
-            # there are still leftovers, then the order is nonpoly-poly-nonpoly-...
-            # in this case, we can only apply PBSO leftward. We collect these
-            # un-PBSO-able expressions and output their star product. `Star` will
-            # deal with whatever possible evaluation left over, such as when we
-            # have a product between a polynomial and an s-ordering bracket.
-            #
-            # However, a cascade of PSBO calls would get expensive quickly since 
-            # we would have a derivative, inside a sum, inside a derivative, and so on.
-            # It will get even heavier when we call `.doit` to evaluate all the cascaded
-            # chain rules. To work around this, we can make use of `normal_ordered_equivalent`
-            # to obtain a series expansion where each term goes like
-            #       (normal-ordered poly)(nonpoly)(normal-ordered poly)(nonpoly)...
-            # whence we can use binomial expansion to get an explicit series where the chain
-            # rule has been applied. 
+            # Here we abuse the efficiency of `Star`.
             
-            coefs = []
+            coef_factors = []
             out_star_factors = []
-            #
-            bopp_r = []
-            bopp_l = []
-            nonpoly = None
-            
-            # NOTE: While it is tempting to go with an explicit series by
-            # writing the normal-ordered equivalent of the input then evaluting
-            # the normal-ordered "bopp monomials" for each term using explicit series,
-            # this implementation may unnecessary slow down the algorithm for the 
-            # general use case (low number of operators), since we would have a very 
-            # long series. As such, sticking to a cascade of PSBO applications may 
-            # be a better design choice. Might want to recheck this in the future. 
-            
-            def do_when_nonpoly_found(arg):
-                if nonpoly is None:
-                    new_bopp_r = bopp_r
-                    new_bopp_l = bopp_l
-                    next_nonpoly = arg
-                else:
-                    x = CGTransform(nonpoly)
-                    for o in reversed(bopp_r): 
-                        # This will not loop after the first nonpoly
-                        # since bopp_r would be empty. NOTE: Reverse
-                        # the list since we apply right-directed PSBOs
-                        # starting with the rightmost operator. 
-                        b, e = o.as_base_exp()
-                        for _ in range(e):
-                            x = PSBO(op2sc(b), x, False)
-                    for o in bopp_l:
-                        b, e = o.as_base_exp()
-                        for _ in range(e):
-                            x = PSBO(op2sc(b), x, True)
-                    
-                    out_star_factors.append(x)
-                    new_bopp_r = [] # emptying list is O(n), so we avoid that
-                    new_bopp_l = []
-                    next_nonpoly = arg
-
-                return new_bopp_r, new_bopp_l, next_nonpoly
-            
+            poly = []
             for arg in A.args:
-                if arg.has(annihilateOp, createOp):
-                    if arg.is_polynomial(annihilateOp, createOp):
-                        if nonpoly is None:
-                            bopp_r.append(arg)
-                        else:
-                            bopp_l.append(arg)
-                   
-                    else:
-                        bopp_r, bopp_l, nonpoly = do_when_nonpoly_found(arg)
-
+                if is_nonconstant_polynomial(arg, annihilateOp, createOp):
+                    poly.append(arg)
+                elif arg.has(HilbertSpaceObject):
+                    if poly:
+                        out_star_factors.append(op2sc(s_ordered_equivalent(sp.Mul(*poly))))
+                        poly = []
+                    out_star_factors.append(arg)
                 else:
-                    if arg.has(Operator):
-                        bopp_r, bopp_l, nonpoly = do_when_nonpoly_found(arg)
-                    else:
-                        coefs.append(arg)
-                            
-            # Loop may end with nonpoly or poly in the operators. If it
-            # ends with a nonpoly, then we just append that nonpoly into
-            # the out_star_factors (bopp_l would be empty since there is no
-            # iteration after nonpoly). Otherwise, we apply left-directed PSBOs
-            # to the last nonpoly found.
-            do_when_nonpoly_found(sp.Number(1)) # argument does not matter
+                    coef_factors.append(arg)
             
-            return sp.Mul(*coefs, Star(*out_star_factors))
-        
-                        
+            if poly:
+                out_star_factors.append(op2sc(s_ordered_equivalent(sp.Mul(*poly))))
+            
+            return sp.Mul(*coef_factors, Star(*out_star_factors))
+
         def treat_sOrdering(A : sOrdering) -> sp.Expr:
             if (A.args[1] != CahillGlauberS.val):
                 if not(A.args[0].is_polynomial(PhaseSpaceVariableOperator)):
@@ -316,6 +250,7 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
                 # Since we can collect all nonpolynomials together, it would avoid
                 # clutter to keep the nonpolynomial part unevaluated.
             
+            # NOTE: Here we use the explicit form of the cascaded HSBS applications.
             out_summands = []
             for sub in sub_cache:
                 m = m_dict[sub]

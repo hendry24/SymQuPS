@@ -1,7 +1,7 @@
 import sympy as sp
 import sympy.physics.quantum as spq
 
-from ._internal.basic_routines import operation_routine, default_treat_add
+from ._internal.basic_routines import operation_routine, default_treat_add, is_nonconstant_polynomial
 from ._internal.operator_handling import is_universal, separate_term_oper_by_sub
 from ._internal.cache import ( op2sc_subs_dict, sc2op_subs_dict, 
                               alpha2qp_subs_dict, qp2alpha_subs_dict, ProtectedDict)
@@ -94,21 +94,21 @@ def _eval_Blasiak(A : sp.Expr) -> sp.Expr:
     s = []
     for arg in A.args:
         
-        if isinstance(arg, Operator):
-            exponent = 1
-        else:
-            exponent = arg.args[1]
+        b, e = arg.as_base_exp()
 
         if arg.has(createOp):
-            r.append(exponent)
+            r.append(e)
         else:
-            s.append(exponent)
+            s.append(e)
+    
+    sub = b.sub 
+    a, ad = annihilateOp(sub), createOp(sub)
 
     if len(r) != len(s):
-        s.append(sp.Number(0))
+        s.append(0)
 
-    r.append(sp.Number(0))
-    s.append(sp.Number(0))
+    r.append(0)
+    s.append(0)
 
     r = list(reversed(r))
     s = list(reversed(s))
@@ -130,9 +130,6 @@ def _eval_Blasiak(A : sp.Expr) -> sp.Expr:
                                                 s[m])
             sum_val += sp.binomial(k,j) * sp.Number(-1)**(k-j) * prod_val
         return sum_val / sp.factorial(k)
-    
-    a = list(A.atoms(annihilateOp))[0]
-    ad = list(A.atoms(createOp))[0]
     
     if d[-1] >= 0:
         R, S, D = r, s, d
@@ -175,13 +172,16 @@ def normal_ordered_equivalent(expr : sp.Expr) -> sp.Expr:
         return default_treat_add(A.args, normal_ordered_equivalent)
     
     def treat_mul(A : sp.Expr) -> sp.Expr:
-        if not(expr.is_polynomial(Operator)) or is_universal(expr):
+        if (not(is_nonconstant_polynomial(A, annihilateOp, createOp)) 
+            or is_universal(expr)):
             return A
 
         A_sep = separate_term_oper_by_sub(A)
         coef = A_sep.pop(0)
                 
         return coef*sp.Mul(*mp_helper(A_sep, _eval_Blasiak))
+        # NOTE: no need for _final_swap since this is automaticaly done
+        # by the patched sympy.Mul.flatten.
                 
     expr = qp2alpha(sp.sympify(expr))
     return operation_routine(expr,
