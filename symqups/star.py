@@ -101,19 +101,33 @@ def _HattedStar_Bopp_monomial_A_times_B(A : sp.Expr, B : sp.Expr, left : bool):
             op.append(b)
             
             xi = xi_a if isinstance(b, annihilateOp) else xi_ad
-            op_bopp.append([(xi, (dagger(b), e))])
+            op_bopp.append([xi, (dagger(b), e)])
         
         else:
             coef_factors.append(arg)
-            
+    
     expansion_combos = itertools.product(*[(x,y) 
                                            for x,y in zip(op, op_bopp)])
     
+    ###
+    
+    out_summands = []
     for combo in expansion_combos:
-        term_factors = []
+        xi = []
+        op = []
+        diff_B_wrt = []
         for o in combo:
             if isinstance(o, list):
-                
+                xi.append(o[0])
+                diff_B_wrt.append(o[1])
+            else:
+                op.append(o)
+        out_summands.append(sp.Mul(*coef_factors,
+                                   *xi,
+                                   *op,
+                                   sp.Derivative(B, *diff_B_wrt)))
+        
+    return sp.Add(*out_summands)
     
 ###
 

@@ -83,7 +83,17 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
                     for atom in A.atoms(Operator))):
                 return op2sc(s_ordered_equivalent(A))
             
-            # Here we abuse the efficiency of `Star`.
+            # NOTE: There are other implementations that we can conisider.
+            # The specified speed relative to the current implementation 
+            # is lazily tested.
+            #
+            # (1)   Cascaded application of PBSOs (slower, possibly due
+            #       to the multiply nested expressions).
+            #
+            # (2)   Star product of the factors, divided by polynomiality
+            #       (slower, due to the need to run `s_ordered_equivalent`
+            #       before Star which ends up looping through the operator
+            #       string anyway)
             
             coef_factors = []
             out_star_factors = []
