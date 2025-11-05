@@ -119,10 +119,44 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
         return sp.Equality(lhs, rhs)
     definition = _definition()
     
-    def __new__(cls, expr : sp.Expr, *_vars):
+    def __new__(cls, expr : sp.Expr, *_vars, mode = "Star"):
         """
-        oper -> quantum ps vars
+        
+        PARAMETERS
+        ----------
+        
+        mode : str
+            Evaluation mode for expressions containing polynomial and nonpolynomial
+            parts.
+            
+            (1) Cascaded application of PSBOs (SLOW, possibly due
+                to the multiply nested expressions). Running .doit 
+                afterwards would also be more expensive due to all 
+                the nesting. This is mode "PSBO".
+            
+            (2) Star product of the CG Transforn of the factors 
+                divided by polynomiality (FAST, since we make 
+                can abuse the commutativity). This is mode "Star".
+            
+            (3) Make every possible word where every operator is
+                replaced by the corresponding PSBO split into 
+                the PSV part and the derivative part. Then normal
+                order each word utilizing the similarity between
+                [aOp, adOp] = 1 and [dx, x] = 1 to obtain the explicit
+                series expanded to the greatest extend possible (i.e., 
+                with the product rule already evaluated). This is SLOW,
+                because it takes multiple loops to (i) separate the factors
+                by polynomiality, (ii) make each word, (iii) normal order
+                each word, and (iv) evaluate each term in the output. This
+                is mode "explicit".
+
         """
+        
+        mode = mode.lower()
+        if mode not in ["star", "psbo", "explicit"]:
+            msg = "Invalid mode. Either 'Star','PSBO', or 'explicit'."
+            raise ValueError(msg)
+        
         if expr.is_Equality:
             from .eom import LindbladMasterEquation
             
@@ -147,25 +181,27 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
                     for atom in A.atoms(Operator))):
                 return op2sc(s_ordered_equivalent(A))
             
-            # NOTE: There are other implementations that we can conisider.
-            # The specified speed relative to the current implementation 
-            # is lazily tested.
-            #
-            # (1)   Cascaded application of PBSOs (slower, possibly due
-            #       to the multiply nested expressions). Running .doit 
-            #       afterwards would also be more expensive due to all 
-            #       the nesting.
-            #
-            # (2)   Star product of the factors, divided by polynomiality
-            #       (slower, due to the need to run `s_ordered_equivalent`
-            #       before Star which ends up looping through the operator
-            #       string anyway).
+            ###
             
             s = CahillGlauberS.val
             
-            def do_when_nonpoly_found(poly_factors : list[Operator], 
-                                      nonpoly : Operator, 
-                                      left : bool):
+            coefs = []
+            out_star_factors = [] 
+            poly_factors = []
+            nonpoly = None
+            
+            def transform_poly_factors(poly_factors):
+                return op2sc(s_ordered_equivalent(sp.Mul(*poly_factors)))
+            
+            def nonpoly_found_PSBO(poly_factors, nonpoly, left):
+                out = CGTransform(nonpoly)
+                for o in poly_factors:
+                    b, e = o.as_base_exp()
+                    for _ in range(e):
+                        out = PSBO(op2sc(b), out, left)
+                return out
+            
+            def nonpoly_found_explicit(poly_factors, nonpoly, left):
                 # left = nonpoly is to the left of poly
                 #
                 # Here we turn `poly` into a word of PSBOs that
@@ -211,28 +247,25 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
                     to_combo.extend([[psv_term, der_term]]*e)
                 
                 return sp.Add(*mp_helper(list(itertools.product(*to_combo)),
-                                         functools.partial(_normal_ordered_PSBO_on_B,
-                                                           B = CGTransform(nonpoly))))
+                                        functools.partial(_normal_ordered_PSBO_on_B,
+                                                        B = CGTransform(nonpoly))))
 
-            coefs = []
-            out_star_factors = [] 
-            poly_factors = []
-            nonpoly = None
+            nonpoly_found = nonpoly_found_PSBO if mode.lower() == "PSBO" else nonpoly_found_explicit
             
             for arg in A.args:
                 if arg.has(annihilateOp, createOp):
                     if is_nonconstant_polynomial(arg, annihilateOp, createOp):
                         poly_factors.append(arg)
                     else:
-                        if nonpoly is None:
-                            nonpoly = do_when_nonpoly_found(poly_factors,
-                                                            arg,
-                                                            False)
+                        if mode == "star":
+                            out_star_factors.append(op2sc(s_ordered_equivalent(sp.Mul(*poly_factors))))
+                            out_star_factors.append(CGTransform(nonpoly))
                         else:
-                            out_star_factors.append(do_when_nonpoly_found(poly_factors,
-                                                                          nonpoly,
-                                                                          True))
-                            nonpoly = arg
+                            if nonpoly is None:
+                                nonpoly = nonpoly_found(poly_factors, arg, False)
+                            else:
+                                out_star_factors.append(nonpoly_found(poly_factors, nonpoly, True))
+                                nonpoly = arg
                             
                         poly_factors = []
                 else:
@@ -240,32 +273,40 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
                         # We can avoid code duplicate by using some flags, but
                         # let us put efficiency first here. Since the two are close
                         # together, they would be easy to fix anyway.
-                        if nonpoly is None:
-                            nonpoly = do_when_nonpoly_found(poly_factors,
-                                                            arg,
-                                                            False)
+                        if mode == "star":
+                            out_star_factors.append(transform_poly_factors(poly_factors))
+                            out_star_factors.append(CGTransform(nonpoly))
                         else:
-                            out_star_factors.append(do_when_nonpoly_found(poly_factors,
-                                                                          nonpoly,
-                                                                          True))
-                            nonpoly = arg
+                            if nonpoly is None:
+                                nonpoly = nonpoly_found(poly_factors, arg, False)
+                            else:
+                                out_star_factors.append(nonpoly_found(poly_factors, nonpoly, True))
+                                nonpoly = arg
                             
                         poly_factors = []
                     else:
                         coefs.append(arg)
                         
-            # Loop may end with nonpoly or poly in the operators. If it
+            # Loop may end with nonpoly or poly in the operators. 
+            # 
+            # For mode "Star", if the loop ends with a nonpoly, then we need not
+            # do anything. If it ends with a poly, then we CG-transform the leftover
+            # polynomial part and add to the Star-factors.
+            #
+            # For mode "PSBO" or "explicit", if the loop
             # ends with a nonpoly, then we just append that nonpoly into
             # the out_star_factors (poly_factors would be empty since there is no
             # iteration after nonpoly). Otherwise, we apply left-directed PSBOs
             # to the last nonpoly found.
             
-            out_star_factors.append(do_when_nonpoly_found(poly_factors,
-                                                          nonpoly,
-                                                          True))
+            if mode == "star":
+                if poly_factors:
+                    out_star_factors.append(transform_poly_factors(poly_factors))
+            else:
+                out_star_factors.append(nonpoly_found(poly_factors, nonpoly, True))
             
             return sp.Mul(*coefs, Star(*out_star_factors))
-            
+
         def treat_sOrdering(A : sOrdering) -> sp.Expr:
             if (A.args[1] != CahillGlauberS.val):
                 if not(A.args[0].is_polynomial(PhaseSpaceVariableOperator)):
