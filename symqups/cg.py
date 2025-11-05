@@ -50,17 +50,23 @@ class _CreateOpAsPSV(annihilateOp):
     # Identifies as an annihilateOp but does not trigger 
     # sub-caching. Used in `CGTransform::treat_mul` to 
     # *represent* the PSV part of a PSBO.
-    def __new__(cls, psv : Operator):
-        obj = super(Operator, cls).__new__(cls, psv.sub)
+    def __new__(cls, psv : alpha | alphaD):
+        obj = super(Operator, cls).__new__(cls,
+                                           sp.latex(psv.sub)+str(type(psv)))
+                                        # need to make the sub different 
+                                        # between alpha and alphaD 
+                                        # since d(alphaD) and alpha commute,
+                                        # etc.
         obj.psv = psv
         return obj
     
 class _AnnihilateOpAsDer(createOp):
     # Represents the derivative part of a PSBO.
-    def __new__(cls, diff_wrt : Operator, xi : sp.Expr):
-        obj = super(Operator, cls).__new__(cls, diff_wrt.sub)
+    def __new__(cls, psv : alpha | alphaD, xi : sp.Expr):
+        obj = super(Operator, cls).__new__(cls, 
+                                           sp.latex(psv.sub)+str(type(psv)))
         obj.xi = xi
-        obj.diff_wrt = diff_wrt
+        obj.diff_wrt = dagger(psv)
         return obj
     
 ###
@@ -71,20 +77,25 @@ def _normal_ordered_PSBO_on_B(combo, B):
     rep_word_NO = normal_ordered_equivalent(rep_word).expand()
     
     if isinstance(rep_word_NO, sp.Add):
-        args = rep_word_NO.args
+        rep_word_NO_summands = rep_word_NO.args
     else:
-        args = [rep_word_NO]
+        rep_word_NO_summands = [rep_word_NO]
     
     out_summands = []
-    for arg in args:
+    for term in rep_word_NO_summands:
+        if term.is_Mul:
+            args = term.args
+        else:
+            args = [term]
+            
         coef = []
         xi = []
         psv = []
         diff_B_wrt = []
-        for o in arg.args:
+        for o in args:
             b, e = o.as_base_exp()
             if isinstance(b, _CreateOpAsPSV):
-                psv.append(o)
+                psv.extend([b.psv]*e)
             elif isinstance(b, _AnnihilateOpAsDer):
                 xi.extend([b.xi]*e)
                 diff_B_wrt.append((b.diff_wrt, e))
@@ -190,13 +201,15 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
                 to_combo = []
                 for o in poly_factors:
                     b, e = o.as_base_exp()
-                    xi = xi_a if isinstance(b, annihilateOp) else xi_ad
+                
+                    xi = xi_a if isinstance(b, annihilateOp) else xi_ad    
+                    psv = op2sc(b)
                     
-                    psv_term = _CreateOpAsPSV(b)
-                    der_term = _AnnihilateOpAsDer(dagger(b), xi)
+                    psv_term = _CreateOpAsPSV(psv)
+                    der_term = _AnnihilateOpAsDer(dagger(psv), xi)
                     
                     to_combo.extend([[psv_term, der_term]]*e)
-                    
+                
                 return sp.Add(*mp_helper(list(itertools.product(*to_combo)),
                                          functools.partial(_normal_ordered_PSBO_on_B,
                                                            B = CGTransform(nonpoly))))
