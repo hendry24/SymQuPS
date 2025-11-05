@@ -49,7 +49,7 @@ def _Star_Bopp_monomial_A_times_B(A : sp.Expr, B : sp.Expr, left : bool):
             coef_factors.append(arg)
     
     bopped_series_summands = []
-    for j_lst in itertools.product(*[range(e) for e in e_lst]):
+    for j_lst in itertools.product(*[range(e+1) for e in e_lst]):
         bopp_factors = []
         der_wrt = []
         for j, b, e in zip(j_lst, b_lst, e_lst):
@@ -91,24 +91,19 @@ def _HattedStar_Bopp_monomial_A_times_B(A : sp.Expr, B : sp.Expr, left : bool):
     # likewise for xi_ad
     
     coef_factors = []
-    op = []
-    op_bopp = []
+    to_combo = []
     for arg in args:
         if arg.has(annihilateOp, createOp):
             b, e = arg.as_base_exp()
             xi = xi_a if isinstance(b, annihilateOp) else xi_ad
-            op.extend([b]*e)
-            op_bopp.extend([[xi, dagger(b)]]*e)
+            to_combo.extend([(b, [xi, dagger(b)])]*e)
         else:
             coef_factors.append(arg)
-    
-    expansion_combos = itertools.product(*[(x,y) 
-                                           for x,y in zip(op, op_bopp)])
     
     ###
     
     out_summands = []
-    for combo in expansion_combos:
+    for combo in itertools.product(*to_combo):
         xi = []
         op = []
         diff_B_wrt = []

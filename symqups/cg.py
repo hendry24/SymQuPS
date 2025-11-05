@@ -1,5 +1,5 @@
 import sympy as sp
-import itertools
+import itertools, functools
 
 from ._internal.multiprocessing import mp_helper
 from ._internal.basic_routines import (operation_routine, is_nonconstant_polynomial,
@@ -18,7 +18,7 @@ from .bopp import HSBS, PSBO
 from .star import Star, HattedStar
 from .ordering import sOrdering
 from .manipulations import (qp2alpha, op2sc, alpha2qp, sc2op, Commutator,
-                            s_ordered_equivalent)
+                            s_ordered_equivalent, dagger, normal_ordered_equivalent)
 from .utils import get_N, _treat_der_template
 
 from . import s as CahillGlauberS
@@ -45,6 +45,58 @@ def _iCGT_str(x : str, var : bool = False) -> str:
     return out
 
 ###
+
+class _CreateOpAsPSV(annihilateOp):
+    # Identifies as an annihilateOp but does not trigger 
+    # sub-caching. Used in `CGTransform::treat_mul` to 
+    # *represent* the PSV part of a PSBO.
+    def __new__(cls, psv : Operator):
+        obj = super(Operator, cls).__new__(cls, psv.sub)
+        obj.psv = psv
+        return obj
+    
+class _AnnihilateOpAsDer(createOp):
+    # Represents the derivative part of a PSBO.
+    def __new__(cls, diff_wrt : Operator, xi : sp.Expr):
+        obj = super(Operator, cls).__new__(cls, diff_wrt.sub)
+        obj.xi = xi
+        obj.diff_wrt = diff_wrt
+        return obj
+    
+###
+
+def _normal_ordered_PSBO_on_B(combo, B):
+    # Used in CGTransform::treat_mul::do_when_nonpoly_found.
+    rep_word = sp.Mul(*combo)
+    rep_word_NO = normal_ordered_equivalent(rep_word).expand()
+    
+    if isinstance(rep_word_NO, sp.Add):
+        args = rep_word_NO.args
+    else:
+        args = [rep_word_NO]
+    
+    out_summands = []
+    for arg in args:
+        coef = []
+        xi = []
+        psv = []
+        diff_B_wrt = []
+        for o in arg.args:
+            b, e = o.as_base_exp()
+            if isinstance(b, _CreateOpAsPSV):
+                psv.append(o)
+            elif isinstance(b, _AnnihilateOpAsDer):
+                xi.extend([b.xi]*e)
+                diff_B_wrt.append((b.diff_wrt, e))
+            else:
+                coef.append(o)
+        
+        out_summands.append(sp.Mul(*coef,
+                                   *xi,
+                                   *psv,
+                                   sp.Derivative(B, *diff_B_wrt)))
+    
+    return sp.Add(*out_summands)
 
 @preprocess_class
 class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
@@ -98,20 +150,109 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             #       before Star which ends up looping through the operator
             #       string anyway).
             
-            def do_when_nonpoly_found(left_poly_op,
-                                      left_poly_op_bopp,
-                                      nonpoly_factors,
-                                      right_poly_op,
-                                      right_poly_op_bopp):
-                # left = to the left of nonpoly
-                # right_poly_* is ordered left-to-right, and we reverse it here.
+            s = CahillGlauberS.val
+            
+            def do_when_nonpoly_found(poly_factors : list[Operator], 
+                                      nonpoly : Operator, 
+                                      left : bool):
+                # left = nonpoly is to the left of poly
+                #
+                # Here we turn `poly` into a word of PSBOs that
+                # operate on whatever is to its operation direction.
+                # Unlike the usual Bopp shifts, however, we cannot 
+                # just let the PSVs bypass the derivative operator.
+                # As such, we need an extra trick to obtain the most
+                # explciit series (in comparison to the algorithm used in,
+                # say, `Star`).
+                #
+                # We note that the derivative operator and the PSVs obey
+                # a commutation relation [dx, x] = 1 just like the commutation
+                # relation [a, ad] = 1. As such, dx can play the role of a, while
+                # x can play the role of ad, and what we want to do is to obtain the
+                # normal-ordered series. We can thus make use of 
+                # `normal_ordered equivalent`. It would be more efficient to rewrite
+                # the algorithm here, but for readibility and convenience 
+                # let us substitute dx and x with the ladder operators. Since the 
+                # objects for ad and a can pass through each other, we can assign 
+                # them to ladder operators with different subscripts.
+                #
+                # Note that dx here is a right-directed derivative, so the LAST
+                # entry in `poly_factors` `is the FIRST to apply to the CGTransform
+                # of `nonpoly'.
                 
-                to_combo = [(x,y) for x,y in zip(reversed(left_poly_op),
-                                                 reversed(left_poly_op_bopp))]
-                to_combo += [(x,y) for x,y in zip()] 
+                lr_sign = 1
+                if left:
+                    lr_sign = -1
+
+                xi_a = sp.Rational(1,2) * (s + lr_sign)
+                xi_ad = sp.Rational(1,2) * (s - lr_sign)
                 
+                to_combo = []
+                for o in poly_factors:
+                    b, e = o.as_base_exp()
+                    xi = xi_a if isinstance(b, annihilateOp) else xi_ad
+                    
+                    psv_term = _CreateOpAsPSV(b)
+                    der_term = _AnnihilateOpAsDer(dagger(b), xi)
+                    
+                    to_combo.extend([[psv_term, der_term]]*e)
+                    
+                return sp.Add(*mp_helper(list(itertools.product(*to_combo)),
+                                         functools.partial(_normal_ordered_PSBO_on_B,
+                                                           B = CGTransform(nonpoly))))
 
-
+            coefs = []
+            out_star_factors = [] 
+            poly_factors = []
+            nonpoly = None
+            
+            for arg in A.args:
+                if arg.has(annihilateOp, createOp):
+                    if is_nonconstant_polynomial(arg, annihilateOp, createOp):
+                        poly_factors.append(arg)
+                    else:
+                        if nonpoly is None:
+                            nonpoly = do_when_nonpoly_found(poly_factors,
+                                                            arg,
+                                                            False)
+                        else:
+                            out_star_factors.append(do_when_nonpoly_found(poly_factors,
+                                                                          nonpoly,
+                                                                          True))
+                            nonpoly = arg
+                            
+                        poly_factors = []
+                else:
+                    if arg.has(Operator):
+                        # We can avoid code duplicate by using some flags, but
+                        # let us put efficiency first here. Since the two are close
+                        # together, they would be easy to fix anyway.
+                        if nonpoly is None:
+                            nonpoly = do_when_nonpoly_found(poly_factors,
+                                                            arg,
+                                                            False)
+                        else:
+                            out_star_factors.append(do_when_nonpoly_found(poly_factors,
+                                                                          nonpoly,
+                                                                          True))
+                            nonpoly = arg
+                            
+                        poly_factors = []
+                    else:
+                        coefs.append(arg)
+                        
+            # Loop may end with nonpoly or poly in the operators. If it
+            # ends with a nonpoly, then we just append that nonpoly into
+            # the out_star_factors (poly_factors would be empty since there is no
+            # iteration after nonpoly). Otherwise, we apply left-directed PSBOs
+            # to the last nonpoly found.
+            
+            out_star_factors.append(do_when_nonpoly_found(poly_factors,
+                                                          nonpoly,
+                                                          True))
+            
+            return sp.Mul(*coefs, Star(*out_star_factors))
+            
         def treat_sOrdering(A : sOrdering) -> sp.Expr:
             if (A.args[1] != CahillGlauberS.val):
                 if not(A.args[0].is_polynomial(PhaseSpaceVariableOperator)):

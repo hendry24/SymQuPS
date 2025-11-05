@@ -179,7 +179,7 @@ def normal_ordered_equivalent(expr : sp.Expr) -> sp.Expr:
         A_sep = separate_term_oper_by_sub(A)
         coef = A_sep.pop(0)
                 
-        return coef*sp.Mul(*mp_helper(A_sep, _eval_Blasiak))
+        return sp.Mul(coef, *mp_helper(A_sep, _eval_Blasiak))
         # NOTE: no need for _final_swap since this is automaticaly done
         # by the patched sympy.Mul.flatten.
                 

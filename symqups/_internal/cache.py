@@ -65,7 +65,7 @@ class SubCache(list):
         
         for k, v in [[a, (zeta*qq + sp.I*(1/zeta)*pp)/sp.sqrt(2*hbar)],
                      [ad, (zeta*qq - sp.I*(1/zeta)*pp)/sp.sqrt(2*hbar)]]:
-            alpha2qp_subs_dict._set_item(k, v)            
+            alpha2qp_subs_dict._set_item(k, v)         
             alpha2qp_subs_dict._set_item(sc2op_subs_dict[k], 
                                          v.xreplace({qq:qop, pp:pop}))
             
