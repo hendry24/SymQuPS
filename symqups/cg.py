@@ -2,14 +2,12 @@ import sympy as sp
 import itertools, functools
 
 from ._internal.multiprocessing import mp_helper
-from ._internal.basic_routines import (operation_routine, is_nonconstant_polynomial,
-                                       separate_term_by_polynomiality)
+from ._internal.basic_routines import (operation_routine, is_nonconstant_polynomial)
 from ._internal.grouping import (PhaseSpaceVariable, PhaseSpaceObject, Defined, 
                                  HilbertSpaceObject, NotAnOperator, NotAScalar,
                                  PhaseSpaceVariableOperator)
 from ._internal.cache import sub_cache
 from ._internal.preprocessing import preprocess_class
-from ._internal.operator_handling import separate_operator
 
 from .objects.scalars import W, StateFunction, alpha, alphaD
 from .objects.operators import Operator, densityOp, rho, annihilateOp, createOp
@@ -152,6 +150,8 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
 
         """
         
+        if isinstance(mode, sp.Symbol): # deal with decorator
+            mode = mode.name
         mode = mode.lower()
         if mode not in ["star", "psbo", "explicit"]:
             msg = "Invalid mode. Either 'Star','PSBO', or 'explicit'."
@@ -188,7 +188,7 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             coefs = []
             out_star_factors = [] 
             poly_factors = []
-            nonpoly = None
+            nonpoly = None # not used in mode "Star"
             
             def transform_poly_factors(poly_factors):
                 return op2sc(s_ordered_equivalent(sp.Mul(*poly_factors)))
@@ -259,7 +259,7 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
                     else:
                         if mode == "star":
                             out_star_factors.append(op2sc(s_ordered_equivalent(sp.Mul(*poly_factors))))
-                            out_star_factors.append(CGTransform(nonpoly))
+                            out_star_factors.append(CGTransform(arg))
                         else:
                             if nonpoly is None:
                                 nonpoly = nonpoly_found(poly_factors, arg, False)
@@ -275,7 +275,7 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
                         # together, they would be easy to fix anyway.
                         if mode == "star":
                             out_star_factors.append(transform_poly_factors(poly_factors))
-                            out_star_factors.append(CGTransform(nonpoly))
+                            out_star_factors.append(CGTransform(arg))
                         else:
                             if nonpoly is None:
                                 nonpoly = nonpoly_found(poly_factors, arg, False)
