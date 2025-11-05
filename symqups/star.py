@@ -82,10 +82,8 @@ def _HattedStar_Bopp_monomial_A_times_B(A : sp.Expr, B : sp.Expr, left : bool):
     
     if left:
         lr_sgn = -1
-        iter_through = args
     else:
         lr_sgn = 1
-        iter_through = reversed(args)
         
     xi_a = -sp.Rational(1,2) * (s + lr_sgn)
     xi_ad = -sp.Rational(1,2) * (s - lr_sgn)
@@ -95,14 +93,12 @@ def _HattedStar_Bopp_monomial_A_times_B(A : sp.Expr, B : sp.Expr, left : bool):
     coef_factors = []
     op = []
     op_bopp = []
-    for arg in iter_through:
+    for arg in args:
         if arg.has(annihilateOp, createOp):
             b, e = arg.as_base_exp()
-            op.append(b)
-            
             xi = xi_a if isinstance(b, annihilateOp) else xi_ad
-            op_bopp.append([xi, (dagger(b), e)])
-        
+            op.extend([b]*e)
+            op_bopp.extend([[xi, dagger(b)]]*e)
         else:
             coef_factors.append(arg)
     
@@ -122,10 +118,17 @@ def _HattedStar_Bopp_monomial_A_times_B(A : sp.Expr, B : sp.Expr, left : bool):
                 diff_B_wrt.append(o[1])
             else:
                 op.append(o)
-        out_summands.append(sp.Mul(*coef_factors,
-                                   *xi,
-                                   *op,
-                                   sp.Derivative(B, *diff_B_wrt)))
+                
+        if left:
+            out_summands.append(sp.Mul(*coef_factors,
+                                       *xi,
+                                       sp.Derivative(B, *diff_B_wrt),
+                                       *op))
+        else:
+            out_summands.append(sp.Mul(*coef_factors,
+                                       *xi,
+                                       *op,
+                                       sp.Derivative(B, *diff_B_wrt)))
         
     return sp.Add(*out_summands)
     

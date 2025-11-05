@@ -1,4 +1,5 @@
 import sympy as sp
+import itertools
 
 from ._internal.multiprocessing import mp_helper
 from ._internal.basic_routines import (operation_routine, is_nonconstant_polynomial,
@@ -88,31 +89,28 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             # is lazily tested.
             #
             # (1)   Cascaded application of PBSOs (slower, possibly due
-            #       to the multiply nested expressions).
+            #       to the multiply nested expressions). Running .doit 
+            #       afterwards would also be more expensive due to all 
+            #       the nesting.
             #
             # (2)   Star product of the factors, divided by polynomiality
             #       (slower, due to the need to run `s_ordered_equivalent`
             #       before Star which ends up looping through the operator
-            #       string anyway)
+            #       string anyway).
             
-            coef_factors = []
-            out_star_factors = []
-            poly = []
-            for arg in A.args:
-                if is_nonconstant_polynomial(arg, annihilateOp, createOp):
-                    poly.append(arg)
-                elif arg.has(HilbertSpaceObject):
-                    if poly:
-                        out_star_factors.append(op2sc(s_ordered_equivalent(sp.Mul(*poly))))
-                        poly = []
-                    out_star_factors.append(CGTransform(arg))
-                else:
-                    coef_factors.append(arg)
-            
-            if poly:
-                out_star_factors.append(op2sc(s_ordered_equivalent(sp.Mul(*poly))))
-            
-            return sp.Mul(*coef_factors, Star(*out_star_factors))
+            def do_when_nonpoly_found(left_poly_op,
+                                      left_poly_op_bopp,
+                                      nonpoly_factors,
+                                      right_poly_op,
+                                      right_poly_op_bopp):
+                # left = to the left of nonpoly
+                # right_poly_* is ordered left-to-right, and we reverse it here.
+                
+                to_combo = [(x,y) for x,y in zip(reversed(left_poly_op),
+                                                 reversed(left_poly_op_bopp))]
+                to_combo += [(x,y) for x,y in zip()] 
+                
+
 
         def treat_sOrdering(A : sOrdering) -> sp.Expr:
             if (A.args[1] != CahillGlauberS.val):
