@@ -127,26 +127,28 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             Evaluation mode for expressions containing polynomial and nonpolynomial
             parts.
             
-            (1) Cascaded application of PSBOs (SLOW, possibly due
-                to the multiply nested expressions). Running .doit 
+            (1) Cascaded application of PSBOs. This is SLOW, possibly due
+                to the multiply nested expressions. Running `.doit` 
                 afterwards would also be more expensive due to all 
-                the nesting. This is mode "PSBO".
+                the nesting. This is mode `"PSBO"`.
             
             (2) Star product of the CG Transforn of the factors 
-                divided by polynomiality (FAST, since we make 
-                can abuse the commutativity). This is mode "Star".
+                divided by polynomiality. This is FAST, since we 
+                can abuse the efficiency of the star-product algorithm
+                which has no ordering problem for its arguments. 
+                This is mode `"Star"`.
             
             (3) Make every possible word where every operator is
                 replaced by the corresponding PSBO split into 
-                the PSV part and the derivative part. Then normal
+                the PSV part and the derivative part. Then, normal
                 order each word utilizing the similarity between
-                [aOp, adOp] = 1 and [dx, x] = 1 to obtain the explicit
+                `[aOp, adOp] = 1` and `[dx, x] = 1` to obtain the explicit
                 series expanded to the greatest extend possible (i.e., 
                 with the product rule already evaluated). This is SLOW,
                 because it takes multiple loops to (i) separate the factors
                 by polynomiality, (ii) make each word, (iii) normal order
                 each word, and (iv) evaluate each term in the output. This
-                is mode "explicit".
+                is mode `"explicit"`.
 
         """
         
@@ -304,8 +306,6 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
                     out_star_factors.append(transform_poly_factors(poly_factors))
             else:
                 out_star_factors.append(nonpoly_found(poly_factors, nonpoly, True))
-            
-            print("yeah")
             
             return sp.Mul(*coefs, Star(*out_star_factors))
 

@@ -12,6 +12,9 @@ from .scalars import t
 # in circular imports. 
 
 class Operator(Base, HilbertSpaceObject):
+    """
+    Base class for Hilbert space operators.
+    """
     
     base = NotImplemented
     has_sub = True
@@ -21,6 +24,17 @@ class Operator(Base, HilbertSpaceObject):
                                             # This should shut off the assumption system.
     
     def __new__(cls, sub = None):
+        """
+        Construct an operator object.
+        
+        Parameters
+        ----------
+
+        sub : sympify-able, default: None
+            Subscript of the operator representing the subsystem. If `None`,
+            then `sympy.Symbol("")` is used to represent no subscript.
+            
+        """
         sub = treat_sub(sub, cls.has_sub)
         
         if cls.has_sub:
@@ -46,6 +60,9 @@ class Operator(Base, HilbertSpaceObject):
 ###
 
 class HermitianOp(Operator):
+    """
+    Base class for hermitian operators.
+    """
     @typing.final
     def dagger(self):
         return self
@@ -53,14 +70,23 @@ class HermitianOp(Operator):
 ###
 
 class qOp(HermitianOp, qpType, PhaseSpaceVariableOperator):
+    """
+    The operator corresponding to the canonical position `q`.
+    """
     base = r"\hat{q}"
     
 class pOp(HermitianOp, qpType, PhaseSpaceVariableOperator):
+    """
+    The operator corresponding to the canonical momentum `p`.
+    """
     base = r"\hat{p}"
 
 ###
  
 class annihilateOp(Operator, alphaType, PhaseSpaceVariableOperator):
+    """
+    The annihilation operator. 
+    """
     base = r"\hat{a}"
     
     def dagger(self):
@@ -71,6 +97,9 @@ class annihilateOp(Operator, alphaType, PhaseSpaceVariableOperator):
         return True
     
 class createOp(Operator, alphaType, PhaseSpaceVariableOperator):
+    """
+    The creation operator.
+    """
     base = r"\hat{a}^{\dagger}"
         
     def dagger(self):
@@ -83,6 +112,9 @@ class createOp(Operator, alphaType, PhaseSpaceVariableOperator):
 ###
 
 class densityOp(HermitianOp, CannotBoppShift):
+    """
+    The density operator or density matrix.
+    """
     base = r"\rho"
     has_sub = False
     

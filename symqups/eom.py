@@ -3,7 +3,7 @@ from typing import Sequence
 from functools import cached_property
 
 from ._internal.grouping import _AddOnlyExpr
-from ._internal.operator_handling import separate_operator
+from ._internal.math import separate_operator
 from ._internal.preprocessing import preprocess_class
 
 from .objects.scalars import W, t
@@ -64,19 +64,40 @@ class _LindbladDissipator(_AddOnlyExpr):
 
 ###
 
+class _LindbladMasterEquation(sp.Equality):
+    def __new__(cls, lhs, rhs, **options):
+        return super().__new__(cls, lhs, rhs, **options)
+
 @preprocess_class
 class LindbladMasterEquation(sp.Basic):
     """
-    The Lindblad master equation. 
-    
-    Parameters
-    ----------
-    
+    The Lindblad master equation.
     """
     
     is_Equality = True
         
-    def __new__(cls, H : sp.Expr = sp.Integer(0), *dissipators, **options):
+    def __new__(cls, H : sp.Expr = sp.Integer(0), *dissipators):
+        """
+        Construct a Lindblad master equation.
+        
+        Parameters
+        ----------
+        
+        H : sp.Expr, optional
+            The Hamiltonian as a function of `qOp`, `pOp`, `annihilateOp` or `createOp`.
+            
+        *dissipators
+            The Lindblad dissipators. Each entry is a `sympy.Expr` or a sequence of length
+            2 or 3. 
+            
+            -   A single `Expr`, is taken as the whole collapse operator. 
+            -   For a length-2 sequence, the first entry is the dissipator rate coefficient, 
+                while the second entry is the dissipator operator. 
+            -   For a length-3 sequence, the first entry is the dissipator rate coefficient,
+                while the second and third entries are the two operators which specifies a 
+                nondiagonal dissipator. 
+        
+        """
         lhs = sp.Derivative(rho, t())
         
         dissip_lst = []
@@ -105,31 +126,7 @@ class LindbladMasterEquation(sp.Basic):
         rhs = sp.Add(-sp.I/hbar.val * Commutator(H, rho),
                      *dissip_lst)
         
-        obj = super().__new__(cls, lhs, rhs, **options)
-        
-        obj._H = H
-        obj._dissipators = dissip_lst
-        obj._lhs = lhs
-        obj._rhs = rhs
-        obj._equality = sp.Equality(lhs, rhs)
-        
-        return obj
-    
-    @property
-    def H(self) -> sp.Expr:
-        return self._H
-    
-    @property
-    def dissipators(self) -> list:
-        return self._dissipators
-    
-    @property
-    def lhs(self) -> sp.Derivative:
-        return self._lhs
-    
-    @property
-    def rhs(self) -> sp.Expr:
-        return self._rhs
-    
-    def _latex(self, printer):
-        return sp.latex(self._equality)
+        return _LindbladMasterEquation(lhs, rhs)
+
+class LME(LindbladMasterEquation):
+    pass

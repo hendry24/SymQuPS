@@ -6,7 +6,7 @@ from functools import cmp_to_key
 from .basic_routines import screen_type, deep_screen_type
 from .cache import sub_cache
 from .grouping import NotAnOperator, Acting
-from .operator_handling import get_oper_sub, is_universal, separate_operator
+from .math import get_sub, is_universal, separate_operator
 from .multiprocessing import mp_helper
 
 from ..objects.scalars import t
@@ -97,8 +97,8 @@ def patched_Mul_flatten(seq : Sequence) -> Tuple[list, list, list]:
                 # Whether A can move to the left of B, assuming A is originally
                 # to B's right. 
                 
-                A_sub = get_oper_sub(A)
-                B_sub = get_oper_sub(B)
+                A_sub = get_sub(A)
+                B_sub = get_sub(B)
                 
                 # A can be safely reordered with respect to B if they do *not* share
                 # any common 'sub's. 

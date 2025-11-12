@@ -10,6 +10,9 @@ from .._internal.basic_routines import treat_sub, invalid_input
 __all__ = ["q", "p", "alpha", "alphaD", "W"]
 
 class Scalar(Base):
+    """
+    Base class for scalar objects.
+    """
     base = NotImplemented
     has_sub = True
     is_real = True
@@ -19,6 +22,18 @@ class Scalar(Base):
         return name, {"real" : cls.is_real, "commutative" : True}
         
     def __new__(cls, sub = None):
+        """
+        Construct an operator object.
+        
+        Parameters
+        ----------
+
+        sub : sympify-able, default: None
+            Subscript of the scalar representing the subsystem. If `None`,
+            then `sympy.Symbol("")` is used to represent no subscript.
+        
+        """
+ 
         sub = treat_sub(sub, cls.has_sub)
         
         if cls.has_sub:
@@ -41,28 +56,19 @@ class t(Scalar):
 class q(Scalar, PhaseSpaceVariable, qpType):
     """
     The canonical position operator or first phase-space quadrature.
-    
-    Parameters
-    ----------
-    
-    sub : objects castable to sympy.Symbol
-        Subscript signifying subsystem.
     """
     base = r"q"
     
 class p(Scalar, PhaseSpaceVariable, qpType):
     """
-    The canonical position operator or first phase-space quadrature.
-    
-    Parameters
-    ----------
-    
-    sub : objects castable to sympy.Symbol
-        Subscript signifying subsystem.
+    The canonical momentum operator or second phase-space quadrature.
     """
     base = r"p"
     
 class alpha(Scalar, PhaseSpaceVariable, alphaType):
+    """
+    The complex phase space amplitude.
+    """
     base = r"\alpha"
     is_real = False
     
@@ -72,6 +78,9 @@ class alpha(Scalar, PhaseSpaceVariable, alphaType):
         return self.conjugate()
     
 class alphaD(Scalar, PhaseSpaceVariable, alphaType):
+    """
+    The formal variable representing the complex conjugate of `alpha`.
+    """
     base = r"\overline{\alpha}"
     is_real = False
         
@@ -91,14 +100,7 @@ class StateFunction(sp.Expr, PhaseSpaceObject, CannotBoppShift):
     ----------
         
     *vars
-        Variables of the Wigner function. 
-    
-    s : complex number
-        s-paremeter defined within the Cahill-Glauber formalism. Some special
-        values of s:
-            - `s = 0` : Wigner function
-            - `s = 1` : Glauber P function
-            - `s = -1` : Husimi Q function
+        Variables of the state function. 
     """
     
     @property

@@ -1,43 +1,82 @@
 import sympy as sp
 from typing import Sequence, Tuple
 
-from .basic_routines import screen_type, is_nonconstant_polynomial
+from .basic_routines import screen_type
 from .cache import sub_cache
+from .grouping import PhaseSpaceVariable
 
+from ..objects.scalars import Scalar
 from ..objects.operators import Operator, createOp, annihilateOp
 
-# def decouple(expr : sp.Expr):
-#     """
-#     Decouple expressions when the noncommuting symbols actually belong
-#     to different 'sub's.
-#     """
-#     # NOTE: WIP
-        
-#     if not(expr.has(Operator)):
-#         return expr
-    
-#     # Power of Mul
-#     def query(A : sp.Expr):
-#         return (isinstance(A, sp.Pow) 
-#                 and isinstance(A.args[0], sp.Mul) 
-#                 and A.args[0].has(Operator))
-#     def value(A : sp.Pow):
-#         base = A.args[0]
-#         base_separated_by_subs = separate_term_oper_by_sub()
-#         exponent = A.args[1]
-#         separate_term_oper_by_sub(base)
-#         return sp.Mul(*[factor**exponent for factor in base_separated_by_subs])
-#     expr = expr.replace(query, value)
-    
-#     # Functions whose 
-#     functions = []
-#     # expr = expr.replace(lambda A: isinstance(A, sp.exp) and isinstance())
-    
-#     return expr
-
-def get_oper_sub(expr : sp.Expr) -> set[sp.Symbol]:
-    return {atom.sub for atom in expr.atoms(Operator) if atom.has_sub}
+def get_sub(expr : sp.Expr) -> set[sp.Symbol]:
+    return {atom.sub for atom in expr.atoms(Scalar, Operator) if atom.has_sub}
             # Must use a set to avoid repeated 'sub's.
+            
+def is_nonconstant_polynomial(A, *gens):
+    for gen in gens:
+        if A.has(gen) and A.is_polynomial(gen):
+            return True
+    return False
+
+def separate_term_by_polynomiality(expr : sp.Expr, 
+                                   polynomials_in : tuple[sp.Basic]
+                                   ) -> list[sp.Expr] :
+    """
+    Subsequent elements of the output has alternating (non-constant) polynomiality 
+    in 'polynomials_in'. Always starts with a nonpolynomial part. If factors of `expr`
+    start with a polynomial, then the first entry is unity.
+    """
+    
+    if not(isinstance(polynomials_in, Sequence)):
+        polynomials_in = [polynomials_in]
+    
+    screen_type(expr, sp.Add, separate_term_by_polynomiality)
+    
+    if not(isinstance(expr, sp.Mul)):
+        return [expr]
+    
+    out = []
+    same_poly = [sp.Number(1)]
+    for arg in expr.args:
+        if (is_nonconstant_polynomial(arg, *polynomials_in) 
+            == is_nonconstant_polynomial(same_poly[-1], *polynomials_in)):
+            same_poly.append(arg)
+        else:
+            if same_poly:
+                out.append(sp.Mul(*same_poly))
+            same_poly = [arg]
+    
+    # The polynomiality may change at the last argument. If so, then 'factor'
+    # contains the last argument when the loop ends which has not been added
+    # to 'out' yet. Otherwise, 'factor' has not been appended to 'out' since
+    # the last ddetected polynomial change. So in any case, at the end of
+    # the loop, 'factor' contains the leftover arguments not appended yet to 'out',
+    # but it would never be unity. 
+    
+    out.append(sp.Mul(*same_poly))
+        
+    return out
+
+def get_factor_polynomiality(expr : sp.Expr,
+                             polynomials_in : tuple[sp.Basic]
+                             ) -> list[bool]:
+    
+    if not(isinstance(polynomials_in, Sequence)):
+        polynomials_in = [polynomials_in]
+        
+    screen_type(expr, sp.Add, get_factor_polynomiality)
+    
+    if not(isinstance(expr, sp.Mul)):
+        return [is_nonconstant_polynomial(expr, *polynomials_in)]
+    
+    out = []
+    for factor in expr.args:
+        if is_nonconstant_polynomial(factor, *polynomials_in):
+            out.append(True)
+        else:
+            out.append(False)
+    
+    return out
 
 def is_universal(expr : sp.Expr) -> bool:
     """
@@ -58,19 +97,19 @@ def separate_operator(expr: sp.Expr) -> Tuple[sp.Expr, sp.Expr]:
     else:
         args = [expr]
     
-    non_operator = sp.Number(1)
-    operator = sp.Number(1)
+    non_operator = []
+    operator = []
     
     for arg in args:
         if arg.has(Operator):
-            operator *= arg
+            operator.append(arg)
         else:
-            non_operator *= arg
+            non_operator.append(arg)
     
     # Even noncommuting symbols should commute with Operator,
     # so they go into non_operator.
     
-    return non_operator, operator
+    return sp.Mul(*non_operator), sp.Mul(*operator)
 
 def collect_alpha_type_oper_from_monomial_by_sub(expr : sp.Expr) -> Tuple[sp.Expr, dict, dict]:
     expr = sp.sympify(expr)
@@ -85,7 +124,7 @@ def collect_alpha_type_oper_from_monomial_by_sub(expr : sp.Expr) -> Tuple[sp.Exp
     else:
         args = [expr]
     
-    non_operator = sp.Number(1)
+    non_operator = []
     collect_ad = {sub : [createOp(sub), sp.Number(0)] for sub in sub_cache}
     collect_a = {sub : [annihilateOp(sub), sp.Number(0)] for sub in sub_cache}
     for A_ in args:
@@ -98,9 +137,9 @@ def collect_alpha_type_oper_from_monomial_by_sub(expr : sp.Expr) -> Tuple[sp.Exp
         elif A_.has(annihilateOp):
             collect_a[A_.args[0].sub][1] += A_.args[1]
         else:
-            non_operator *= A_
+            non_operator.append(A_)
             
-    return non_operator, collect_ad, collect_a
+    return sp.Mul(*non_operator), collect_ad, collect_a
 
 def separate_term_oper_by_sub(expr : sp.Expr) -> list[sp.Expr]:
     """
@@ -138,9 +177,9 @@ def separate_term_oper_by_sub(expr : sp.Expr) -> list[sp.Expr]:
     # to the next entry in the output.
 
     out = [non_op, oper.args[0]]
-    sub_group = get_oper_sub(oper.args[0])
+    sub_group = get_sub(oper.args[0])
     for factor in oper.args[1:]:
-        subs_in_factor = list(get_oper_sub(factor))
+        subs_in_factor = list(get_sub(factor))
                 
         other_subs = []
         in_the_sub_group = False
@@ -212,3 +251,51 @@ def separate_term_oper_by_sub(expr : sp.Expr) -> list[sp.Expr]:
     ###################
                 
     return out
+
+def collect_psv_in_monomial_by_sub(expr: sp.Expr) -> Tuple[sp.Expr, dict]:
+    others = []
+    sub_factor_dict = {sub : [] for sub in sub_cache}
+    
+    args = expr.args if expr.is_Mul else [expr]
+    for arg in args:
+        psv_atom = arg.atoms(PhaseSpaceVariable)
+        if psv_atom:
+            sub = list(psv_atom)[0]
+            sub_factor_dict[sub].append(arg)
+        else:
+            others.append(arg)
+    
+    others = sp.Mul(*others)
+    sub_factor_dict = {k : sp.Mul(*v) 
+                       for k, v in sub_factor_dict.items()}
+    
+    return others, sub_factor_dict
+
+# def decouple(expr : sp.Expr):
+#     """
+#     Decouple expressions when the noncommuting symbols actually belong
+#     to different 'sub's.
+#     """
+#     # NOTE: WIP
+        
+#     if not(expr.has(Operator)):
+#         return expr
+    
+#     # Power of Mul
+#     def query(A : sp.Expr):
+#         return (isinstance(A, sp.Pow) 
+#                 and isinstance(A.args[0], sp.Mul) 
+#                 and A.args[0].has(Operator))
+#     def value(A : sp.Pow):
+#         base = A.args[0]
+#         base_separated_by_subs = separate_term_oper_by_sub()
+#         exponent = A.args[1]
+#         separate_term_oper_by_sub(base)
+#         return sp.Mul(*[factor**exponent for factor in base_separated_by_subs])
+#     expr = expr.replace(query, value)
+    
+#     # Functions whose 
+#     functions = []
+#     # expr = expr.replace(lambda A: isinstance(A, sp.exp) and isinstance())
+    
+#     return expr
