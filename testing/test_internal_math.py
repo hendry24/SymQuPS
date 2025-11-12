@@ -2,40 +2,57 @@ import pytest
 import sympy as sp
 
 from symqups.objects.operators import Operator, createOp, annihilateOp, rho
+from symqups.objects.scalars import alpha, alphaD
 from symqups._internal.cache import sub_cache
+
+from utils import expected_to_fail
 
 # TESTED FUNCTIONALITIES
 # ======================
 
-from symqups._internal.basic_routines import separate_term_by_polynomiality
 from symqups._internal.math import (
-    get_oper_sub,
-    is_universal,
+    get_sub,
+    is_nonconstant_polynomial,
+    separate_term_by_polynomiality,
+    get_factor_polynomiality,
+    has_universal_oper,
     separate_operator,
+    collect_alpha_type_oper_from_monomial_by_sub,
     separate_term_oper_by_sub,
-    collect_alpha_type_oper_from_monomial_by_sub
+    collect_psv_in_monomial_by_sub
 )
 
+###
+
 @pytest.mark.fast
-class TestOperatorHandling:
-    def test_get_oper_sub(self):
-        assert len(get_oper_sub(rho)) == 0
-        assert get_oper_sub(createOp(1)) == {createOp(1).sub}
-        sub_cache.clear()
-        a = [annihilateOp(i) for i in range(4)]
-        ad = [createOp(i) for i in range(4)]
-        assert get_oper_sub(sp.Mul(*a, *ad)) == set(sub_cache)
+class TestInternalMath:
+    def test_get_sub(self):
+        for a, ad in [[annihilateOp, createOp],
+                      [alpha, alphaD]]:
+            assert len(get_sub(rho)) == 0
+            assert get_sub(ad(1)) == {ad(1).sub}
+            sub_cache.clear()
+            aa = [a(i) for i in range(4)]
+            aad = [ad(i) for i in range(4)]
+            assert get_sub(sp.Mul(*aa, *aad)) == set(sub_cache)
+    
+    def test_is_nonconstant_polynomial(self):
+        x = sp.Symbol("x")
+        y = sp.Symbol("y")
+        assert not is_nonconstant_polynomial(sp.Number(1), x)
+        assert not is_nonconstant_polynomial(x, y)
+        assert is_nonconstant_polynomial(x, x)
+        assert is_nonconstant_polynomial(2*x**3+x, x)
+        assert not is_nonconstant_polynomial(sp.exp(x), x)
+        assert not is_nonconstant_polynomial(x**1.2, x)
+        assert not is_nonconstant_polynomial(sp.sqrt(x) + x**2, x )
+    
+    def has_universal_oper(self):
+        expected_to_fail(lambda: has_universal_oper(1))
         
-    def is_universal(self):
-        try:
-            is_universal(1)
-            raise RuntimeError("Test failed")
-        except:
-            pass
-        
-        assert is_universal(rho) == True
-        assert is_universal(createOp()) == False
-        assert is_universal(rho*createOp() == True)
+        assert has_universal_oper(rho) == True
+        assert has_universal_oper(createOp()) == False
+        assert has_universal_oper(rho*createOp() == True)
     
     def test_separate_operator(self):
         op_1 = Operator(1)
@@ -43,11 +60,7 @@ class TestOperatorHandling:
         x = sp.Symbol("x")
         foo = sp.Function("f")(x, op_1)
         
-        try:
-            separate_term_by_polynomiality(x+2)
-            raise RuntimeError("Test failed.")
-        except:
-            pass
+        expected_to_fail(lambda: separate_term_by_polynomiality(x+2))
 
         assert separate_operator(op_1) == (1, op_1)
         assert separate_operator(x) == (x, 1)
@@ -64,11 +77,8 @@ class TestOperatorHandling:
         ad_2 = createOp(2)
         x = sp.Symbol("x")
         
-        try:
-            separate_term_by_polynomiality(a_1+1, (annihilateOp, createOp))
-            raise RuntimeError("Test failed.")
-        except:
-            pass
+        expected_to_fail(lambda: separate_term_by_polynomiality(a_1+1, 
+                                                                (annihilateOp, createOp)))
         
         assert (separate_term_by_polynomiality(a_1, (annihilateOp, createOp))
                 == [a_1])

@@ -9,3 +9,11 @@ def arithmetic_test(A):
     assert A**2 == A*A
     assert A**(0) == 1
     assert sp.sqrt(A)
+    
+def expected_to_fail(foo : callable):
+    try:
+        foo()
+    except:
+        return
+
+    raise RuntimeError("This part is expected to fail, but succeded instead.")

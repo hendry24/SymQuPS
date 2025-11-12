@@ -12,15 +12,12 @@ def get_sub(expr : sp.Expr) -> set[sp.Symbol]:
     return {atom.sub for atom in expr.atoms(Scalar, Operator) if atom.has_sub}
             # Must use a set to avoid repeated 'sub's.
             
-def is_nonconstant_polynomial(A, *gens):
-    for gen in gens:
-        if A.has(gen) and A.is_polynomial(gen):
-            return True
-    return False
+def is_nonconstant_polynomial(A : sp.Expr, *gens):
+    return A.is_polynomial(*gens) and all(A.has(gen) for gen in gens)
 
-def separate_term_by_polynomiality(expr : sp.Expr, 
-                                   polynomials_in : tuple[sp.Basic]
-                                   ) -> list[sp.Expr] :
+def separate_term_by_nonconstant_polynomiality(expr : sp.Expr, 
+                                               polynomials_in : tuple[sp.Basic]
+                                               ) -> list[sp.Expr] :
     """
     Subsequent elements of the output has alternating (non-constant) polynomiality 
     in 'polynomials_in'. Always starts with a nonpolynomial part. If factors of `expr`
@@ -30,7 +27,7 @@ def separate_term_by_polynomiality(expr : sp.Expr,
     if not(isinstance(polynomials_in, Sequence)):
         polynomials_in = [polynomials_in]
     
-    screen_type(expr, sp.Add, separate_term_by_polynomiality)
+    screen_type(expr, sp.Add, separate_term_by_nonconstant_polynomiality)
     
     if not(isinstance(expr, sp.Mul)):
         return [expr]
@@ -57,14 +54,14 @@ def separate_term_by_polynomiality(expr : sp.Expr,
         
     return out
 
-def get_factor_polynomiality(expr : sp.Expr,
+def get_factor_nonconstant_polynomiality(expr : sp.Expr,
                              polynomials_in : tuple[sp.Basic]
                              ) -> list[bool]:
     
     if not(isinstance(polynomials_in, Sequence)):
         polynomials_in = [polynomials_in]
         
-    screen_type(expr, sp.Add, get_factor_polynomiality)
+    screen_type(expr, sp.Add, get_factor_nonconstant_polynomiality)
     
     if not(isinstance(expr, sp.Mul)):
         return [is_nonconstant_polynomial(expr, *polynomials_in)]

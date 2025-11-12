@@ -7,7 +7,6 @@ from ._internal.grouping import (PhaseSpaceVariable, PhaseSpaceObject, Defined,
                                  HilbertSpaceObject, NotAnOperator, NotAScalar,
                                  PhaseSpaceVariableOperator)
 from ._internal.cache import sub_cache
-from ._internal.math import is_nonconstant_polynomial
 from ._internal.preprocessing import preprocess_class
 
 from .objects.scalars import W, StateFunction, alpha, alphaD
@@ -161,11 +160,11 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             raise ValueError(msg)
         
         if expr.is_Equality:
-            from .eom import LindbladMasterEquation
+            from .eom import _LindbladMasterEquation
             
             lhs = expr.lhs
             rhs = expr.rhs
-            if isinstance(expr, LindbladMasterEquation):
+            if isinstance(expr, _LindbladMasterEquation):
                 lhs /= pi.val
                 rhs /= pi.val
             return sp.Equality(CGTransform(lhs),
@@ -179,7 +178,7 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
         
         def treat_mul(A : sp.Expr) -> sp.Expr:
         
-            if (A.is_polynomial(annihilateOp, createOp) and
+            if (A.is_polynomial(PhaseSpaceVariableOperator) and
                 all(isinstance(atom, PhaseSpaceVariableOperator) 
                     for atom in A.atoms(Operator))):
                 return op2sc(s_ordered_equivalent(A))
@@ -256,8 +255,9 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             nonpoly_found = nonpoly_found_PSBO if mode.lower() == "PSBO" else nonpoly_found_explicit
             
             for arg in A.args:
-                if arg.has(annihilateOp, createOp):
-                    if is_nonconstant_polynomial(arg, annihilateOp, createOp):
+                arg : sp.Expr
+                if arg.has(PhaseSpaceVariableOperator):
+                    if arg.is_polynomial(PhaseSpaceVariableOperator):
                         poly_factors.append(arg)
                     else:
                         if mode == "star":
@@ -414,7 +414,7 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
             return sc2op(A)            
             
         def treat_mul(A : sp.Mul) -> sp.Expr:
-            if (is_nonconstant_polynomial(A, alpha, alphaD) and
+            if (A.is_polynomial(PhaseSpaceVariable) and
                 not(A.has(StateFunction))):
                 return sOrdering(sc2op(A), lazy=lazy)                                                                                               
             
@@ -423,17 +423,19 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
             n_dict = {sub : 0 for sub in sub_cache}
             others = []
             for arg in A.args:
-                if is_nonconstant_polynomial(arg, alphaD):
-                    b, e = arg.as_base_exp()
-                    m_dict[b.sub] += e
-                elif is_nonconstant_polynomial(arg, alpha):
-                    b, e = arg.as_base_exp()
-                    n_dict[b.sub] += e
-                else:
-                    if arg.has(alpha, alphaD):
-                        others.append(arg)
+                if arg.has(PhaseSpaceVariable):
+                    if arg.is_polynomial(PhaseSpaceVariable):                        
+                        b, e = arg.as_base_exp()
+                        if isinstance(b, alphaD):
+                            m_dict[b.sub] += e
+                        elif isinstance(b, alpha):
+                            n_dict[b.sub] += e
+                        else:
+                            raise ValueError("Invalid value here.")
                     else:
-                        coefs.append(arg)
+                        others.append(arg)
+                else:
+                    coefs.append(arg)
                         
             # Here, 'others' may contain nonpolynomial functions in
             # the PSV like exp(alpha) and is generally a Mul object.

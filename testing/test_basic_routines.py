@@ -1,6 +1,8 @@
 import pytest
 import sympy as sp
 
+from utils import expected_to_fail
+
 # TESTED FUNCTIONALITIES
 # ======================
 
@@ -26,11 +28,7 @@ class TestBasicRoutines:
     def test_screen_type(self):
         x_pass = sp.Add(sp.Symbol("x"), 2)
         x_raise = sp.Symbol("x")
-        try:
-            screen_type(x_raise, sp.Symbol, "")
-            raise RuntimeError("Test failed.")
-        except:
-            pass
+        expected_to_fail(lambda : screen_type(x_raise, sp.Symbol, ""))
         screen_type(x_pass, (sp.Symbol, sp.Number), "test")
         
     def test_deep_screen_type(self):
@@ -38,19 +36,11 @@ class TestBasicRoutines:
         x_raise_2 = sp.Add(sp.Symbol("x"), 2)
         x_pass = sp.Number(1)
         for xx in [x_raise_1, x_raise_2]:
-            try:
-                deep_screen_type(xx, sp.Symbol, "")
-                raise RuntimeError("Test failed.")
-            except:
-                pass
+            expected_to_fail(lambda: deep_screen_type(xx, sp.Symbol, ""))
         screen_type(x_pass, (sp.Symbol, sp.Function), "test")
         
     def test_invalid_type(self):
-        try:
-            invalid_input("test", "test")
-            raise RuntimeError("Test failed.")
-        except:
-            pass
+        expected_to_fail(lambda: invalid_input("test", "test"))
         
     def test_operation_routine(self):
         

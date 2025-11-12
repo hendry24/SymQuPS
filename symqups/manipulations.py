@@ -2,7 +2,7 @@ import sympy as sp
 import sympy.physics.quantum as spq
 
 from ._internal.basic_routines import operation_routine, default_treat_add
-from ._internal.math import is_universal, separate_term_oper_by_sub, is_nonconstant_polynomial
+from ._internal.math import has_universal_oper, separate_term_oper_by_sub
 from ._internal.cache import ( op2sc_subs_dict, sc2op_subs_dict, 
                               alpha2qp_subs_dict, qp2alpha_subs_dict, ProtectedDict)
 from ._internal.multiprocessing import mp_helper
@@ -172,8 +172,8 @@ def normal_ordered_equivalent(expr : sp.Expr) -> sp.Expr:
         return default_treat_add(A.args, normal_ordered_equivalent)
     
     def treat_mul(A : sp.Expr) -> sp.Expr:
-        if (not(is_nonconstant_polynomial(A, annihilateOp, createOp)) 
-            or is_universal(expr)):
+        if (not(A.is_polynomial(annihilateOp, createOp)) 
+            or has_universal_oper(expr)):
             return A
 
         A_sep = separate_term_oper_by_sub(A)

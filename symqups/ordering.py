@@ -3,14 +3,14 @@ from itertools import permutations
 from typing import Tuple
 import functools
 
-from ._internal.grouping import HilbertSpaceObject, CannotBoppShift
+from ._internal.grouping import HilbertSpaceObject, CannotBoppShift, PhaseSpaceVariableOperator
 from ._internal.cache import sub_cache
 from ._internal.basic_routines import (operation_routine, 
                                        default_treat_add,)
 from ._internal.math import (separate_operator,
                              has_universal_oper,
                              get_sub,
-                             separate_term_by_polynomiality,
+                             separate_term_by_nonconstant_polynomiality,
                              collect_alpha_type_oper_from_monomial_by_sub,
                              separate_term_oper_by_sub)
 from ._internal.preprocessing import preprocess_class
@@ -60,79 +60,55 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
             return make(A)
             
         def treat_function(A : sp.Expr) -> sp.Expr:
-            if has_ordering_ambiguity(A):
-                return make(A)
-            return A
+            return make(A)
         
         def treat_mul(A : sp.Expr) -> sp.Expr:
+            if not(has_ordering_ambiguity(A)):
+                return A
+            
             if lazy:
                 leftovers, bracket_arg = separate_operator(A)
                 return leftovers * make(bracket_arg)
             
             # We don't care about operator ordering inside
             # the braces, so might as well return it pretty.
+            coefs = []
+            poly = {sub : [
+                0, # number of polynomial ad_sub
+                0, # number of polynomial a_sub
+            ] for sub in sub_cache}
+            nonpoly = [] 
+            # We shove all nonpolynomial to the right of the polynomial part
+            # since one nonpoly factor
+            # may contain multiple subs. Separating "separable" factors
+            # into their own ordering braces would be unnecessarily 
+            # expensive, so we don't do that.
             #
-            # Here, factors belonging to different 'sub's go in their
-            # own braces. If there are "coupled factors", such as exp(a_1*a_2),
-            # then the factors corresponding to the "coupled 'sub's" are
-            # enclosed by the same braces. The expression inside the braces
-            # are normal-ordered to the "greatest extent possible":
-            # the polynomial parts are collected and normal-ordered, and
-            # the nonpolynomial parts go after the poynomial parts.
-            
-            bracket_arg_by_sub = separate_term_oper_by_sub(A)
-                                            
-            out = bracket_arg_by_sub.pop(0) # gets all non-Operator subexpresions.
-            
-            for arg in bracket_arg_by_sub:
-                
-                if not(has_ordering_ambiguity(arg)):
-                    out *= arg
-                  
-                elif arg.is_polynomial():
-                    
-                    # contains only one sub because there are no coupled expressions.
-                    
-                    _, collect_ad, collect_a = \
-                        collect_alpha_type_oper_from_monomial_by_sub(arg)
-                    
-                    arg_sub_lst = list(get_sub(arg))
-                    
-                    arg_sub = arg_sub_lst[0]
-                    
-                    ad, m = collect_ad[arg_sub]
-                    a, n = collect_a[arg_sub]
-                    
-                    if (m==0) or (n==0):
-                        out *= ad**m * a**n
-                    else:
-                        out *= make(ad**m * a**n)
-                    
-                else:
-                    
-                    arg_by_polynomiality = separate_term_by_polynomiality(arg,
-                                                                          (Operator,))
-                    collect_polynomial = sp.Number(1)
-                    collect_nonpolynomial = sp.Number(1)
-                    for argg in arg_by_polynomiality:
-                        if argg.is_polynomial():
-                            collect_polynomial *= argg
+            for arg in A.args:
+                arg : sp.Expr
+                if arg.has(PhaseSpaceVariableOperator):
+                    if arg.is_polynomial(PhaseSpaceVariableOperator):
+                        b, e = arg.as_base_exp()
+                        if isinstance(b, createOp):
+                            poly[b.sub][0] += e
+                        elif isinstance(b, annihilateOp):
+                            poly[b.sub][1] += e
                         else:
-                            collect_nonpolynomial *= argg
-                    
-                    _, collect_ad, collect_a = \
-                        collect_alpha_type_oper_from_monomial_by_sub(collect_polynomial)
-                        
-                    collect_polynomial_normal_ordered = sp.Number(1)
-                    for sub in get_sub(arg):
-                        collect_polynomial_normal_ordered *= \
-                            sp.Pow(*collect_ad[sub]) * sp.Pow(*collect_a[sub])
-                        
-                    out *= make(collect_polynomial_normal_ordered * collect_nonpolynomial)
-                        
-            return out
+                            raise ValueError("Invalid value.")
+                    else:
+                        nonpoly.append(arg)
+                else:
+                    coefs.append(arg)
+            
+            in_braces = make(sp.Mul(*[createOp(sub)**pow_lst[0] for sub, pow_lst in poly.items()],
+                                    *[annihilateOp(sub)**pow_lst[1] for sub, pow_lst in poly.items()]
+                                    *nonpoly))
+            
+            return sp.Mul(*coefs, in_braces)
 
         def make(A : sp.Expr) -> sOrdering:
+            if not(has_ordering_ambiguity(A)):
+                return A
             return super(sOrdering, cls).__new__(cls, A, s)
            
         return operation_routine(sp.expand(sp.sympify(expr)),
