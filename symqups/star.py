@@ -64,7 +64,7 @@ def _Star_Bopp_monomial_A_times_B(A : sp.Expr, B : sp.Expr, left : bool):
                                  xi**j])
             der_wrt.append((dagger(b), j))
         
-        der = sp.Derivative(B, *der_wrt).doit()
+        der = sp.Derivative(B, *der_wrt)
         y = sp.Mul(*coef_factors, *bopp_factors, der)
         bopped_series_summands.append(y)
     

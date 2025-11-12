@@ -13,7 +13,6 @@ from symqups.objects.operators import (Operator, qOp, pOp, createOp, annihilateO
                                         densityOp, rho)
 from symqups.utils import get_random_poly
 from symqups.ordering import sOrdering
-from symqups.star import _Primed, _deprime
 
 from symqups import hbar, zeta
 
@@ -23,20 +22,21 @@ zeta = zeta.val
 # TESTED FUNCTIONALITIES
 ########################
 
-from symqups.manipulations import dagger, qp2alpha, alpha2qp, normal_ordered_equivalent, explicit, express
+from symqups.manipulations import (
+    dagger, qp2alpha, alpha2qp, normal_ordered_equivalent, 
+    explicit_sOrdering, express_sOrdering
+)
 
 ###
     
 @pytest.mark.fast
 def test_core_arithmetic():
-    for A in [Scalar(), Operator(), 
-              _Primed(alpha()), _Primed(annihilateOp())]:
+    for A in [Scalar(), Operator()]:
         arithmetic_test(A)
 
 @pytest.mark.fast
 def test_compound_expressions_with_objects():
-    for A in [Scalar(), Operator(), 
-              _Primed(alpha()), _Primed(annihilateOp())]:
+    for A in [Scalar(), Operator()]:
         assert dill.loads(dill.dumps(sp.Expr(A))) == sp.Expr(A)
         assert sp.Expr(A).args[0] == A
         assert dill.loads(dill.dumps(sp.Function("F")(A))) == sp.Function("F")(A)
@@ -56,13 +56,6 @@ def test_multiplication_reordering():
     # Different 'sub's > commute
     assert a_op_1*ad_op_2 == ad_op_2*a_op_1
     assert ad_op_1*a_op_2 == a_op_2*ad_op_1
-     
-@pytest.mark.full
-def test_deprime():
-    rand_poly = get_random_poly([q(), p(), alpha(), alphaD(), Scalar()],
-                                [1, sp.Symbol("x"), sp.Symbol("y"), sp.exp(sp.Symbol("z"))],
-                                dice_throw = 3)
-    assert sp.expand(_deprime(_Primed(rand_poly)) - rand_poly) == 0
 
 @pytest.mark.full
 def test_alpha2qp_and_qp2alpha():
@@ -140,24 +133,24 @@ def test_normal_ordered_equivalent():
             == 0)
     
 @pytest.mark.full
-def test_explicit_and_express():
+def test_explicit_and_express_sOrdering():
     a = annihilateOp()
     ad = createOp()
 
     expr = 2*sOrdering(a*ad, s=1)+3
-    assert not(explicit(expr).has(sOrdering))
+    assert not(explicit_sOrdering(expr).has(sOrdering))
     
     expr = 2*sOrdering(a*ad, s=0.5)+3
-    assert explicit(expr).has(sOrdering)
+    assert explicit_sOrdering(expr).has(sOrdering)
     
     expr = 2*sOrdering(sp.exp(a*ad), s=1)**2+3
-    assert explicit(expr) == 2*sOrdering(sp.exp(a*ad), s=1)**2+3
+    assert explicit_sOrdering(expr) == 2*sOrdering(sp.exp(a*ad), s=1)**2+3
 
     ###
     
     expr = 2*sOrdering(a*ad, s = 1)
-    assert express(expr, t = 0.2).has(sOrdering)
+    assert express_sOrdering(expr, t = 0.2).has(sOrdering)
 
     expr = 2*sOrdering(a*ad, s = 1)
-    assert not(express(expr, t = -1).has(sOrdering))
-    assert express(expr, t = -1, explicit=False).has(sOrdering)
+    assert not(express_sOrdering(expr, t = -1).has(sOrdering))
+    assert express_sOrdering(expr, t = -1, explicit=False).has(sOrdering)

@@ -6,7 +6,7 @@ from symqups.objects.scalars import q, p, alpha, alphaD
 from symqups.objects.operators import qOp, pOp, annihilateOp, createOp
 
 from symqups.ordering import sOrdering
-from symqups.manipulations import qp2alpha, express
+from symqups.manipulations import qp2alpha, express_sOrdering
 
 from symqups import s as CahillGlauberS
 
@@ -60,6 +60,6 @@ def test_iCGTransform():
              [qOp(), pOp(), annihilateOp(), createOp()],
              iCGTransform)
     
-    A = express(iCGTransform(alpha()*alphaD()), 1, explicit=True)
-    B = express(sOrdering(annihilateOp()*createOp()), 1, explicit=True)
+    A = express_sOrdering(iCGTransform(alpha()*alphaD()), 1, explicit=True)
+    B = express_sOrdering(sOrdering(annihilateOp()*createOp()), 1, explicit=True)
     assert sp.simplify(A-B) == 0

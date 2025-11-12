@@ -7,11 +7,11 @@ from symqups._internal.cache import sub_cache
 # TESTED FUNCTIONALITIES
 # ======================
 
-from symqups._internal.operator_handling import (
+from symqups._internal.basic_routines import separate_term_by_polynomiality
+from symqups._internal.math import (
     get_oper_sub,
     is_universal,
     separate_operator,
-    separate_term_by_polynomiality,
     separate_term_oper_by_sub,
     collect_alpha_type_oper_from_monomial_by_sub
 )
@@ -65,18 +65,19 @@ class TestOperatorHandling:
         x = sp.Symbol("x")
         
         try:
-            separate_term_by_polynomiality(a_1+1)
+            separate_term_by_polynomiality(a_1+1, (annihilateOp, createOp))
             raise RuntimeError("Test failed.")
         except:
             pass
         
-        assert (separate_term_by_polynomiality(a_1)
+        assert (separate_term_by_polynomiality(a_1, (annihilateOp, createOp))
                 == [a_1])
-        assert (separate_term_by_polynomiality(a_1**2*ad_2)
-                == [a_1**2*ad_2])
-        assert (separate_term_by_polynomiality(a_1**2*ad_2*sp.exp(x))
-                == [a_1**2*ad_2*sp.exp(x)])
-        assert (separate_term_by_polynomiality(a_1*x*sp.exp(ad_2)*ad_2**3 * a_1**0.3 * 2**ad_2)
+        assert (separate_term_by_polynomiality(a_1**2*ad_2, (annihilateOp, createOp))
+                == [1, a_1**2*ad_2])
+        assert (separate_term_by_polynomiality(a_1**2*ad_2*sp.exp(x), (annihilateOp, createOp))
+                == [sp.exp(x), a_1**2*ad_2])
+        assert (separate_term_by_polynomiality(a_1*x*sp.exp(ad_2)*ad_2**3 * a_1**0.3 * 2**ad_2,
+                                               (annihilateOp, createOp))
                 == [x, a_1**1.3, sp.exp(ad_2), ad_2**3, 2**ad_2])
         
     def test_collect_alpha_type_oper_from_monomial_by_sub(self):
@@ -89,13 +90,13 @@ class TestOperatorHandling:
         x = sp.Symbol("x")
         
         try:
-            separate_term_by_polynomiality(a_1+1)
+            separate_term_by_polynomiality(a_1+1, (annihilateOp, createOp))
             raise RuntimeError("Test failed.")
         except:
             pass
         
         try:
-            separate_term_by_polynomiality(sp.exp(ad_2))
+            separate_term_by_polynomiality(sp.exp(ad_2), (annihilateOp, createOp))
             raise RuntimeError("Test failed.")
         except:
             pass

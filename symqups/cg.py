@@ -305,6 +305,8 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             else:
                 out_star_factors.append(nonpoly_found(poly_factors, nonpoly, True))
             
+            print("yeah")
+            
             return sp.Mul(*coefs, Star(*out_star_factors))
 
         def treat_sOrdering(A : sOrdering) -> sp.Expr:
