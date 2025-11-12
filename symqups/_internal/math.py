@@ -78,7 +78,7 @@ def get_factor_polynomiality(expr : sp.Expr,
     
     return out
 
-def is_universal(expr : sp.Expr) -> bool:
+def has_universal_oper(expr : sp.Expr) -> bool:
     """
     Returns 'True' if the input has at least one universally-noncommuting
     operator, e.g. 'densityOp'. Returns 'False' otherwise.
@@ -164,7 +164,7 @@ def separate_term_oper_by_sub(expr : sp.Expr) -> list[sp.Expr]:
     if not(expr.has(Operator)):
         return [expr]
     
-    if is_universal(expr):
+    if has_universal_oper(expr):
         raise ValueError("Input must not contain universally noncommuting operators.")
      
     non_op, oper = separate_operator(expr)

@@ -14,6 +14,7 @@ from .manipulations import dagger
 
 from . import s as CahillGlauberS
 
+@preprocess_class
 class _BoppActor(Base, Acting):
     """
     Base class for HSBS and PSBO.

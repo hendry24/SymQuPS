@@ -2,17 +2,18 @@ import sympy as sp
 import itertools, functools
 
 from ._internal.multiprocessing import mp_helper
-from ._internal.basic_routines import (operation_routine, is_nonconstant_polynomial)
+from ._internal.basic_routines import operation_routine
 from ._internal.grouping import (PhaseSpaceVariable, PhaseSpaceObject, Defined, 
                                  HilbertSpaceObject, NotAnOperator, NotAScalar,
                                  PhaseSpaceVariableOperator)
 from ._internal.cache import sub_cache
+from ._internal.math import is_nonconstant_polynomial
 from ._internal.preprocessing import preprocess_class
 
 from .objects.scalars import W, StateFunction, alpha, alphaD
 from .objects.operators import Operator, densityOp, rho, annihilateOp, createOp
 
-from .bopp import HSBS, PSBO
+from .bopp import PSBO
 from .star import Star, HattedStar
 from .ordering import sOrdering
 from .manipulations import (qp2alpha, op2sc, alpha2qp, sc2op, Commutator,

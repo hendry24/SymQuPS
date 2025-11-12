@@ -1,22 +1,20 @@
 import sympy as sp
 from itertools import permutations
 from typing import Tuple
-import warnings
 import functools
 
 from ._internal.grouping import HilbertSpaceObject, CannotBoppShift
 from ._internal.cache import sub_cache
 from ._internal.basic_routines import (operation_routine, 
-                                       default_treat_add, 
-                                       separate_term_by_polynomiality)
+                                       default_treat_add,)
 from ._internal.math import (separate_operator,
-                                           is_universal,
-                                           get_oper_sub,
-                                            collect_alpha_type_oper_from_monomial_by_sub,
-                                            separate_term_oper_by_sub)
+                             has_universal_oper,
+                             get_sub,
+                             separate_term_by_polynomiality,
+                             collect_alpha_type_oper_from_monomial_by_sub,
+                             separate_term_oper_by_sub)
 from ._internal.preprocessing import preprocess_class
 
-from .objects.scalars import q, p, alpha, alphaD
 from .objects.operators import Operator, annihilateOp, createOp
 
 from .manipulations import qp2alpha
@@ -35,7 +33,7 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
         
         # We assume that the input does not contain any universally-noncommuting
         # operators like 'densityOp'.
-        if is_universal(expr):
+        if has_universal_oper(expr):
             msg = "No universal operators should be put into s-ordering. "
             msg += "Input may contain 'densityOp' which never goes in "
             msg += "the ordering braces."
@@ -91,14 +89,14 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
                 if not(has_ordering_ambiguity(arg)):
                     out *= arg
                   
-                elif arg.is_polynomial(): 
+                elif arg.is_polynomial():
                     
                     # contains only one sub because there are no coupled expressions.
                     
                     _, collect_ad, collect_a = \
                         collect_alpha_type_oper_from_monomial_by_sub(arg)
                     
-                    arg_sub_lst = list(get_oper_sub(arg))
+                    arg_sub_lst = list(get_sub(arg))
                     
                     arg_sub = arg_sub_lst[0]
                     
@@ -126,7 +124,7 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
                         collect_alpha_type_oper_from_monomial_by_sub(collect_polynomial)
                         
                     collect_polynomial_normal_ordered = sp.Number(1)
-                    for sub in get_oper_sub(arg):
+                    for sub in get_sub(arg):
                         collect_polynomial_normal_ordered *= \
                             sp.Pow(*collect_ad[sub]) * sp.Pow(*collect_a[sub])
                         

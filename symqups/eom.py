@@ -1,18 +1,16 @@
 import sympy as sp
 from typing import Sequence
-from functools import cached_property
 
 from ._internal.grouping import _AddOnlyExpr
 from ._internal.math import separate_operator
 from ._internal.preprocessing import preprocess_class
 
-from .objects.scalars import W, t
+from .objects.scalars import t
 from .objects.operators import rho, Operator
 
 from .manipulations import dagger, Commutator
-from .cg import CGTransform
 
-from . import hbar, pi
+from . import hbar
 
 __all__ = ["LindbladMasterEquation"]
 

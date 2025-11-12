@@ -1,13 +1,10 @@
 import sympy as sp
-from sympy.printing.latex import LatexPrinter
 from typing import Sequence, Tuple
 from functools import cmp_to_key
 
-from .basic_routines import screen_type, deep_screen_type
 from .cache import sub_cache
-from .grouping import NotAnOperator, Acting
-from .math import get_sub, is_universal, separate_operator
-from .multiprocessing import mp_helper
+from .grouping import Acting
+from .math import get_sub, has_universal_oper
 
 from ..objects.scalars import t
 from ..objects.operators import densityOp, createOp, annihilateOp
@@ -138,7 +135,7 @@ def patched_Mul_flatten(seq : Sequence) -> Tuple[list, list, list]:
                                                 key=cmp_to_key(cmp))))
             
         for nc in nc_part:
-            if not(is_universal(nc)):
+            if not(has_universal_oper(nc)):
                 # As long as 'nc' is not universal (i.e., reorderable),
                 # we can keep appending to reorderable_nc.
                 reorderable_nc.append(nc)
