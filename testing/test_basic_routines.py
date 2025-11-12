@@ -12,7 +12,8 @@ from symqups._internal.basic_routines import (
     deep_screen_type,
     invalid_input,
     operation_routine,
-    only_allow_leaves_in_branches
+    default_treat_add,
+    only_allow_leaves_in_branches,
 )
 
 @pytest.mark.fast
@@ -30,7 +31,7 @@ class TestBasicRoutines:
         x_raise = sp.Symbol("x")
         expected_to_fail(lambda : screen_type(x_raise, sp.Symbol, ""))
         screen_type(x_pass, (sp.Symbol, sp.Number), "test")
-        
+
     def test_deep_screen_type(self):
         x_raise_1 = sp.Symbol("x")
         x_raise_2 = sp.Add(sp.Symbol("x"), 2)
@@ -54,44 +55,39 @@ class TestBasicRoutines:
                                       (sp.Mul, sp.Add) : lambda A: "mul or add"}
                                      )
         
-        try:
-            _foo(sp.Function(r"raise_error"))
-            raise RuntimeError("Test failed.")
-        except:
-            pass
+        expected_to_fail(lambda : _foo(sp.Function(r"raise_error")))
         
-        try:
-            _foo(sp.Add(sp.Function(r"raise_error_as_well"), sp.Number(2)))
-            raise RuntimeError("Test failed.")
-        except:
-            pass
-        
+        expected_to_fail(lambda : _foo(sp.Add(sp.Function(r"raise_error_as_well"), sp.Number(2)))) 
+               
         inputs = [sp.Expr(sp.Number(1)), # no symbol,  
                   sp.Symbol("x")**2, 
                   sp.Symbol("x") * 2,
                   sp.Symbol("x") + 2]
+        
         expected_outputs = ["no symbol", 
                             "pow", 
                             "mul or add",
                             "mul or add"]
+        
         for inpt, e_out in zip(inputs[:1], expected_outputs[:1]):
             assert _foo(inpt) == e_out
-            
+    
+    @staticmethod
+    def default_add_foo(x):
+        return x*2
+    def test_default_add(self):
+        res = default_treat_add([1,2,3], TestBasicRoutines.default_add_foo)
+        assert res == 2+4+6
+        
     def test_only_allow_leaves_in_branches(self):
         from symqups.objects.scalars import q, p
         q = q()
         p = p()
         only_allow_leaves_in_branches(q,"",p.func,sp.Pow)
         only_allow_leaves_in_branches(q**2,"",q.func,sp.Pow)
-        try:
-            only_allow_leaves_in_branches(q,"",q.func,sp.Pow)
-            raise RuntimeError("Test failed.")
-        except:
-            pass
         
+        expected_to_fail(lambda : only_allow_leaves_in_branches(q,"",q.func,sp.Pow))
+                
         only_allow_leaves_in_branches(q*p+2*p,"",(q.func,p.func),sp.Mul)
-        try:
-            only_allow_leaves_in_branches(q**2+q*p**2, "", (q.func,p.func), sp.Mul)
-            raise RuntimeError("Test failed.")
-        except:
-            pass
+        
+        expected_to_fail(lambda : only_allow_leaves_in_branches(q**2+q*p**2, "", (q.func,p.func), sp.Mul))
