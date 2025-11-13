@@ -12,8 +12,31 @@ def get_sub(expr : sp.Expr) -> set[sp.Symbol]:
     return {atom.sub for atom in expr.atoms(Scalar, Operator) if atom.has_sub}
             # Must use a set to avoid repeated 'sub's.
             
-def is_nonconstant_polynomial(A : sp.Expr, *gens):
-    return A.is_polynomial(*gens) and all(A.has(gen) for gen in gens)
+def is_nonconstant_polynomial(A : sp.Expr, *gens) -> bool:
+    """
+    If '.is_polynomial' returns `None`, then it is taken to generally NOT be a polynomial.
+    """
+    is_poly = A.is_polynomial(*gens)
+    if is_poly is None:
+        is_poly = False   
+    return is_poly and all(A.has(gen) for gen in gens)
+
+def is_pip(A : sp.Expr, *base : type | sp.Basic) -> bool:
+    """
+    Returns `True` if 'A' is a positive integer power of any object identified in 'base',
+    which can either be classes or instances. 
+    """
+    b, e = A.as_base_exp()
+    base_hit = False
+    for bb in base:
+        if isinstance(bb, type) and isinstance(b, bb):
+            base_hit = True
+            break
+        elif b == bb:
+            base_hit = True
+            break
+        
+    return base_hit and e.is_integer and e.is_positive
 
 def separate_term_by_nonconstant_polynomiality(expr : sp.Expr, 
                                                polynomials_in : tuple[sp.Basic]
@@ -34,14 +57,14 @@ def separate_term_by_nonconstant_polynomiality(expr : sp.Expr,
     
     out = []
     same_poly = [sp.Number(1)]
+    is_poly = False
     for arg in expr.args:
-        if (is_nonconstant_polynomial(arg, *polynomials_in) 
-            == is_nonconstant_polynomial(same_poly[-1], *polynomials_in)):
+        if is_nonconstant_polynomial(arg, *polynomials_in) == is_poly:
             same_poly.append(arg)
         else:
-            if same_poly:
-                out.append(sp.Mul(*same_poly))
+            out.append(sp.Mul(*same_poly))
             same_poly = [arg]
+            is_poly = not(is_poly)
     
     # The polynomiality may change at the last argument. If so, then 'factor'
     # contains the last argument when the loop ends which has not been added
@@ -87,7 +110,7 @@ def has_universal_oper(expr : sp.Expr) -> bool:
 def separate_operator(expr: sp.Expr) -> Tuple[sp.Expr, sp.Expr]:
     expr = sp.sympify(expr)
     
-    screen_type(expr, sp.Add, "_separate_operator")
+    screen_type(expr, sp.Add, separate_operator)
     
     if isinstance(expr, sp.Mul):
         args = expr.args
@@ -111,7 +134,7 @@ def separate_operator(expr: sp.Expr) -> Tuple[sp.Expr, sp.Expr]:
 def collect_alpha_type_oper_from_monomial_by_sub(expr : sp.Expr) -> Tuple[sp.Expr, dict, dict]:
     expr = sp.sympify(expr)
     
-    screen_type(expr, sp.Add, "_collect_alpha_type_oper_from_monomial_by_sub")
+    screen_type(expr, sp.Add, collect_alpha_type_oper_from_monomial_by_sub)
     
     if not(expr.is_polynomial(annihilateOp, createOp)):
         raise ValueError("This function does not accept non-polynomials.")
@@ -156,7 +179,7 @@ def separate_term_oper_by_sub(expr : sp.Expr) -> list[sp.Expr]:
     NOTE: This assumes that no universally-noncommuting operators (e.g., rho) 
     are present, which is usually the case in applications.
     """
-    screen_type(expr, sp.Add, "_separate_term_oper_by_sub")
+    screen_type(expr, sp.Add, separate_term_oper_by_sub)
     
     if not(expr.has(Operator)):
         return [expr]
@@ -248,25 +271,6 @@ def separate_term_oper_by_sub(expr : sp.Expr) -> list[sp.Expr]:
     ###################
                 
     return out
-
-def collect_psv_in_monomial_by_sub(expr: sp.Expr) -> Tuple[sp.Expr, dict]:
-    others = []
-    sub_factor_dict = {sub : [] for sub in sub_cache}
-    
-    args = expr.args if expr.is_Mul else [expr]
-    for arg in args:
-        psv_atom = arg.atoms(PhaseSpaceVariable)
-        if psv_atom:
-            sub = list(psv_atom)[0]
-            sub_factor_dict[sub].append(arg)
-        else:
-            others.append(arg)
-    
-    others = sp.Mul(*others)
-    sub_factor_dict = {k : sp.Mul(*v) 
-                       for k, v in sub_factor_dict.items()}
-    
-    return others, sub_factor_dict
 
 # def decouple(expr : sp.Expr):
 #     """

@@ -6,7 +6,7 @@ class SubCache(list):
             raise ValueError("Must be empty on initialization.")
         super().__init__(*args)
     
-    def _append(self, sub) -> None:
+    def _append(self, sub):
         
         if sub in self:
             return

@@ -4,6 +4,7 @@ import sympy as sp
 from symqups.objects.operators import Operator, createOp, annihilateOp, rho
 from symqups.objects.scalars import alpha, alphaD
 from symqups._internal.cache import sub_cache
+from symqups._internal.grouping import PhaseSpaceVariableOperator
 
 from utils import expected_to_fail
 
@@ -13,13 +14,13 @@ from utils import expected_to_fail
 from symqups._internal.math import (
     get_sub,
     is_nonconstant_polynomial,
-    separate_term_by_polynomiality,
-    get_factor_polynomiality,
+    is_pip,
+    separate_term_by_nonconstant_polynomiality,
+    get_factor_nonconstant_polynomiality,
     has_universal_oper,
     separate_operator,
     collect_alpha_type_oper_from_monomial_by_sub,
-    separate_term_oper_by_sub,
-    collect_psv_in_monomial_by_sub
+    separate_term_oper_by_sub
 )
 
 ###
@@ -43,9 +44,20 @@ class TestInternalMath:
         assert not is_nonconstant_polynomial(x, y)
         assert is_nonconstant_polynomial(x, x)
         assert is_nonconstant_polynomial(2*x**3+x, x)
-        assert not is_nonconstant_polynomial(sp.exp(x), x)
+        assert not is_nonconstant_polynomial(sp.exp(x), x) and is_nonconstant_polynomial(sp.exp(x), x) is not None
         assert not is_nonconstant_polynomial(x**1.2, x)
         assert not is_nonconstant_polynomial(sp.sqrt(x) + x**2, x )
+        
+    def test_is_pip(self):
+        a = annihilateOp()
+        assert not is_pip(sp.Number(1), annihilateOp)
+        assert is_pip(a, annihilateOp)
+        assert not is_pip(2*a, annihilateOp)
+        assert not is_pip(a**2+1, annihilateOp)
+        assert is_pip(a**2, a)
+        assert is_pip(a**2, annihilateOp)
+        assert not is_pip(a**2, createOp)
+        assert not is_pip(a**(-1), a)
     
     def has_universal_oper(self):
         expected_to_fail(lambda: has_universal_oper(1))
@@ -60,7 +72,7 @@ class TestInternalMath:
         x = sp.Symbol("x")
         foo = sp.Function("f")(x, op_1)
         
-        expected_to_fail(lambda: separate_term_by_polynomiality(x+2))
+        expected_to_fail(lambda: separate_term_by_nonconstant_polynomiality(x+2))
 
         assert separate_operator(op_1) == (1, op_1)
         assert separate_operator(x) == (x, 1)
@@ -72,23 +84,35 @@ class TestInternalMath:
         assert (separate_operator(op_1*foo*op_2**2*x**3*2) 
                 == (2*x**3, op_1*foo*op_2**2))
         
-    def test_separate_term_by_polynomiality(self):
+    def test_separate_term_by_nonconstant_polynomiality(self):
         a_1 = annihilateOp(1)
         ad_2 = createOp(2)
         x = sp.Symbol("x")
         
-        expected_to_fail(lambda: separate_term_by_polynomiality(a_1+1, 
-                                                                (annihilateOp, createOp)))
+        foo = separate_term_by_nonconstant_polynomiality
+        psvo = PhaseSpaceVariableOperator
         
-        assert (separate_term_by_polynomiality(a_1, (annihilateOp, createOp))
+        expected_to_fail(lambda: foo(a_1+1, psvo))
+        
+        assert (foo(a_1, psvo)
                 == [a_1])
-        assert (separate_term_by_polynomiality(a_1**2*ad_2, (annihilateOp, createOp))
+        assert (foo(a_1**2*ad_2, psvo)
                 == [1, a_1**2*ad_2])
-        assert (separate_term_by_polynomiality(a_1**2*ad_2*sp.exp(x), (annihilateOp, createOp))
+        assert (foo(a_1**2*ad_2*sp.exp(x), psvo)
                 == [sp.exp(x), a_1**2*ad_2])
-        assert (separate_term_by_polynomiality(a_1*x*sp.exp(ad_2)*ad_2**3 * a_1**0.3 * 2**ad_2,
-                                               (annihilateOp, createOp))
-                == [x, a_1**1.3, sp.exp(ad_2), ad_2**3, 2**ad_2])
+        assert (foo(a_1*x*sp.exp(ad_2)*ad_2**3 * a_1**0.3 * 2**ad_2, psvo)
+                == [x*a_1**1.3*sp.exp(ad_2), ad_2**3, 2**ad_2])
+        
+    def test_get_factor_nonconstant_polynomiality(self):
+        x = sp.Symbol("x")
+        foo = get_factor_nonconstant_polynomiality
+        
+        expected_to_fail(lambda: foo(x+1, x))
+        
+        assert foo(sp.Number(1), x) == [False]
+        assert foo(x, x) == [True]
+        assert foo(x*sp.exp(x),x) == [True, False]
+        assert foo(3*sp.Symbol("y")*sp.exp(x)*x**4,x) == [False, False, True, False]
         
     def test_collect_alpha_type_oper_from_monomial_by_sub(self):
         sub_cache.clear()
@@ -99,30 +123,23 @@ class TestInternalMath:
         ad_2 = createOp(2)
         x = sp.Symbol("x")
         
-        try:
-            separate_term_by_polynomiality(a_1+1, (annihilateOp, createOp))
-            raise RuntimeError("Test failed.")
-        except:
-            pass
+        foo = collect_alpha_type_oper_from_monomial_by_sub
         
-        try:
-            separate_term_by_polynomiality(sp.exp(ad_2), (annihilateOp, createOp))
-            raise RuntimeError("Test failed.")
-        except:
-            pass
+        expected_to_fail(lambda : foo(a_1+1, (annihilateOp, createOp)))        
+        expected_to_fail(lambda : foo(sp.exp(ad_2), (annihilateOp, createOp)))
         
-        assert collect_alpha_type_oper_from_monomial_by_sub(x)[0] == x
+        assert foo(x)[0] == x
         
-        col_ad = collect_alpha_type_oper_from_monomial_by_sub(ad_1)[1]
+        col_ad = foo(ad_1)[1]
         assert isinstance(col_ad, dict)
         assert col_ad[ad_1.sub] == [ad_1, 1]
         
-        col_a = collect_alpha_type_oper_from_monomial_by_sub(a_1)[2]
+        col_a = foo(a_1)[2]
         assert isinstance(col_a, dict)
         assert col_a[a_1.sub] == [a_1, 1]
         
         expr = 2*x*sp.exp(x) * a_2**2 * a_1 * a_2 * a_1 * ad_2**3 * a_2**1
-        non_op, col_ad, col_a = collect_alpha_type_oper_from_monomial_by_sub(expr)
+        non_op, col_ad, col_a = foo(expr)
         
         assert non_op == 2*x*sp.exp(x)
         assert col_a.pop(a_1.sub) == [a_1, 2]
@@ -139,15 +156,11 @@ class TestInternalMath:
         assert foo(sp.Number(1)) == [1]
         
         a = [annihilateOp(i) for i in range(4)]
-        ad = [annihilateOp(i) for i in range(4)]
+        ad = [createOp(i) for i in range(4)]
         x = sp.Symbol("x")
         
-        try:
-            collect_alpha_type_oper_from_monomial_by_sub(a[0]+ad[0])
-            raise RuntimeError("Test failed.")
-        except:
-            pass
-        
+        expected_to_fail(lambda: collect_alpha_type_oper_from_monomial_by_sub(a[0]+ad[0]))
+
         assert foo(a[0]) == [1, a[0]]
         assert (list(sp.ordered(foo(a[0]*a[1]))) 
                 == list(sp.ordered([1, a[0], a[1]])))

@@ -183,13 +183,22 @@ class PatchedDerivative(original_Derivative):
         t_order = 0
         other_vars  = []
         for var in variables:
-            if isinstance(var, (tuple, sp.Tuple)):
+            if isinstance(var, (Sequence, sp.Tuple)):
                 if var[0].has(annihilateOp):
                     a_lst += [var[0]]*var[1]
                 elif var[0].has(createOp):
                     ad_lst += [var[0]]*var[1]
                 elif var[0].has(t):
                     t_order += var[1]
+                # NOTE: The following check must be done after
+                # the above checks since Operator objects like
+                # `rho` does not have other Operator objects, but
+                # we don't want the derivative to evaluate to zero.
+                # We also need this shortcut since SymPy automatically
+                # applies the chain rule and we would have infinite 
+                # recursion when `expr` has both 
+                elif not(expr.has(var[0])) and var[1] > 0:
+                    return sp.Number(0)
                 else:
                     other_vars.append(var)
             
@@ -200,6 +209,8 @@ class PatchedDerivative(original_Derivative):
                     ad_lst.append(var) 
                 elif var.has(t):
                     t_order += 1
+                elif not(expr.has(var)):
+                    return sp.Number(0)
                 else:
                     other_vars.append(var)
         
@@ -218,7 +229,7 @@ class PatchedDerivative(original_Derivative):
                 # densityOp to stay unevaluated. Might want to change this if
                 # chain/product rule evaluation is desired. 
                 return super().__new__(cls, PatchedDerivative(expr, *other_vars), 
-                                    (t(), t_order), evaluate=False)
+                                       (t(), t_order), evaluate=False)
             else:
                 other_vars.append((t(), t_order))
         
@@ -226,7 +237,7 @@ class PatchedDerivative(original_Derivative):
         
         if not(other_vars):
             return expr
-        
+                
         return super().__new__(cls, expr, *other_vars, **kwargs)
             
     

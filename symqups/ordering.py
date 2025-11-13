@@ -9,10 +9,7 @@ from ._internal.basic_routines import (operation_routine,
                                        default_treat_add,)
 from ._internal.math import (separate_operator,
                              has_universal_oper,
-                             get_sub,
-                             separate_term_by_nonconstant_polynomiality,
-                             collect_alpha_type_oper_from_monomial_by_sub,
-                             separate_term_oper_by_sub)
+                             collect_alpha_type_oper_from_monomial_by_sub)
 from ._internal.preprocessing import preprocess_class
 
 from .objects.operators import Operator, annihilateOp, createOp
@@ -57,10 +54,10 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
         def treat_pow(A : sp.Expr) -> sp.Expr:
             if A.is_polynomial(Operator):
                 return A
-            return make(A)
+            return make(A, False)
             
         def treat_function(A : sp.Expr) -> sp.Expr:
-            return make(A)
+            return make(A, False)
         
         def treat_mul(A : sp.Expr) -> sp.Expr:
             if not(has_ordering_ambiguity(A)):
@@ -68,7 +65,8 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
             
             if lazy:
                 leftovers, bracket_arg = separate_operator(A)
-                return leftovers * make(bracket_arg)
+                return leftovers * make(bracket_arg, 
+                                        bracket_arg.is_polynomial(PhaseSpaceVariableOperator))
             
             # We don't care about operator ordering inside
             # the braces, so might as well return it pretty.
@@ -101,15 +99,18 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
                     coefs.append(arg)
             
             in_braces = make(sp.Mul(*[createOp(sub)**pow_lst[0] for sub, pow_lst in poly.items()],
-                                    *[annihilateOp(sub)**pow_lst[1] for sub, pow_lst in poly.items()]
-                                    *nonpoly))
+                                    *[annihilateOp(sub)**pow_lst[1] for sub, pow_lst in poly.items()],
+                                    *nonpoly),
+                             not(nonpoly))
             
             return sp.Mul(*coefs, in_braces)
 
-        def make(A : sp.Expr) -> sOrdering:
+        def make(A : sp.Expr, contains_poly : bool) -> sOrdering:
             if not(has_ordering_ambiguity(A)):
                 return A
-            return super(sOrdering, cls).__new__(cls, A, s)
+            obj = super(sOrdering, cls).__new__(cls, A, s)
+            obj._contains_poly = contains_poly
+            return obj
            
         return operation_routine(sp.expand(sp.sympify(expr)),
                                   sOrdering,
@@ -126,19 +127,26 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
     @property
     def s_val(self):
         return self.args[1]
+    
+    @property
+    def contains_poly(self):
+        return self._contains_poly
         
     def _latex(self, printer) -> str:
         return r"\left\{ %s \right\}_{s=%s}" % (sp.latex(self.args[0]),
                                               sp.latex(self.args[1]))
 
     def _collect_oper(self) -> Tuple[dict, dict]:
+        if not(self.contains_poly):
+            raise RuntimeError("Cannot call '_collect_oper' when 'sOrdering' contains a nonpolynomial.")
+        
         non_operator, collect_ad, collect_a = \
             collect_alpha_type_oper_from_monomial_by_sub(self.args[0])
-        assert non_operator == 1
+        
         return collect_ad, collect_a
         
     def explicit(self) -> sp.Expr:
-        if not(self.args[0].is_polynomial(Operator)):
+        if not(self.contains_poly):
             return self
         
         collect_ad, collect_a = self._collect_oper()
@@ -173,7 +181,7 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
         By default, express the object in terms of normal-ordered products.
         """
         
-        if not(self.args[0].is_polynomial(Operator)):
+        if not(self.contains_poly):
             return self
         
         collect_ad, collect_a = self._collect_oper()                            

@@ -29,40 +29,6 @@ def screen_type(expr : sp.Expr,
         msg = f"'{name}' does not accept {forbidden_types}."
         raise TypeError(msg)
     
-def only_allow_leaves_in_branches(expr : sp.Expr,
-                              name : str,
-                              leaves : tuple[type[sp.Basic]], 
-                              allowed_branches : tuple[type[sp.Basic]]):
-    """
-    Ensure that all leaves occur only inside subexpressions of type `allowed_branches`.
-    """
-    if not(isinstance(leaves, Sequence)):
-        leaves = (leaves,)
-    leaves = tuple(leaves)
-    
-    if not(isinstance(allowed_branches, Sequence)):
-        allowed_branches = (allowed_branches,)
-    allowed_branches = tuple(allowed_branches)
-    
-    if any(not(leaf.is_Atom) for leaf in leaves):
-        raise TypeError("'leaves' must all be atomic.")
-        
-    def walk_and_screen(A, branches, leaf):
-        if isinstance(A, leaf):
-            if not(any(isinstance(branch, allowed_branches)
-                    for branch in branches)):
-                msg = f"'{name}' only accepts '{leaf.__name__}' instances if they "
-                msg += f"are contained within {str([cls.__name__ for cls in allowed_branches])}"
-                raise ValueError(msg)
-        for arg in A.args:
-            walk_and_screen(arg, branches + (A,), leaf)
-    
-    for l in leaves:
-        walk_and_screen(expr, (), l)
-        # In the first recursion layer, the function checks if `expr`` is the screened 'leaf'
-        # and raises an error if so. This is correct since we want 'leaf' to be contained in
-        # 'allowed_branches'.
-    
 def deep_screen_type(expr : sp.Expr, 
                      forbidden_types : type | Sequence[type], 
                      name : str) -> None:
@@ -127,3 +93,37 @@ def default_treat_add(summands : tuple[sp.Expr], foo : callable) -> sp.Expr:
     'summands'.
     """
     return sp.Add(*mp_helper(summands, foo))
+
+def only_allow_leaves_in_branches(expr : sp.Expr,
+                                  name : str,
+                                  leaves : tuple[type[sp.Basic]], 
+                                  allowed_branches : tuple[type[sp.Basic]]) -> None:
+    """
+    Ensure that all leaves occur only inside subexpressions of type `allowed_branches`.
+    """
+    if not(isinstance(leaves, Sequence)):
+        leaves = (leaves,)
+    leaves = tuple(leaves)
+    
+    if not(isinstance(allowed_branches, Sequence)):
+        allowed_branches = (allowed_branches,)
+    allowed_branches = tuple(allowed_branches)
+    
+    if any(not(leaf.is_Atom) for leaf in leaves):
+        raise TypeError("'leaves' must all be atomic.")
+        
+    def walk_and_screen(A, branches, leaf):
+        if isinstance(A, leaf):
+            if not(any(isinstance(branch, allowed_branches)
+                    for branch in branches)):
+                msg = f"'{name}' only accepts '{leaf.__name__}' instances if they "
+                msg += f"are contained within {str([cls.__name__ for cls in allowed_branches])}"
+                raise ValueError(msg)
+        for arg in A.args:
+            walk_and_screen(arg, branches + (A,), leaf)
+    
+    for l in leaves:
+        walk_and_screen(expr, (), l)
+        # In the first recursion layer, the function checks if `expr`` is the screened 'leaf'
+        # and raises an error if so. This is correct since we want 'leaf' to be contained in
+        # 'allowed_branches'.
