@@ -1,12 +1,9 @@
 import typing
-import sympy as sp
 
 from .base import Base
 from .._internal.grouping import HilbertSpaceObject, qpType, alphaType, PhaseSpaceVariableOperator, CannotBoppShift
 from .._internal.cache import sub_cache
 from .._internal.basic_routines import treat_sub
-
-from .scalars import t
 
 # NOTE: 'import .._internal.operator_handling' will result
 # in circular imports. 
@@ -50,13 +47,12 @@ class Operator(Base, HilbertSpaceObject):
         raise NotImplementedError()
     
     @property
-    def _diff_wrt(self):
-        msg = "Differentiation with respect to this 'Operator' is undefined."
+    def _diff_wrt(self): 
+        msg = "Differentiation with respect to 'Operator' is undefined for SymPy. "
+        msg += "This package, however, implements the formal derivative with respect to"
+        msg += "'annihilateOp' and 'createOp'. See this package's 'Derivative' object."
         raise NotImplementedError(msg)
     
-    def diff(self, *symbols, **assumptions):
-        return sp.Derivative(self, *symbols, **assumptions)
-
 ###
 
 class HermitianOp(Operator):
@@ -91,11 +87,7 @@ class annihilateOp(Operator, alphaType, PhaseSpaceVariableOperator):
     
     def dagger(self):
         return createOp(sub = self.sub)
-    
-    @property
-    def _diff_wrt(self):
-        return True
-    
+        
 class createOp(Operator, alphaType, PhaseSpaceVariableOperator):
     """
     The creation operator.
@@ -104,11 +96,7 @@ class createOp(Operator, alphaType, PhaseSpaceVariableOperator):
         
     def dagger(self):
         return annihilateOp(sub = self.sub)
-    
-    @property
-    def _diff_wrt(self):
-        return True
-    
+        
 ###
 
 class densityOp(HermitianOp, CannotBoppShift):
@@ -118,7 +106,7 @@ class densityOp(HermitianOp, CannotBoppShift):
     base = r"\rho"
     has_sub = False
     
-    def __new__(cls, _sub=None):
+    def __new__(cls, _sub = None):
         return super().__new__(cls, _sub)
     
 global rho

@@ -10,7 +10,7 @@ from .objects.base import Base
 from .objects.scalars import alpha, alphaD
 from .objects.operators import annihilateOp, createOp
 
-from .manipulations import dagger
+from .manipulations import dagger, Derivative
 
 from . import s as CahillGlauberS
 
@@ -71,9 +71,9 @@ class _BoppActor(Base, Acting):
         sgn = -1 if isinstance(self.base, (annihilateOp, alpha)) else 1
         space_sgn = -1 if self.Hilbert else 1
         if self.left:
-            return target*self.base + space_sgn * sp.Rational(1,2)*(s+sgn)*sp.Derivative(target, dagger(self.base))
+            return target*self.base + space_sgn * sp.Rational(1,2)*(s+sgn)*Derivative(target, dagger(self.base))
         else:
-            return self.base*target + space_sgn * sp.Rational(1,2)*(s-sgn)*sp.Derivative(target, dagger(self.base))
+            return self.base*target + space_sgn * sp.Rational(1,2)*(s-sgn)*Derivative(target, dagger(self.base))
 
 class HilbertSpaceBoppSuperoperator(_BoppActor, HilbertSpaceObject, NotAnOperator):
     """

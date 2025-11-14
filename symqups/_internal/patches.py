@@ -6,10 +6,6 @@ from .cache import sub_cache
 from .grouping import Acting
 from .math import get_sub, has_universal_oper
 
-from ..objects.scalars import t
-from ..objects.operators import densityOp, createOp, annihilateOp
-from ..manipulations import Commutator
-
 # HACK: Monkey patching sympy's core implementation to do something
 # extra if this package's objects are involved. Default implementation
 # should be applied universally.
@@ -151,7 +147,7 @@ def patched_Mul_flatten(seq : Sequence) -> Tuple[list, list, list]:
         
         # There may be leftover 'nc' from the loop if the last one is not universal. 
         treat_reorderable_nc() 
-                    
+
         # We run it thorugh the original Mul.flatten again to let sympy clean
         # up the arguments, like merging adjacent factors into a Pow. The first
         # call does not do this because the two may be separated by another
@@ -164,85 +160,7 @@ def patched_Mul_flatten(seq : Sequence) -> Tuple[list, list, list]:
 
         return c_part, nc_part, order_symbol
     
-    
-###
-
-global original_Derivative
-original_Derivative = sp.Derivative
-
-class PatchedDerivative(original_Derivative):
-    # HACK: We patch sympy.Derivative such that derivative w.r.t annihilateOp
-    # and createOp is handled correctly for Operator, which are symbols that 
-    # by default gives 0 when "differentiated" w.r.t them by sympy's logic.
-    def __new__(cls, expr, *variables, **kwargs):
-        
-        ###
-        
-        a_lst = []
-        ad_lst = []
-        t_order = 0
-        other_vars  = []
-        for var in variables:
-            if isinstance(var, (Sequence, sp.Tuple)):
-                if var[0].has(annihilateOp):
-                    a_lst += [var[0]]*var[1]
-                elif var[0].has(createOp):
-                    ad_lst += [var[0]]*var[1]
-                elif var[0].has(t):
-                    t_order += var[1]
-                # NOTE: The following check must be done after
-                # the above checks since Operator objects like
-                # `rho` does not have other Operator objects, but
-                # we don't want the derivative to evaluate to zero.
-                # We also need this shortcut since SymPy automatically
-                # applies the chain rule and we would have infinite 
-                # recursion when `expr` has both 
-                elif not(expr.has(var[0])) and var[1] > 0:
-                    return sp.Number(0)
-                else:
-                    other_vars.append(var)
-            
-            else:
-                if var.has(annihilateOp):
-                    a_lst.append(var)
-                elif var.has(createOp):
-                    ad_lst.append(var) 
-                elif var.has(t):
-                    t_order += 1
-                elif not(expr.has(var)):
-                    return sp.Number(0)
-                else:
-                    other_vars.append(var)
-        
-        ###
-                
-        for a in a_lst:
-            expr = Commutator(expr, createOp(a.sub))
-        for ad in ad_lst:
-            expr = Commutator(annihilateOp(ad.sub), expr)
-        
-        ###
-        
-        if t_order > 0:
-            if expr.has(densityOp):
-                # HACK: This forces the time derivative for expressions containing
-                # densityOp to stay unevaluated. Might want to change this if
-                # chain/product rule evaluation is desired. 
-                return super().__new__(cls, PatchedDerivative(expr, *other_vars), 
-                                       (t(), t_order), evaluate=False)
-            else:
-                other_vars.append((t(), t_order))
-        
-        ###
-        
-        if not(other_vars):
-            return expr
-                
-        return super().__new__(cls, expr, *other_vars, **kwargs)
-            
-    
 ###
 
 def apply_patches():
     sp.Mul.flatten = patched_Mul_flatten
-    sp.Derivative = PatchedDerivative

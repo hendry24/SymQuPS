@@ -13,7 +13,7 @@ from ._internal.preprocessing import preprocess_class
 from .objects.scalars import alpha, alphaD, StateFunction
 from .objects.operators import annihilateOp, createOp, densityOp
 
-from .manipulations import qp2alpha, dagger
+from .manipulations import qp2alpha, dagger, Derivative
 
 from . import s as CahillGlauberS
 
@@ -64,7 +64,7 @@ def _Star_Bopp_monomial_A_times_B(A : sp.Expr, B : sp.Expr, left : bool):
                                  xi**j])
             der_wrt.append((dagger(b), j))
         
-        der = sp.Derivative(B, *der_wrt)
+        der = Derivative(B, *der_wrt)
         y = sp.Mul(*coef_factors, *bopp_factors, der)
         bopped_series_summands.append(y)
     
@@ -117,13 +117,13 @@ def _HattedStar_Bopp_monomial_A_times_B(A : sp.Expr, B : sp.Expr, left : bool):
         if left:
             out_summands.append(sp.Mul(*coef_factors,
                                        *xi,
-                                       sp.Derivative(B, *diff_B_wrt),
+                                       Derivative(B, *diff_B_wrt),
                                        *op))
         else:
             out_summands.append(sp.Mul(*coef_factors,
                                        *xi,
                                        *op,
-                                       sp.Derivative(B, *diff_B_wrt)))
+                                       Derivative(B, *diff_B_wrt)))
         
     return sp.Add(*out_summands)
     

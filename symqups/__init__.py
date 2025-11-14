@@ -28,7 +28,7 @@ from .cg import CGTransform, iCGTransform, CGProps
 from .eom import LindbladMasterEquation
 from .manipulations import (
     alpha2qp, qp2alpha, sc2op, op2sc, dagger, explicit_sOrdering, express_sOrdering,
-    normal_ordered_equivalent
+    normal_ordered_equivalent, Derivative
 )
 from .ordering import sOrdering, normal_order, weyl_order, antinormal_order
 from .quantization import naive_quantize, s_quantize

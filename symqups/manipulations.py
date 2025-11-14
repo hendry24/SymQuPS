@@ -1,5 +1,6 @@
 import sympy as sp
 import sympy.physics.quantum as spq
+from typing import Sequence
 
 from ._internal.basic_routines import operation_routine, default_treat_add
 from ._internal.math import has_universal_oper, separate_term_oper_by_sub
@@ -9,8 +10,8 @@ from ._internal.multiprocessing import mp_helper
 from ._internal.grouping import qpType, alphaType, HilbertSpaceObject
 from ._internal.preprocessing import preprocess_func, preprocess_class
 
-from .objects.scalars import Scalar
-from .objects.operators import annihilateOp, createOp, Operator
+from .objects.scalars import Scalar, t
+from .objects.operators import annihilateOp, createOp, Operator, densityOp
     
 ###
 
@@ -199,3 +200,76 @@ def s_ordered_equivalent(expr : sp.Expr) -> sp.Expr:
     from .ordering import sOrdering
     from . import s 
     return express_sOrdering(sOrdering(normal_ordered_equivalent(expr), 1), s.val, False)
+
+###
+
+class Derivative(sp.Derivative):
+    """
+    The derivative object.
+    """
+    def __new__(cls, expr, *variables, **hints):
+        
+        if not(variables):
+            return expr
+
+        a_lst = []
+        ad_lst = []
+        t_order = 0
+        other_vars  = []
+        for var in variables:
+            if isinstance(var, (Sequence, sp.Tuple)):
+                if var[0].has(annihilateOp):
+                    a_lst += [var[0]]*var[1]
+                elif var[0].has(createOp):
+                    ad_lst += [var[0]]*var[1]
+                elif var[0].has(t):
+                    t_order += var[1]
+                # NOTE: The following check must be done after
+                # the above checks since Operator objects like
+                # `rho` does not have other Operator objects, but
+                # we don't want the derivative to evaluate to zero.
+                # We also need this shortcut since SymPy automatically
+                # applies the chain rule and we would have infinite 
+                # recursion when `expr` has both 
+                elif not(expr.has(var[0])) and var[1] > 0:
+                    return sp.Number(0)
+                else:
+                    other_vars.append(var)
+            
+            else:
+                if var.has(annihilateOp):
+                    a_lst.append(var)
+                elif var.has(createOp):
+                    ad_lst.append(var) 
+                elif var.has(t):
+                    t_order += 1
+                elif not(expr.has(var)):
+                    return sp.Number(0)
+                else:
+                    other_vars.append(var)
+        
+        ###
+                
+        for a in a_lst:
+            expr = Commutator(expr, createOp(a.sub))
+        for ad in ad_lst:
+            expr = Commutator(annihilateOp(ad.sub), expr)
+        
+        ###
+        
+        if t_order > 0:
+            if expr.has(densityOp):
+                # HACK: This forces the time derivative for expressions containing
+                # densityOp to stay unevaluated. Might want to change this if
+                # chain/product rule evaluation is desired. 
+                return super().__new__(cls, Derivative(expr, *other_vars), 
+                                       (t(), t_order), evaluate=False)
+            else:
+                other_vars.append((t(), t_order))
+        
+        ###
+        
+        if not(other_vars):
+            return expr
+                
+        return super().__new__(cls, expr, *other_vars, **hints)

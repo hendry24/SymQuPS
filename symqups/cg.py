@@ -16,7 +16,8 @@ from .bopp import PSBO
 from .star import Star, HattedStar
 from .ordering import sOrdering
 from .manipulations import (qp2alpha, op2sc, alpha2qp, sc2op, Commutator,
-                            s_ordered_equivalent, dagger, normal_ordered_equivalent)
+                            s_ordered_equivalent, dagger, normal_ordered_equivalent,
+                            Derivative)
 from .utils import get_N, _treat_der_template
 
 from . import s as CahillGlauberS
@@ -103,7 +104,7 @@ def _normal_ordered_PSBO_on_B(combo, B):
         out_summands.append(sp.Mul(*coef,
                                    *xi,
                                    *psv,
-                                   sp.Derivative(B, *diff_B_wrt)))
+                                   Derivative(B, *diff_B_wrt)))
     
     return sp.Add(*out_summands)
 
@@ -352,7 +353,7 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             return sp.Mul(*mp_helper(A.args, CGTransform))
         
         def treat_der(A : sp.Derivative):
-            return sp.Derivative(CGTransform(A.args[0]), *A.args[1:])
+            return Derivative(CGTransform(A.args[0]), *A.args[1:])
         
         def treat_commutator(A : Commutator):
             return CGTransform(A.args[0]*A.args[1] - A.args[1]*A.args[0])

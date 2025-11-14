@@ -8,7 +8,7 @@ from ._internal.preprocessing import preprocess_class
 from .objects.scalars import t
 from .objects.operators import rho, Operator
 
-from .manipulations import dagger, Commutator
+from .manipulations import dagger, Commutator, Derivative
 
 from . import hbar
 
@@ -96,7 +96,7 @@ class LindbladMasterEquation(sp.Basic):
                 nondiagonal dissipator. 
         
         """
-        lhs = sp.Derivative(rho, t())
+        lhs = Derivative(rho, t())
         
         dissip_lst = []
         for dissip in dissipators:
