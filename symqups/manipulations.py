@@ -3,7 +3,7 @@ import sympy.physics.quantum as spq
 from typing import Sequence
 
 from ._internal.basic_routines import operation_routine, default_treat_add
-from ._internal.math import has_universal_oper, separate_term_oper_by_sub
+from ._internal.math import has_universal_oper, separate_term_oper_by_sub, get_sub
 from ._internal.cache import ( op2sc_subs_dict, sc2op_subs_dict, 
                               alpha2qp_subs_dict, qp2alpha_subs_dict, ProtectedDict)
 from ._internal.multiprocessing import mp_helper
@@ -11,7 +11,7 @@ from ._internal.grouping import qpType, alphaType, HilbertSpaceObject
 from ._internal.preprocessing import preprocess_func, preprocess_class
 
 from .objects.scalars import Scalar, t
-from .objects.operators import annihilateOp, createOp, Operator, densityOp
+from .objects.operators import annihilateOp, createOp, Operator, densityOp, qOp, pOp
     
 ###
 
@@ -78,7 +78,38 @@ def express_sOrdering(expr : sp.Expr, t=1, explicit=True) -> sp.Expr:
 
 @preprocess_class
 class Commutator(spq.Commutator, HilbertSpaceObject):
+    
     def __new__(cls, A : sp.Expr, B : sp.Expr):
+        
+        A_is_universal = has_universal_oper(A)
+        B_is_universal = has_universal_oper(B)
+        A_subs = get_sub(A)
+        B_subs = get_sub(B)
+        common_subs = A_subs & B_subs
+        zero = sp.Number(0)
+
+        if A_is_universal:
+            if not(B_is_universal) and not(B_subs):
+                # Meaning A contains universal operators while B does
+                # not have operators.
+                return zero
+        elif B_is_universal:
+            if not(A_is_universal) and not(B_subs):
+                return zero
+        else:
+            if common_subs:
+                for sub in common_subs:
+                    query = lambda x: isinstance(x, Operator) and (x.sub == sub)
+                    atoms_in_A_with_sub = A.find(query)
+                    atoms_in_B_with_sub = B.find(query)
+                    if (len(atoms_in_A_with_sub) == 1
+                        and atoms_in_A_with_sub == atoms_in_B_with_sub):
+                        # NOTE: This check assumes that an Operator only commutes
+                        # with itself. May want to change this in the future.
+                        return zero
+            else:
+                return zero
+            
         return super().__new__(cls, A, B)
 
 # Normal-ordered equivalent
