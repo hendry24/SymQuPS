@@ -94,7 +94,7 @@ class Commutator(spq.Commutator, HilbertSpaceObject):
                 # not have operators.
                 return zero
         elif B_is_universal:
-            if not(A_is_universal) and not(B_subs):
+            if not(A_is_universal) and not(A_subs):
                 return zero
         else:
             if common_subs:
@@ -215,7 +215,7 @@ def normal_ordered_equivalent(expr : sp.Expr) -> sp.Expr:
         # NOTE: no need for _final_swap since this is automaticaly done
         # by the patched sympy.Mul.flatten.
                 
-    expr = qp2alpha(sp.sympify(expr))
+    expr = express_sOrdering(qp2alpha(sp.sympify(expr)), 1, True)
     return operation_routine(expr,
                              normal_ordered_equivalent,
                              [],
@@ -234,6 +234,7 @@ def s_ordered_equivalent(expr : sp.Expr) -> sp.Expr:
 
 ###
 
+@preprocess_class
 class Derivative(sp.Derivative):
     """
     The derivative object.
@@ -255,15 +256,6 @@ class Derivative(sp.Derivative):
                     ad_lst += [var[0]]*var[1]
                 elif var[0].has(t):
                     t_order += var[1]
-                # NOTE: The following check must be done after
-                # the above checks since Operator objects like
-                # `rho` does not have other Operator objects, but
-                # we don't want the derivative to evaluate to zero.
-                # We also need this shortcut since SymPy automatically
-                # applies the chain rule and we would have infinite 
-                # recursion when `expr` has both 
-                elif not(expr.has(var[0])) and var[1] > 0:
-                    return sp.Number(0)
                 else:
                     other_vars.append(var)
             
@@ -274,8 +266,6 @@ class Derivative(sp.Derivative):
                     ad_lst.append(var) 
                 elif var.has(t):
                     t_order += 1
-                elif not(expr.has(var)):
-                    return sp.Number(0)
                 else:
                     other_vars.append(var)
         

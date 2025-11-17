@@ -4,9 +4,11 @@ import itertools
 
 from ._internal.grouping import (
     PhaseSpaceObject, HilbertSpaceObject,
-    CannotBoppShift, Defined, qpType
+    CannotBoppShift, Defined, qpType,
+    PhaseSpaceVariableOperator, PhaseSpaceVariable
 )
 from ._internal.basic_routines import operation_routine
+from ._internal.math import is_nonconstant_polynomial
 from ._internal.multiprocessing import mp_helper
 from ._internal.preprocessing import preprocess_class
 
@@ -73,6 +75,7 @@ def _Star_Bopp_monomial_A_times_B(A : sp.Expr, B : sp.Expr, left : bool):
 ###
 
 def _HattedStar_Bopp_monomial_A_times_B(A : sp.Expr, B : sp.Expr, left : bool):
+
     s = CahillGlauberS.val
     
     if A.is_Mul:
@@ -84,7 +87,7 @@ def _HattedStar_Bopp_monomial_A_times_B(A : sp.Expr, B : sp.Expr, left : bool):
         lr_sgn = -1
     else:
         lr_sgn = 1
-        
+    
     xi_a = -sp.Rational(1,2) * (s + lr_sgn)
     xi_ad = -sp.Rational(1,2) * (s - lr_sgn)
     # xi_a is the coefficient attached to the Bopp shift of a,
@@ -93,15 +96,14 @@ def _HattedStar_Bopp_monomial_A_times_B(A : sp.Expr, B : sp.Expr, left : bool):
     coef_factors = []
     to_combo = []
     for arg in args:
-        if arg.has(annihilateOp, createOp):
+        if arg.has(PhaseSpaceVariableOperator):
             b, e = arg.as_base_exp()
             xi = xi_a if isinstance(b, annihilateOp) else xi_ad
             to_combo.extend([(b, [xi, dagger(b)])]*e)
         else:
             coef_factors.append(arg)
     
-    ###
-    
+    ###    
     out_summands = []
     for combo in itertools.product(*to_combo):
         xi = []
@@ -136,25 +138,27 @@ def _star_base(F : sp.Expr,
     if hatted:
         var_group = HilbertSpaceObject
         a, ad = annihilateOp, createOp
+        a_ad_group = PhaseSpaceVariableOperator
         state = densityOp
         bopp_monomial = _HattedStar_Bopp_monomial_A_times_B
     else:
         var_group = PhaseSpaceObject
         a, ad = alpha, alphaD
+        a_ad_group = PhaseSpaceVariable
         state = StateFunction
         bopp_monomial = _Star_Bopp_monomial_A_times_B
     
-    if not(F.has(var_group)) or not(G.has(var_group)):
+    if (not(F.has(var_group))) or (not(G.has(var_group))):
         return F*G
     
     if F.has(CannotBoppShift) and G.has(CannotBoppShift):
         raise _CannotBoppFlag
     
-    if F.is_polynomial(a, ad):
+    if is_nonconstant_polynomial(F, a_ad_group):
         Bopp_shifted = F
         other = G
         left = False
-    elif G.is_polynomial(a, ad):
+    elif is_nonconstant_polynomial(G, a_ad_group):
         Bopp_shifted = G
         other = F
         left = True

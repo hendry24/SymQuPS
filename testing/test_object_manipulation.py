@@ -24,7 +24,8 @@ zeta = zeta.val
 
 from symqups.manipulations import (
     dagger, qp2alpha, alpha2qp, normal_ordered_equivalent, 
-    explicit_sOrdering, express_sOrdering
+    explicit_sOrdering, express_sOrdering, s_ordered_equivalent,
+    Derivative, Commutator, op2sc, sc2op
 )
 
 ###
@@ -41,21 +42,9 @@ def test_compound_expressions_with_objects():
         assert sp.Expr(A).args[0] == A
         assert dill.loads(dill.dumps(sp.Function("F")(A))) == sp.Function("F")(A)
         assert A in sp.Function("F")(A).free_symbols
-
-@pytest.mark.full
-def test_multiplication_reordering():
-    a_op_1 = annihilateOp(1)
-    ad_op_1 = createOp(1)
-    a_op_2 = annihilateOp(2)
-    ad_op_2 = createOp(2)
     
-    # Same 'sub' -> do not commute
-    assert a_op_1*ad_op_1 != ad_op_1*a_op_1
-    assert ad_op_2*a_op_2 != a_op_2*ad_op_2
-    
-    # Different 'sub's > commute
-    assert a_op_1*ad_op_2 == ad_op_2*a_op_1
-    assert ad_op_1*a_op_2 == a_op_2*ad_op_1
+    F = sp.Function("F")(Scalar(), Operator())
+    assert dill.loads(dill.dumps(F)) == F
 
 @pytest.mark.full
 def test_alpha2qp_and_qp2alpha():
@@ -90,13 +79,31 @@ def test_alpha2qp_and_qp2alpha():
     for obj_lst, (qq, pp, a, ad) in zip([qp_sc_lst+a_sc_lst, qp_op_lst+a_op_lst],
                                             [(q, p, alpha, alphaD), 
                                             (qOp, pOp, annihilateOp, createOp)]):
-        expr = get_random_poly(obj_lst, dice_throw=3)
+        expr = get_random_poly(obj_lst)
         expr_def = alpha2qp(expr)
         expr_qp2a = qp2alpha(expr)
         assert not(expr_def.has(alphaType)) and expr_def.has(qpType)
         assert not(expr_qp2a.has(qpType)) and expr_qp2a.has(alphaType)
         assert sp.simplify(alpha2qp(expr_qp2a) -  expr_def) == 0
         assert sp.simplify(qp2alpha(expr_def) - expr_qp2a) == 0
+
+@pytest.mark.fast
+def test_op2sc_and_sc2op():
+    aOp = annihilateOp()
+    adOp = createOp
+    a = alpha()
+    ad = alphaD()
+    
+    assert all(
+        op2sc(1) == 1,
+        op2sc(a) == a,
+        op2sc(aOp) == a,
+        op2sc(a*aOp) == a**2,
+        sc2op(1) == 1,
+        sc2op(aOp) == aOp,
+        sc2op(a) == aOp,
+        sc2op(a*aOp) == aOp**2
+    )
 
 @pytest.mark.full
 def test_dagger():
@@ -110,8 +117,7 @@ def test_dagger():
 
     rand_poly = get_random_poly(objects = (1, sp.Symbol("x"), qOp(), annihilateOp(),
                                             createOp(), annihilateOp()),
-                                coeffs = list(range(10)) + sp.symbols([]),
-                                dice_throw = 3)
+                                coeffs = list(range(10)) + sp.symbols([]))
     assert (dagger(dagger(rand_poly)) - rand_poly).expand() == 0
     
 @pytest.mark.full
@@ -154,3 +160,48 @@ def test_explicit_and_express_sOrdering():
     expr = 2*sOrdering(a*ad, s = 1)
     assert not(express_sOrdering(expr, t = -1).has(sOrdering))
     assert express_sOrdering(expr, t = -1, explicit=False).has(sOrdering)
+    
+@pytest.mark.fast
+def test_s_ordered_equivalent():
+    a = annihilateOp()
+    ad = createOp()
+    
+    a_lst = [annihilateOp(i) for i in range(4)]
+    ad_lst = [createOp(i) for i in range(4)]
+    
+    assert s_ordered_equivalent(1) == 1
+    assert s_ordered_equivalent(a) == a
+    assert s_ordered_equivalent(ad) == ad
+    
+    from symqups import s
+    assert s_ordered_equivalent(a*ad) == (sOrdering(a*ad) + (s.val+1)/2).expand()
+    
+    rand_poly = get_random_poly(a_lst+ad_lst)
+    assert (express_sOrdering(s_ordered_equivalent(rand_poly),1,True)
+            - normal_ordered_equivalent(rand_poly)).expand() == 0
+    
+@pytest.mark.fast
+def test_derivative():
+    aOp, adOp = annihilateOp(), createOp()
+    a, ad = alpha(), alphaD()
+    x = sp.Symbol("x")
+    f = sp.Function("f")(a,ad)
+    F = sp.Function("F")(aOp, adOp)
+    X = sp.Function("X")(a, ad, aOp, adOp, x)
+    tt = t()
+    
+    assert isinstance(Derivative(f, a), sp.Derivative)
+    
+    assert Derivative(1).doit() == 1
+    assert Derivative(1, a).doit() == 0
+    assert Derivative(f, a).doit() == sp.Derivative(f,a)
+    assert Derivative(F, a).doit() == 0
+    assert Derivative(F, adOp) == Commutator(aOp, F)
+    assert Derivative(f, adOp) == Commutator(aOp, f)
+    assert Derivative(X, x).doit() == sp.Derivative(X, x)
+    
+    assert Derivative(X, adOp, x) == Derivative(Commutator(aOp, X), x)
+    
+    assert Derivative(rho, tt).doit() != 0
+    assert Derivative(rho, tt, adOp, x) == Derivative(Commutator(aOp, rho), 
+                                                      t(), x)
