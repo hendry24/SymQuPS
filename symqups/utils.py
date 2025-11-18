@@ -110,38 +110,3 @@ def collect_by_derivative(A : sp.Expr,
     return sp.collect(A, [dq_m_dp_n(m, n) 
                           for m in range(max_order) 
                           for n in range(max_order - m)])
-    
-###
-
-def _treat_der_template(A : sp.Derivative, a, ad):
-    # Used for opder2comm and iCGTransform
-    if not(isinstance(A, sp.Derivative)):
-        return A
-    
-    der_args = list(A.args)
-    
-    other_ders = []
-    out = der_args.pop(0)
-    for arg in der_args:
-        diff_var, order = arg
-        if isinstance(diff_var, a):
-            for _ in range(order):
-                out = Commutator(out, ad(diff_var.sub))
-        elif isinstance(diff_var, ad):
-            for _ in range(order):
-                out = Commutator(a(diff_var.sub), out)
-        else:
-            other_ders.append(arg)
-            
-    if other_ders:
-        out = sp.Derivative(out, *other_ders)
-    
-    return out
-
-@preprocess_func
-def opder2comm(expr : sp.Expr) -> sp.Expr:
-
-    return expr.replace(lambda e: isinstance(e, sp.Derivative),
-                        functools.partial(_treat_der_template,
-                                          a = annihilateOp,
-                                          ad = createOp))

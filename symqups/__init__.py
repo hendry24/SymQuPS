@@ -34,6 +34,6 @@ from .ordering import sOrdering, normal_order, weyl_order, antinormal_order
 from .quantization import naive_quantize, s_quantize
 from .star import Star, HattedStar
 from .utils import (
-    collect_by_derivative, derivative_not_in_num, get_N, get_random_poly,
-    opder2comm
+    collect_by_derivative, derivative_not_in_num, 
+    get_N, get_random_poly
 )

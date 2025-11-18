@@ -9,16 +9,30 @@ def preprocess_func(func):
         sympified_args = []
         for arg in args:
             try:
-                sympified_args.append(sp.sympify(arg))
+                arg = sp.sympify(arg)
             except:
-                sympified_args.append(arg)
+                pass
+            
+            try:
+                arg = arg.doit().expand()
+            except:
+                pass
+            
+            sympified_args.append(arg)
             
         sympified_kwargs = {}
         for k,v in kwargs.items():
             try:
-                sympified_kwargs[k] = sp.sympify(v)
+                v = sp.sympify(v)
             except:
-                sympified_kwargs[k] = v
+                pass
+            
+            try:
+                v = v.doit().expand()
+            except:
+                pass
+            
+            sympified_kwargs[k] = v
         
         # HACK: The multiprocessing implementation has an issue
         # where the first call in a session involving objects

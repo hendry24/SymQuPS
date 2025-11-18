@@ -12,7 +12,7 @@ from symqups.objects.scalars import (Scalar, q, p, t, W, alpha, alphaD)
 from symqups.objects.operators import (Operator, qOp, pOp, createOp, annihilateOp,
                                         densityOp, rho)
 from symqups.utils import get_random_poly
-from symqups.ordering import sOrdering
+from symqups.ordering import sOrdering, normal_order
 
 from symqups import hbar, zeta
 
@@ -90,34 +90,44 @@ def test_alpha2qp_and_qp2alpha():
 @pytest.mark.fast
 def test_op2sc_and_sc2op():
     aOp = annihilateOp()
-    adOp = createOp
+    adOp = createOp()
     a = alpha()
     ad = alphaD()
     
-    assert all(
+    assert all([
         op2sc(1) == 1,
         op2sc(a) == a,
         op2sc(aOp) == a,
         op2sc(a*aOp) == a**2,
+        op2sc(aOp+adOp) == a+ad,
         sc2op(1) == 1,
         sc2op(aOp) == aOp,
         sc2op(a) == aOp,
-        sc2op(a*aOp) == aOp**2
-    )
+        sc2op(a*aOp) == aOp**2,
+        sc2op(a+ad) == aOp+adOp
+    ])
+    
+    rand_poly = get_random_poly([aOp, adOp])
+    assert (sc2op(op2sc(rand_poly)) - normal_order(rand_poly)).expand() == 0
 
 @pytest.mark.full
 def test_dagger():
     assert dagger(1) == 1
+    assert dagger(1+1j) == sp.sympify(1-1j)
+    assert dagger(alpha()) == alphaD()
+    assert dagger(alphaD()) == alpha()
     
     for herm_op in [qOp(), pOp(), densityOp()]:
         assert dagger(herm_op) == herm_op
 
     assert dagger(annihilateOp()) == createOp()
-    assert dagger(createOp()) == annihilateOp()            
+    assert dagger(createOp()) == annihilateOp()   
 
     rand_poly = get_random_poly(objects = (1, sp.Symbol("x"), qOp(), annihilateOp(),
-                                            createOp(), annihilateOp()),
-                                coeffs = list(range(10)) + sp.symbols([]))
+                                            createOp(), annihilateOp(),
+                                            alpha(), alphaD()),
+                                coeffs = list(range(10)) + sp.symbols([]),
+                                n_terms=10)
     assert (dagger(dagger(rand_poly)) - rand_poly).expand() == 0
     
 @pytest.mark.full
@@ -133,6 +143,10 @@ def test_normal_ordered_equivalent():
     
     assert normal_ordered_equivalent(adop[0]*aop[0]) == adop[0]*aop[0]
     assert normal_ordered_equivalent(aop[0]*adop[0]) == 1 + adop[0]*aop[0]
+    assert normal_ordered_equivalent(aop[0]*adop[0]-1) == adop[0]*aop[0]
+    
+    assert normal_ordered_equivalent(adop[0]**2) == adop[0]**2
+    assert normal_ordered_equivalent(aop[0]*adop[0]**2) == 2*adop[0]+adop[0]**2*aop[0]
     
     assert (sp.simplify(sp.expand(normal_ordered_equivalent(aop[0]*adop[0]*aop[1]*adop[1])) 
              - sp.expand((1+adop[0]*aop[0])*(1+adop[1]*aop[1])))
@@ -199,7 +213,6 @@ def test_derivative():
     assert Derivative(F, adOp) == Commutator(aOp, F)
     assert Derivative(f, adOp) == Commutator(aOp, f)
     assert Derivative(X, x).doit() == sp.Derivative(X, x)
-    
     assert Derivative(X, adOp, x) == Derivative(Commutator(aOp, X), x)
     
     assert Derivative(rho, tt).doit() != 0

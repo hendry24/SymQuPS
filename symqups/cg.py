@@ -6,11 +6,13 @@ from ._internal.basic_routines import operation_routine
 from ._internal.grouping import (PhaseSpaceVariable, PhaseSpaceObject, Defined, 
                                  HilbertSpaceObject, NotAnOperator, NotAScalar,
                                  PhaseSpaceVariableOperator)
+from ._internal.math import has_universal_oper
 from ._internal.cache import sub_cache
 from ._internal.preprocessing import preprocess_class
 
 from .objects.scalars import W, StateFunction, alpha, alphaD
-from .objects.operators import Operator, densityOp, rho, annihilateOp, createOp
+from .objects.operators import (Operator, densityOp, rho, annihilateOp, 
+                                createOp, TimeDependentOp)
 
 from .bopp import PSBO
 from .star import Star, HattedStar
@@ -18,7 +20,7 @@ from .ordering import sOrdering
 from .manipulations import (qp2alpha, op2sc, alpha2qp, sc2op, Commutator,
                             s_ordered_equivalent, dagger, normal_ordered_equivalent,
                             Derivative)
-from .utils import get_N, _treat_der_template
+from .utils import get_N
 
 from . import s as CahillGlauberS
 from . import pi
@@ -324,7 +326,7 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             return op2sc(A.args[0])
         
         def treat_function(A : sp.Function) -> sp.Expr:
-            if A.has(densityOp):
+            if has_universal_oper(A):
                 return make(A)
 
             # The CG transform of any function in only one of 'annihilateOp'
@@ -357,11 +359,14 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
         
         def treat_commutator(A : Commutator):
             return CGTransform(A.args[0]*A.args[1] - A.args[1]*A.args[0])
+        
+        def treat_tdOp(A : TimeDependentOp):
+            return CGTransform(A.args[0])
             
         def make(A : sp.Expr):
             return super(CGTransform, cls).__new__(cls, A, *_vars)
         
-        expr = qp2alpha(sp.sympify(expr).expand())
+        expr = qp2alpha(expr)
         return operation_routine(expr,
                                 CGTransform,
                                 [],
@@ -376,7 +381,8 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
                                  iCGTransform : lambda A: A.args[0],
                                  Commutator : treat_commutator,
                                  HattedStar : treat_HattedStar,
-                                 sp.Derivative : treat_der}
+                                 sp.Derivative : treat_der,
+                                 TimeDependentOp : treat_tdOp}
                                 )
         
     def _latex(self, printer):
@@ -405,8 +411,12 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
         def treat_add(A : sp.Add) -> sp.Expr:
             return sp.Add(*mp_helper(A.args, iCGTransform))
         
-        def treat_der(A : sp.Derivative) -> sp.Expr:
-            return _treat_der_template(A, alpha, alphaD)
+        def treat_der(A : sp.Derivative) -> sp.Expr: 
+            der_args = A.args
+            return sc2op(Derivative(iCGTransform(der_args[0]), 
+                                    *der_args[1:]))
+                    # NOTE: assumes that 'sc2op' uses 'xreplace'. Will break
+                    # if 'subs' is used instead.
         
         def treat_pow(A : sp.Pow) -> sp.Expr:
             if (isinstance(A.args[0], sp.Derivative)
@@ -492,10 +502,13 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
         def treat_Star(A : Star) -> sp.Expr:
             return sp.Mul(*mp_helper(A.args, iCGTransform))
         
+        def treat_tdOp(A : TimeDependentOp) -> sp.Expr:
+            return TimeDependentOp(iCGTransform(A.args[0]))
+        
         def make(A : sp.Expr) -> iCGTransform:
             return super(iCGTransform, cls).__new__(cls, A, *_vars)
         
-        expr = qp2alpha(sp.sympify(expr.doit().expand()))
+        expr = qp2alpha(expr)
         return operation_routine(expr, 
                                 iCGTransform,
                                 [],
@@ -506,10 +519,11 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
                                  sp.Pow : treat_pow,
                                  sp.Mul : treat_mul,
                                  PhaseSpaceVariable : lambda A: sc2op(A),
-                                 StateFunction : rho/(pi.val)**get_N(),
+                                 StateFunction : TimeDependentOp(rho)/(pi.val)**get_N(),
                                  sp.Function : treat_foo,
                                  CGTransform : lambda A: A.args[0],
-                                 Star : treat_Star}
+                                 Star : treat_Star,
+                                 TimeDependentOp : treat_tdOp}
                                 )
     def _latex(self, printer):
         return r"\mathcal{W}^{-1}_{s={%s}}\left[{%s}\right]" % (sp.latex(CahillGlauberS.val),

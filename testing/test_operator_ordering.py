@@ -26,7 +26,7 @@ def test_sOrdering():
     assert sOrdering(a_1) == a_1
     assert sOrdering(ad_2) == ad_2
     
-    assert not(isinstance(sOrdering(a_2*ad_1), sOrdering)) 
+    assert sOrdering(a_2*ad_1) == a_2*ad_1
     assert isinstance(sOrdering(a_1*ad_1), sOrdering)
     
     expr = sOrdering(ad_1*a_1)
@@ -36,7 +36,7 @@ def test_sOrdering():
     assert isinstance(expr, sp.Pow) and not(expr.has(sOrdering))
     
     expr = sOrdering(a_2*ad_2 + 2*a_2)
-    assert isinstance(expr, sp.Add) and expr.has(sOrdering)
+    assert expr == sOrdering(a_2*ad_2) + 2*a_2
     
     assert sOrdering(2*x*ad_1*a_1) == 2*x*sOrdering(ad_1*a_1)
     

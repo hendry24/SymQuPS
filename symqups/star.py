@@ -13,7 +13,7 @@ from ._internal.multiprocessing import mp_helper
 from ._internal.preprocessing import preprocess_class
 
 from .objects.scalars import alpha, alphaD, StateFunction
-from .objects.operators import annihilateOp, createOp, densityOp
+from .objects.operators import annihilateOp, densityOp
 
 from .manipulations import qp2alpha, dagger, Derivative
 
@@ -60,7 +60,7 @@ def _Star_Bopp_monomial_A_times_B(A : sp.Expr, B : sp.Expr, left : bool):
             elif isinstance(b, alphaD):
                 xi = sp.Rational(1,2) * (s-lr_sgn)
             else:
-                raise TypeError("Invalid type. Contact dev.")
+                raise TypeError(f"Invalid type b = {b}. Contact dev.")
             bopp_factors.extend([sp.binomial(e, j),
                                  b**(e-j),
                                  xi**j])
@@ -137,13 +137,11 @@ def _star_base(F : sp.Expr,
     
     if hatted:
         var_group = HilbertSpaceObject
-        a, ad = annihilateOp, createOp
         a_ad_group = PhaseSpaceVariableOperator
         state = densityOp
         bopp_monomial = _HattedStar_Bopp_monomial_A_times_B
     else:
         var_group = PhaseSpaceObject
-        a, ad = alpha, alphaD
         a_ad_group = PhaseSpaceVariable
         state = StateFunction
         bopp_monomial = _Star_Bopp_monomial_A_times_B
@@ -205,7 +203,9 @@ class _StarTemplate(sp.Expr, CannotBoppShift, Defined):
             try:
                 if arg.has(qpType):
                     arg = qp2alpha(arg)
-                out = _star_base(out, arg, hatted)
+                out = _star_base(out, arg, hatted).doit().expand()
+                # NOTE: .doit().expand() MUST be called here so that the current output
+                # is put in a form familiar to _star_base.
             except _CannotBoppFlag:
                 if out != 1:
                     unevaluated_args.append(out)

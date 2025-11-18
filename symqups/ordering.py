@@ -14,7 +14,7 @@ from ._internal.preprocessing import preprocess_class
 
 from .objects.operators import Operator, annihilateOp, createOp
 
-from .manipulations import qp2alpha
+from .manipulations import qp2alpha, explicit_sOrdering
 
 from . import s as CahillGlauberS
 
@@ -201,13 +201,14 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
                         * ((t-self.args[1])/2)**k * yy)
             return out
         
-        return sp.Mul(*[expand_s_ordered_unipartite_string(sub) for sub in sub_cache])
+        return sp.Mul(*[expand_s_ordered_unipartite_string(sub) 
+                        for sub in sub_cache])
 
 def normal_order(expr : sp.Expr) -> sp.Expr:
-    return sOrdering(expr, s=1).explicit()
+    return explicit_sOrdering(sOrdering(expr, s=1))
 
 def antinormal_order(expr : sp.Expr) -> sp.Expr:
-    return sOrdering(expr, s=-1).explicit()
+    return explicit_sOrdering(sOrdering(expr, s=-1))
 
 def weyl_order(expr : sp.Expr) -> sp.Expr:
-    return sOrdering(expr, s=0).explicit()
+    return explicit_sOrdering(sOrdering(expr, s=0))

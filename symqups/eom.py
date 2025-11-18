@@ -6,14 +6,13 @@ from ._internal.math import separate_operator
 from ._internal.preprocessing import preprocess_class
 
 from .objects.scalars import t
-from .objects.operators import rho, Operator
+from .objects.operators import rho, Operator, TimeDependentOp
 
 from .manipulations import dagger, Commutator, Derivative
 
 from . import hbar
 
 __all__ = ["LindbladMasterEquation"]
-
 
 class _LindbladDissipator(_AddOnlyExpr):
     def __new__(cls, coef = 1, operator_1 = 1, operator_2 = None):        
@@ -47,9 +46,7 @@ class _LindbladDissipator(_AddOnlyExpr):
                    op_str)
     
     def define(self):
-        
         P = self.operator_1
-        
         Q = self.operator_2
         Qd = dagger(Q)
         
@@ -96,7 +93,7 @@ class LindbladMasterEquation(sp.Basic):
                 nondiagonal dissipator. 
         
         """
-        lhs = Derivative(rho, t())
+        lhs = Derivative(TimeDependentOp(rho), t())
         
         dissip_lst = []
         for dissip in dissipators:

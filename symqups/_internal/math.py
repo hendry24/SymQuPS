@@ -3,7 +3,6 @@ from typing import Sequence, Tuple
 
 from .basic_routines import screen_type
 from .cache import sub_cache
-from .grouping import PhaseSpaceVariable
 
 from ..objects.scalars import Scalar
 from ..objects.operators import Operator, createOp, annihilateOp

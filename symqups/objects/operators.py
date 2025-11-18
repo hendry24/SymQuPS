@@ -1,9 +1,12 @@
+import sympy as sp
 import typing
 
 from .base import Base
 from .._internal.grouping import HilbertSpaceObject, qpType, alphaType, PhaseSpaceVariableOperator, CannotBoppShift
 from .._internal.cache import sub_cache
 from .._internal.basic_routines import treat_sub
+
+from .scalars import t
 
 # NOTE: 'import .._internal.operator_handling' will result
 # in circular imports. 
@@ -111,3 +114,36 @@ class densityOp(HermitianOp, CannotBoppShift):
     
 global rho
 rho = densityOp()
+
+###
+
+class TimeDependentOp(sp.Expr, HilbertSpaceObject, CannotBoppShift):
+    is_commutative = False
+    
+    def __new__(cls, base : sp.Expr, *_args, **assumptions):
+        # need *args since we include two inputs to super() but
+        # only accept one input for the instantiation.
+        td_op_lst = [densityOp] # Currently, only 'rho' is convertible to be time-dependent. 
+        return base.xreplace({x() : super().__new__(cls, x(), t())
+                              for x in td_op_lst})
+    
+    def _latex(self, printer):
+        return r"{%s}(t)" % (self.args[0])
+    
+    @property
+    def sub(self):
+        return self.args[0].sub
+    
+    def dagger(self):
+        from ..manipulations import dagger
+        return TimeDependentOp(dagger(self.args[0]))
+    
+    @property
+    def _diff_wrt(self): 
+        msg = "Differentiation with respect to 'Operator' is undefined for SymPy. "
+        msg += "This package, however, implements the formal derivative with respect to"
+        msg += "'annihilateOp' and 'createOp'. See this package's 'Derivative' object."
+        raise NotImplementedError(msg)
+    
+global rhoTD
+rhoTD = TimeDependentOp(rho)

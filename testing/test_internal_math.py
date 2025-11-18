@@ -44,7 +44,8 @@ class TestInternalMath:
         assert not is_nonconstant_polynomial(x, y)
         assert is_nonconstant_polynomial(x, x)
         assert is_nonconstant_polynomial(2*x**3+x, x)
-        assert not is_nonconstant_polynomial(sp.exp(x), x) and is_nonconstant_polynomial(sp.exp(x), x) is not None
+        assert not is_nonconstant_polynomial(sp.exp(x), x) 
+        assert is_nonconstant_polynomial(sp.exp(x), x) is not None
         assert not is_nonconstant_polynomial(x**1.2, x)
         assert not is_nonconstant_polynomial(sp.sqrt(x) + x**2, x )
         
@@ -62,9 +63,10 @@ class TestInternalMath:
     def has_universal_oper(self):
         expected_to_fail(lambda: has_universal_oper(1))
         
-        assert has_universal_oper(rho) == True
-        assert has_universal_oper(createOp()) == False
-        assert has_universal_oper(rho*createOp() == True)
+        assert not has_universal_oper(sp.sympify(1))
+        assert has_universal_oper(rho)
+        assert not has_universal_oper(createOp())
+        assert has_universal_oper(rho*createOp())
     
     def test_separate_operator(self):
         op_1 = Operator(1)

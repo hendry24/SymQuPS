@@ -2,7 +2,7 @@ import sympy as sp
 import sympy.physics.quantum as spq
 from typing import Sequence
 
-from ._internal.basic_routines import operation_routine, default_treat_add
+from ._internal.basic_routines import operation_routine, default_treat_add, invalid_input
 from ._internal.math import has_universal_oper, separate_term_oper_by_sub, get_sub
 from ._internal.cache import ( op2sc_subs_dict, sc2op_subs_dict, 
                               alpha2qp_subs_dict, qp2alpha_subs_dict, ProtectedDict)
@@ -11,7 +11,7 @@ from ._internal.grouping import qpType, alphaType, HilbertSpaceObject
 from ._internal.preprocessing import preprocess_func, preprocess_class
 
 from .objects.scalars import Scalar, t
-from .objects.operators import annihilateOp, createOp, Operator, densityOp, qOp, pOp
+from .objects.operators import annihilateOp, createOp, Operator, TimeDependentOp
     
 ###
 
@@ -23,7 +23,7 @@ def _subs_template(expr : sp.Expr, subs_dict : ProtectedDict, lookup_atoms : tup
     # dictionary by only having keys that are actually present in the input expression.
     trimmed_subs_dict = {key : subs_dict[key] 
                          for key in expr.atoms(*lookup_atoms) & subs_dict.keys()}
-    return sp.expand(sp.sympify(expr).subs(trimmed_subs_dict))
+    return expr.xreplace(trimmed_subs_dict)
     
 def alpha2qp(expr : sp.Expr) -> sp.Expr:
     return _subs_template(expr, alpha2qp_subs_dict, (alphaType,))
@@ -56,7 +56,7 @@ def dagger(expr : sp.Expr) -> sp.Expr:
                             [],
                             [],
                             {Operator : lambda A: sp.conjugate(A)},
-                            {Operator : lambda A: A.dagger(),
+                            {(Operator, TimeDependentOp) : lambda A: A.dagger(),
                              sp.Add : treat_add,
                              sp.Pow : treat_pow,
                              sp.Mul : treat_mul}
@@ -214,8 +214,11 @@ def normal_ordered_equivalent(expr : sp.Expr) -> sp.Expr:
         return sp.Mul(coef, *mp_helper(A_sep, _eval_Blasiak))
         # NOTE: no need for _final_swap since this is automaticaly done
         # by the patched sympy.Mul.flatten.
-                
-    expr = express_sOrdering(qp2alpha(sp.sympify(expr)), 1, True)
+    
+    if has_universal_oper(expr):
+        invalid_input(expr, normal_ordered_equivalent)
+        
+    expr = express_sOrdering(qp2alpha(expr), 1, True)
     return operation_routine(expr,
                              normal_ordered_equivalent,
                              [],
@@ -237,7 +240,7 @@ def s_ordered_equivalent(expr : sp.Expr) -> sp.Expr:
 @preprocess_class
 class Derivative(sp.Derivative):
     """
-    The derivative object.
+    The derivative constructor.
     """
     def __new__(cls, expr, *variables, **hints):
         
@@ -246,7 +249,6 @@ class Derivative(sp.Derivative):
 
         a_lst = []
         ad_lst = []
-        t_order = 0
         other_vars  = []
         for var in variables:
             if isinstance(var, (Sequence, sp.Tuple)):
@@ -254,8 +256,6 @@ class Derivative(sp.Derivative):
                     a_lst += [var[0]]*var[1]
                 elif var[0].has(createOp):
                     ad_lst += [var[0]]*var[1]
-                elif var[0].has(t):
-                    t_order += var[1]
                 else:
                     other_vars.append(var)
             
@@ -264,8 +264,6 @@ class Derivative(sp.Derivative):
                     a_lst.append(var)
                 elif var.has(createOp):
                     ad_lst.append(var) 
-                elif var.has(t):
-                    t_order += 1
                 else:
                     other_vars.append(var)
         
@@ -278,19 +276,9 @@ class Derivative(sp.Derivative):
         
         ###
         
-        if t_order > 0:
-            if expr.has(densityOp):
-                # HACK: This forces the time derivative for expressions containing
-                # densityOp to stay unevaluated. Might want to change this if
-                # chain/product rule evaluation is desired. 
-                return super().__new__(cls, Derivative(expr, *other_vars), 
-                                       (t(), t_order), evaluate=False)
-            else:
-                other_vars.append((t(), t_order))
-        
-        ###
-        
         if not(other_vars):
             return expr
                 
-        return super().__new__(cls, expr, *other_vars, **hints)
+        return sp.Derivative(expr, *other_vars, **hints)
+    
+    
