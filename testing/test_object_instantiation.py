@@ -9,7 +9,10 @@ from symqups._internal.cache import sub_cache
 from symqups._internal.grouping import PhaseSpaceVariable, qpType, alphaType
 
 from symqups.objects.scalars import (Scalar, t, q, p, alpha, alphaD, StateFunction, W)
-from symqups.objects.operators import Operator, qOp, pOp, createOp, annihilateOp, densityOp, rho, _OperatorTimeDependence
+from symqups.objects.operators import Operator, qOp, pOp, createOp, annihilateOp, densityOp, rho, TimeDependentOp
+
+from symqups._internal.cache import sub_cache
+sub_cache.clear()
 
 ###
 
@@ -77,6 +80,6 @@ class TestObjectInstantiation:
         assert rho == densityOp()
         assert not(rho.has_sub)
         
-        A = _OperatorTimeDependence(rho)
-        assert isinstance(A, _OperatorTimeDependence)
+        A = TimeDependentOp(rho)
+        assert isinstance(A, TimeDependentOp)
         assert dill.loads(dill.dumps(A)) == A

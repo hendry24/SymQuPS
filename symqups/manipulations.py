@@ -1,13 +1,15 @@
 import sympy as sp
 import sympy.physics.quantum as spq
 from typing import Sequence
+from functools import partial
 
-from ._internal.basic_routines import operation_routine, default_treat_add, invalid_input
-from ._internal.math import has_universal_oper, separate_term_oper_by_sub, get_sub
+from ._internal.basic_routines import operation_routine, default_treat_add
+from ._internal.math import (has_universal_oper, separate_term_oper_by_sub, get_sub,
+                             separate_term_by_nonconstant_polynomiality, is_nonconstant_polynomial)
 from ._internal.cache import ( op2sc_subs_dict, sc2op_subs_dict, 
                               alpha2qp_subs_dict, qp2alpha_subs_dict, ProtectedDict)
 from ._internal.multiprocessing import mp_helper
-from ._internal.grouping import qpType, alphaType, HilbertSpaceObject
+from ._internal.grouping import qpType, alphaType, HilbertSpaceObject, PhaseSpaceVariableOperator
 from ._internal.preprocessing import preprocess_func, preprocess_class
 
 from .objects.scalars import Scalar, t
@@ -204,6 +206,19 @@ def normal_ordered_equivalent(expr : sp.Expr) -> sp.Expr:
         return default_treat_add(A.args, normal_ordered_equivalent)
     
     def treat_mul(A : sp.Expr) -> sp.Expr:
+        
+        if has_universal_oper(expr) or not(is_nonconstant_polynomial(expr, PhaseSpaceVariableOperator)):
+            # Polynomial parts will skip this block, so even though 
+            # separate_term_by_nonconstant_polynomiality returns at least
+            # length-2 list for a polynomial, we do not encounter such a
+            # case.
+            sep = separate_term_by_nonconstant_polynomiality(expr,
+                                                            PhaseSpaceVariableOperator)
+            if len(sep) == 1:
+                return sep[0]
+            else:
+                return sp.Mul(*mp_helper(sep, normal_ordered_equivalent))
+        
         if (not(A.is_polynomial(annihilateOp, createOp)) 
             or has_universal_oper(expr)):
             return A
@@ -214,11 +229,9 @@ def normal_ordered_equivalent(expr : sp.Expr) -> sp.Expr:
         return sp.Mul(coef, *mp_helper(A_sep, _eval_Blasiak))
         # NOTE: no need for _final_swap since this is automaticaly done
         # by the patched sympy.Mul.flatten.
-    
-    if has_universal_oper(expr):
-        invalid_input(expr, normal_ordered_equivalent)
         
     expr = express_sOrdering(qp2alpha(expr), 1, True)
+    
     return operation_routine(expr,
                              normal_ordered_equivalent,
                              [],
@@ -226,11 +239,15 @@ def normal_ordered_equivalent(expr : sp.Expr) -> sp.Expr:
                              {Operator : expr},
                              {sp.Add : treat_add,
                               sp.Mul : treat_mul,
-                              (Operator, sp.Pow, sp.Function) : expr})
+                              (Operator, 
+                               TimeDependentOp, 
+                               sp.Pow, 
+                               sp.Function) : expr})
     
 ###
 
 def s_ordered_equivalent(expr : sp.Expr) -> sp.Expr:
+    # TODO: Might want to add nonpoly support here.
     from .ordering import sOrdering
     from . import s 
     return express_sOrdering(sOrdering(normal_ordered_equivalent(expr), 1), s.val, False)

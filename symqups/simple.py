@@ -16,7 +16,7 @@ del alpha, alphaD
 
 ###
 
-from .objects.operators import qOp, pOp, annihilateOp, createOp, rho
+from .objects.operators import qOp, pOp, annihilateOp, createOp, rho, rhoTD
 qOp = qOp()
 pOp = pOp()
 aOp = annihilateOp()
@@ -32,8 +32,8 @@ from .eom import LindbladMasterEquation, LME
 from .manipulations import (alpha2qp, qp2alpha, sc2op, op2sc, dagger, 
                             explicit_sOrdering, express_sOrdering, 
                             normal_ordered_equivalent, s_ordered_equivalent,
-                            Derivative)
-from .ordering import sOrdering
-from .quantization import naive_quantize, s_quantize
+                            Derivative, Commutator)
+from .ordering import sOrdering, normal_order, Weyl_order, antinormal_order
+from .quantization import s_quantize, normal_quantize, Weyl_quantize, antinormal_quantize
 from .star import Star, HattedStar
 from .utils import get_random_poly, collect_by_derivative

@@ -8,6 +8,9 @@ from symqups.ordering import sOrdering
 
 rand_N = random.randint(1, 20)
 
+from symqups._internal.cache import sub_cache
+sub_cache.clear()
+
 @pytest.mark.fast
 def test_sOrdering():
     a_1 = annihilateOp(1)

@@ -8,6 +8,9 @@ from symqups._internal.grouping import PhaseSpaceVariableOperator
 
 from utils import expected_to_fail
 
+from symqups._internal.cache import sub_cache
+sub_cache.clear()
+
 # TESTED FUNCTIONALITIES
 # ======================
 

@@ -3,6 +3,9 @@ import sympy as sp
 
 from utils import expected_to_fail
 
+from symqups._internal.cache import sub_cache
+sub_cache.clear()
+
 # TESTED FUNCTIONALITIES
 # ======================
 

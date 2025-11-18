@@ -1,4 +1,8 @@
 import sympy as sp
+from symqups._internal.cache import sub_cache
+
+def clear_sub_cache():
+    sub_cache.clear()
 
 def arithmetic_test(A):
     assert A+2 == 2+A

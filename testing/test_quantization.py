@@ -1,50 +1,20 @@
 import pytest
 import sympy as sp
 
-from symqups import s
-from symqups.objects.scalars import q, p, alpha, alphaD, W
-from symqups.objects.operators import Operator, qOp, pOp, annihilateOp, createOp
-from symqups.manipulations import qp2alpha
-from symqups.ordering import sOrdering
+from symqups.objects.scalars import alpha, alphaD
+from symqups.objects.operators import annihilateOp, createOp
+from symqups.ordering import normal_order, Weyl_order, antinormal_order
+from symqups.quantization import normal_quantize, Weyl_quantize, antinormal_quantize
+from symqups.manipulations import normal_ordered_equivalent
 
-from symqups.quantization import s_quantize
+from symqups._internal.cache import sub_cache
+sub_cache.clear()
+###
 
 @pytest.mark.fast
-def test_s_quantize():
-    # Since 's_quantize' depends heavily on 'naive_quantize',
-    # this test also serves to test 'naive_quantize'
-    qq = q()
-    q_op = qOp()
-    pp = p()
-    p_op = pOp()
-    a = alpha()
-    a_op = annihilateOp()
-    ad = alphaD()
-    ad_op = createOp()
-    x = sp.Symbol("x")
-    
-    for obj in (s, W, Operator()):
-        try:
-            s_quantize(obj)
-            raise RuntimeError("Test failed.")
-        except:
-            pass
-        
-    assert s_quantize(1) == 1
-    
-    assert s_quantize(x) == x
-    assert s_quantize(x+2) == (x+2)
-    assert s_quantize(sp.exp(x)) == sp.exp(x)
-
-    assert s_quantize(a) == a_op
-    assert s_quantize(qq) == qp2alpha(q_op)
-    
-    assert s_quantize(a+ad) == (a_op+ad_op)
-    assert s_quantize(2*ad) == 2*ad_op
-    assert s_quantize(ad**2) == ad_op**2
-    assert s_quantize(sp.exp(2*a)) == sp.exp(2*a_op)
-    
-    assert s_quantize(sp.exp(a*ad)) == sOrdering(sp.exp(ad_op*a_op))
-                                        # NOTE: sympy orders alphaD() before alpha()
-                                        # so when it is naive-quantized, the resulting
-                                        # expression is normal-ordered.
+def test_quantization():
+    a, ad  = alpha(), alphaD()
+    aOp, adOp = annihilateOp(), createOp()
+    for q, o in zip([normal_quantize, Weyl_quantize, antinormal_quantize],
+                    [normal_order, Weyl_order, antinormal_order]):
+        assert sp.expand(normal_ordered_equivalent(q(a*ad) - o(aOp*adOp))) == 0

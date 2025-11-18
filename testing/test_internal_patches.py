@@ -4,6 +4,9 @@ import sympy as sp
 from symqups.objects.scalars import alpha, alphaD
 from symqups.objects.operators import annihilateOp, createOp, rho
 
+from symqups._internal.cache import sub_cache
+sub_cache.clear()
+
 @pytest.mark.fast
 class TestInternalPatches:
     a = [alpha(i) for i in range(4)]

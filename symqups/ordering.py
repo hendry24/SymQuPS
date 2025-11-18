@@ -210,5 +210,5 @@ def normal_order(expr : sp.Expr) -> sp.Expr:
 def antinormal_order(expr : sp.Expr) -> sp.Expr:
     return explicit_sOrdering(sOrdering(expr, s=-1))
 
-def weyl_order(expr : sp.Expr) -> sp.Expr:
+def Weyl_order(expr : sp.Expr) -> sp.Expr:
     return explicit_sOrdering(sOrdering(expr, s=0))

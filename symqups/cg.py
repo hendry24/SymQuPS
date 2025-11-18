@@ -361,6 +361,7 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             return CGTransform(A.args[0]*A.args[1] - A.args[1]*A.args[0])
         
         def treat_tdOp(A : TimeDependentOp):
+            # Assuming rhoTD only.
             return CGTransform(A.args[0])
             
         def make(A : sp.Expr):
@@ -413,10 +414,10 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
         
         def treat_der(A : sp.Derivative) -> sp.Expr: 
             der_args = A.args
-            return sc2op(Derivative(iCGTransform(der_args[0]), 
-                                    *der_args[1:]))
-                    # NOTE: assumes that 'sc2op' uses 'xreplace'. Will break
-                    # if 'subs' is used instead.
+            new_der_args = [iCGTransform(der_args[0])]
+            for arg in der_args[1:]:
+                new_der_args.append((iCGTransform(arg[0]), arg[1]))
+            return Derivative(*new_der_args)
         
         def treat_pow(A : sp.Pow) -> sp.Expr:
             if (isinstance(A.args[0], sp.Derivative)
@@ -427,7 +428,14 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
         def treat_mul(A : sp.Mul) -> sp.Expr:
             if (A.is_polynomial(PhaseSpaceVariable) and
                 not(A.has(StateFunction))):
-                return sOrdering(sc2op(A), lazy=lazy)                                                                                               
+                return sOrdering(sc2op(A), lazy=lazy)
+            
+            # TODO: Might want to optimize this part by fully using 
+            # the combo method, since there is nested Add-and-Mul
+            # for the output generation below. This will increase
+            # cost with number of subsystems. May not be needed if
+            # use cases is focused on single sub, in which case the
+            # explicit sum may be faster than assembling combos.                                                                            
             
             coefs = []
             m_dict = {sub : 0 for sub in sub_cache}
@@ -470,7 +478,7 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
                 # clutter to keep the nonpolynomial part unevaluated.
             
             # NOTE: Here we use the explicit form of the cascaded HSBS applications.
-            out_summands = []
+            out = sp.Mul(*coefs, F)
             for sub in sub_cache:
                 m = m_dict[sub]
                 n = n_dict[sub]
@@ -478,6 +486,7 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
                 a = annihilateOp(sub)
                 k1 = (1-CahillGlauberS.val)/2
                 k2 = (1+CahillGlauberS.val)/2
+                summands = []
                 for j in range(m+1):
                     for k in range(n+1):
                         factors = [sp.binomial(m,j),
@@ -486,13 +495,14 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
                                    k2**(m-j+k),
                                    ad**(m-j),
                                    a**(n-k),
-                                   F,
+                                   out,
                                    a**k,
                                    ad**j
                                    ]
-                        out_summands.append(sp.Mul(*coefs, *factors))
-                        
-            return sp.Add(*out_summands)
+                        summands.append(sp.Mul(*factors))
+                out = sp.Add(*summands)
+                
+            return out
             
         def treat_foo(A: sp.Function) -> sp.Expr:
             if A.has(StateFunction):
@@ -501,10 +511,7 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
         
         def treat_Star(A : Star) -> sp.Expr:
             return sp.Mul(*mp_helper(A.args, iCGTransform))
-        
-        def treat_tdOp(A : TimeDependentOp) -> sp.Expr:
-            return TimeDependentOp(iCGTransform(A.args[0]))
-        
+                
         def make(A : sp.Expr) -> iCGTransform:
             return super(iCGTransform, cls).__new__(cls, A, *_vars)
         
@@ -522,8 +529,7 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
                                  StateFunction : TimeDependentOp(rho)/(pi.val)**get_N(),
                                  sp.Function : treat_foo,
                                  CGTransform : lambda A: A.args[0],
-                                 Star : treat_Star,
-                                 TimeDependentOp : treat_tdOp}
+                                 Star : treat_Star}
                                 )
     def _latex(self, printer):
         return r"\mathcal{W}^{-1}_{s={%s}}\left[{%s}\right]" % (sp.latex(CahillGlauberS.val),

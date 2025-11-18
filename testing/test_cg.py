@@ -3,16 +3,19 @@ import sympy as sp
 import random
 
 from symqups.objects.scalars import q, p, alpha, alphaD, W, t
-from symqups.objects.operators import qOp, pOp, annihilateOp, createOp, rho, _TimeDependentOp
+from symqups.objects.operators import qOp, pOp, annihilateOp, createOp, rho, TimeDependentOp, rhoTD
 
 from symqups.ordering import sOrdering
-from symqups.manipulations import qp2alpha, express_sOrdering, op2sc, Derivative, Commutator
-from symqups.utils import get_random_poly
+from symqups.manipulations import qp2alpha, op2sc, Derivative, Commutator, normal_ordered_equivalent
+from symqups.utils import get_random_poly, get_N
 from symqups.star import Star, HattedStar
 
 from symqups import s, pi
 s = s.val
 pi = pi.val
+
+from symqups._internal.cache import sub_cache
+sub_cache.clear()
 
 # TESTED FUNCTIONALITIES
 # ======================
@@ -58,7 +61,7 @@ def test_CGTransform():
     assert CGTransform(A) == A
     
     # Density matrix
-    assert CGTransform(rho) == pi*W
+    assert CGTransform(rho) == pi**get_N()*W
     
     # Addition
     A = CGTransform(ins[0]+ins[1])
@@ -80,16 +83,16 @@ def test_CGTransform():
     assert isinstance(CGTransform(foo(a, ad)), CGTransform)
     assert isinstance(CGTransform(foo(rho)), CGTransform)
     
-    # HattedStar
+    # HattedStar product
     F = sp.Function("F")(a,ad)
     G = sp.Function("G")(a,ad)
     assert CGTransform(HattedStar(F,G)) == CGTransform(F)*CGTransform(G)
     
     # Derivative
-    assert CGTransform(Derivative(_TimeDependentOp(rho)/pi, t())) == Derivative(W, t())
+    assert CGTransform(Derivative(TimeDependentOp(rho)/pi**get_N(), t())) == Derivative(W, t())
     
     # Commutator
-    A = CGTransform(Commutator(ad*a, rho/pi)).doit().expand()
+    A = CGTransform(Commutator(ad*a, rho/pi**get_N())).doit().expand()
     B = alphaD()*Derivative(W,alphaD()) - alpha()*Derivative(W,alpha())
     assert sp.expand(A-B) == 0
     
@@ -108,8 +111,51 @@ def test_iCGTransform():
              [qOp(), pOp(), annihilateOp(), createOp()],
              iCGTransform)
     
-    A = express_sOrdering(iCGTransform(alpha()*alphaD()), 1, explicit=True)
-    B = express_sOrdering(sOrdering(annihilateOp()*createOp()), 1, explicit=True)
-    assert sp.simplify(A-B) == 0
+    a, ad = alpha(), alphaD()
     
+    ins = [get_random_poly([a,ad]) for _ in range(2)]
     
+    # State function
+    assert iCGTransform((pi**get_N())*W) == rhoTD
+    
+    # Addition
+    A = iCGTransform(ins[0]+ins[1])
+    B = iCGTransform(ins[0]) + iCGTransform(ins[1])
+    assert sp.expand(normal_ordered_equivalent(A-B)) == 0
+    
+    # Derivative
+    assert iCGTransform(Derivative((pi**get_N())*W, a)) == Commutator(rhoTD, createOp())
+    assert iCGTransform(Derivative((pi**get_N())*W, ad)) == Commutator(annihilateOp(), rhoTD)
+    assert iCGTransform(Derivative((pi**get_N())*W, t())).doit() == Derivative(rhoTD, t())
+    
+    # Power
+    assert isinstance(iCGTransform(Derivative(W,t())**2), iCGTransform)
+    assert isinstance(iCGTransform(W**2), iCGTransform)
+    assert not isinstance(iCGTransform(a**2), iCGTransform)
+    
+    # Mul
+    A = normal_ordered_equivalent(iCGTransform(ins[0]*ins[1]))
+    B = normal_ordered_equivalent(HattedStar(iCGTransform(ins[0]), iCGTransform(ins[1])))
+    assert sp.expand(A-B) == 0
+    
+    # Function
+    foo = sp.Function("f")
+    assert isinstance(iCGTransform(foo(W)), iCGTransform)
+    assert not isinstance(iCGTransform(foo(a,ad)), iCGTransform)
+    assert iCGTransform(foo(a,ad)) == sOrdering(foo(annihilateOp(), createOp()))
+    
+    # Star product
+    F = sp.Function("F")(a,ad)
+    G = sp.Function("G")(a,ad)
+    assert iCGTransform(Star(F,G)) == iCGTransform(F)*iCGTransform(G)
+    
+pytest.mark.fast
+def test_CG_correspondence():
+    a, ad = annihilateOp(), createOp()
+    rp = get_random_poly([a,ad])
+    
+    assert normal_ordered_equivalent(iCGTransform(CGTransform(rp)) - rp).expand() == 0
+    
+    A = Commutator(ad*a, rhoTD/pi**get_N()).doit().expand()
+    B = normal_ordered_equivalent(iCGTransform(CGTransform(A))).doit()
+    assert sp.expand(A-B) == 0

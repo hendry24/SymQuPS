@@ -5,6 +5,9 @@ from symqups.objects.scalars import Scalar, W
 from symqups.objects.operators import Operator
 from symqups._internal.multiprocessing import mp_helper, MP_CONFIG
 
+from symqups._internal.cache import sub_cache
+sub_cache.clear()
+
 def mp_helper_foo(x):
         return x+2
 

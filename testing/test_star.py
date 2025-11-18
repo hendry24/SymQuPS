@@ -12,6 +12,9 @@ from symqups.manipulations import Derivative, Commutator, normal_ordered_equival
 from symqups import s,hbar,zeta
 from symqups.utils import get_random_poly
 
+from symqups._internal.cache import sub_cache
+sub_cache.clear()
+
 hbar = hbar.val
 zeta = zeta.val
 s = s.val
@@ -84,6 +87,10 @@ class TestStar():
         assert isinstance(HattedStar(sp.exp(self.adOp), rho), HattedStar)
         
         ins = [get_random_poly([self.aOp, self.adOp]) for _ in range(3)]
+        
+        # Commutativity
+        assert (normal_ordered_equivalent(HattedStar(ins[0],ins[1]))
+                -normal_ordered_equivalent(HattedStar(ins[1],ins[0]))).expand() == 0
         
         # Associativity
         assert normal_ordered_equivalent(
