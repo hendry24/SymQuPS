@@ -21,15 +21,12 @@ class Constant(CantSympify, _ReadOnlyExpr, Base):
         
     def __new__(cls):
         obj = super().__new__(cls)
-        obj.val = cls.default_value
+        obj._val = cls.default_value
         return obj
         
     @property
     def val(self):
-        if "_val" not in self.__dict__:
-            return self._custom_args[0]
-        else:
-            return self._val
+        return self._val
 
     @val.setter
     def val(self, value):        
@@ -101,8 +98,4 @@ class piTranscendentalNumber(Constant):
     
     @Constant.val.setter
     def val(self, value):
-        if "_val" in self.__dict__:
-            raise NotImplementedError("Cannot set the value of 'pi'.")
-        else:
-            super(piTranscendentalNumber,
-                  piTranscendentalNumber).val.__set__(self, value)
+        raise NotImplementedError("Cannot set the value of 'pi'.")
