@@ -124,7 +124,7 @@ class TimeDependentOp(sp.Expr, HilbertSpaceObject, CannotBoppShift):
         # need *args since we include two inputs to super() but
         # only accept one input for the instantiation.
         td_op_lst = [densityOp] # Currently, only 'rho' is convertible to be time-dependent. 
-        return base.xreplace({x() : super().__new__(cls, x(), t())
+        return base.xreplace({x() : super(cls,cls).__new__(cls, x(), t())
                               for x in td_op_lst})
     
     def _latex(self, printer):

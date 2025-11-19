@@ -108,7 +108,7 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
         def make(A : sp.Expr, contains_poly : bool) -> sOrdering:
             if not(has_ordering_ambiguity(A)):
                 return A
-            obj = super(sOrdering, cls).__new__(cls, A, s)
+            obj = super(cls, cls).__new__(cls, A, s)
             obj._contains_poly = contains_poly
             return obj
            

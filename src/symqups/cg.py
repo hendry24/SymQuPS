@@ -48,7 +48,7 @@ def _iCGT_str(x : str, var : bool = False) -> str:
 ###
 
 class _CreateOpAsPSV(annihilateOp):
-    # Identifies as an annihilateOp but does not trigger 
+    # HACK: Identifies as an annihilateOp but does not trigger 
     # sub-caching. Used in `CGTransform::treat_mul` to 
     # *represent* the PSV part of a PSBO.
     def __new__(cls, psv : alpha | alphaD):
@@ -365,7 +365,7 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             return CGTransform(A.args[0])
             
         def make(A : sp.Expr):
-            return super(CGTransform, cls).__new__(cls, A, *_vars)
+            return super(cls, cls).__new__(cls, A, *_vars)
         
         expr = qp2alpha(expr)
         return operation_routine(expr,
@@ -513,7 +513,7 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
             return sp.Mul(*mp_helper(A.args, iCGTransform))
                 
         def make(A : sp.Expr) -> iCGTransform:
-            return super(iCGTransform, cls).__new__(cls, A, *_vars)
+            return super(cls, cls).__new__(cls, A, *_vars)
         
         expr = qp2alpha(expr)
         return operation_routine(expr, 
