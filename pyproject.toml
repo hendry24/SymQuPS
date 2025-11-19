@@ -15,7 +15,7 @@ authors = [
 ]
 description = "Python symbolic implementation of the quantum phase space formalism."
 readme = "README.md"
-license = {text = "Apache-2.0"}
+license = "Apache-2.0"
 keywords = [
     "Quantum phase space",
     "Wigner transform",
@@ -36,8 +36,7 @@ keywords = [
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
-    "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: Apache Software License",
+    "Intended Audience :: Science/Research"
 ]
 
 [project.urls]
