@@ -178,7 +178,7 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
             case default:
                 return self
 
-    def express(self, t = 1) -> sp.Expr:
+    def express(self, t = 1, explicit=True) -> sp.Expr:
         """
         Expand the expression in terms of t-ordered expressions.
         By default, `t=1` corresponds to normal-ordering. If `define`,
@@ -227,14 +227,13 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
                                                    product(*poly_dict_val)):
             coef = [c for c_lst in coef_combo for c in c_lst]
             poly_dict = {sub : mn for sub, mn in zip(sub_cache, poly_dict_val_combo)}
-            out_summands.append(sp.Mul(*coef,
-                                       sOrdering(1, 
-                                                 s=t, 
-                                                 _fast_constructor=[poly_dict, 
-                                                                   []]
-                                                 )
-                                       )
-                                )
+            sordered = sOrdering(1, s=t, _fast_constructor=[poly_dict, []])
+            
+            if explicit and isinstance(sordered, sOrdering):
+                sordered = sordered.explicit()
+                
+            out_summands.append(sp.Mul(*coef, sordered))
+            
         return sp.Add(*out_summands)
 
 def normal_order(expr : sp.Expr) -> sp.Expr:
