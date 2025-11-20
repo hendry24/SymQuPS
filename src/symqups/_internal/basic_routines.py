@@ -127,3 +127,7 @@ def only_allow_leaves_in_branches(expr : sp.Expr,
         # In the first recursion layer, the function checks if `expr`` is the screened 'leaf'
         # and raises an error if so. This is correct since we want 'leaf' to be contained in
         # 'allowed_branches'.
+        
+class EmptyPlaceholder(sp.Basic):
+    def _latex(self):
+        return r"\dots"

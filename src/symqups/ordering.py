@@ -1,12 +1,12 @@
 import sympy as sp
-from itertools import permutations
-from typing import Tuple
+from itertools import permutations, product
 import functools
 
 from ._internal.grouping import HilbertSpaceObject, CannotBoppShift, PhaseSpaceVariableOperator
 from ._internal.cache import sub_cache
 from ._internal.basic_routines import (operation_routine, 
-                                       default_treat_add,)
+                                       default_treat_add,
+                                       EmptyPlaceholder)
 from ._internal.math import (separate_operator,
                              has_universal_oper,
                              collect_alpha_type_oper_from_monomial_by_sub)
@@ -25,8 +25,30 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
     
     is_commutative = False
     
-    def __new__(cls, expr : sp.Expr, s : sp.Number | None = None, lazy : bool = False) -> sp.Expr:
-        expr = qp2alpha(sp.sympify(expr)) 
+    def __new__(cls, expr : sp.Expr, s : sp.Number | None = None, 
+                _fast_constructor : tuple = None) -> sp.Expr:
+        
+        if s is None:
+            s = CahillGlauberS.val
+            
+        def make(poly_dict : dict,
+                 nonpoly_args: tuple) -> sOrdering:
+            A = sp.Mul(*[b**e for sub,pow_lst in poly_dict.items() 
+                         for b,e in zip([createOp(sub), annihilateOp(sub)],
+                                        pow_lst)],
+                        *nonpoly_args)
+            if A == 1:
+                return A
+            obj = super(cls, cls).__new__(cls, A, s, EmptyPlaceholder())
+            obj._poly_dict = poly_dict
+            obj._nonpoly_args = nonpoly_args
+            return obj
+        
+        if not(isinstance(_fast_constructor, (type(None), EmptyPlaceholder))):
+            poly_dict, nonpoly_args = _fast_constructor
+            return make(poly_dict, nonpoly_args)
+        
+        ###
         
         # We assume that the input does not contain any universally-noncommuting
         # operators like 'densityOp'.
@@ -35,10 +57,6 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
             msg += "Input may contain 'densityOp' which never goes in "
             msg += "the ordering braces."
             raise ValueError(msg)
-            
-        s = sp.sympify(s)
-        if s is None:
-            s = CahillGlauberS.val
     
         def has_ordering_ambiguity(A : sp.Expr) -> bool:
             if any(A.has(annihilateOp(sub)) and A.has(createOp(sub))
@@ -48,25 +66,21 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
         
         def treat_add(A : sp.Expr) -> sp.Expr:
             return default_treat_add(A.args, functools.partial(sOrdering,
-                                                               s=s,
-                                                               lazy=lazy))
+                                                               s=s))
                     
         def treat_pow(A : sp.Expr) -> sp.Expr:
             if A.is_polynomial(Operator):
                 return A
-            return make(A, False)
+            return make({}, [A])
             
-        def treat_function(A : sp.Expr) -> sp.Expr:
-            return make(A, False)
+        def treat_function(A : sp.Function) -> sp.Expr:
+            if has_ordering_ambiguity(A):
+                return make({}, [A])
+            return A
         
         def treat_mul(A : sp.Expr) -> sp.Expr:
             if not(has_ordering_ambiguity(A)):
                 return A
-            
-            if lazy:
-                leftovers, bracket_arg = separate_operator(A)
-                return leftovers * make(bracket_arg, 
-                                        bracket_arg.is_polynomial(PhaseSpaceVariableOperator))
             
             # We don't care about operator ordering inside
             # the braces, so might as well return it pretty.
@@ -98,20 +112,11 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
                 else:
                     coefs.append(arg)
             
-            in_braces = make(sp.Mul(*[createOp(sub)**pow_lst[0] for sub, pow_lst in poly.items()],
-                                    *[annihilateOp(sub)**pow_lst[1] for sub, pow_lst in poly.items()],
-                                    *nonpoly),
-                             not(nonpoly))
+            in_braces = make(poly, nonpoly)
             
             return sp.Mul(*coefs, in_braces)
-
-        def make(A : sp.Expr, contains_poly : bool) -> sOrdering:
-            if not(has_ordering_ambiguity(A)):
-                return A
-            obj = super(cls, cls).__new__(cls, A, s)
-            obj._contains_poly = contains_poly
-            return obj
-           
+        
+        expr = qp2alpha(expr)
         return operation_routine(sp.expand(sp.sympify(expr)),
                                   sOrdering,
                                   [],
@@ -125,55 +130,55 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
                                   )
     
     @property
+    def content(self):
+        return self.args[0]
+    
+    @property
     def s_val(self):
         return self.args[1]
     
     @property
-    def contains_poly(self):
-        return self._contains_poly
-        
+    def poly_dict(self) -> dict:
+        return self._poly_dict
+    
+    @property
+    def nonpoly_args(self) -> list:
+        return self._nonpoly_args
+    
+    @property
+    def contains_poly(self) -> bool:
+        return not(self.nonpoly_args)
+            
     def _latex(self, printer) -> str:
-        return r"\left\{ %s \right\}_{s=%s}" % (sp.latex(self.args[0]),
-                                              sp.latex(self.args[1]))
-
-    def _collect_oper(self) -> Tuple[dict, dict]:
-        if not(self.contains_poly):
-            raise RuntimeError("Cannot call '_collect_oper' when 'sOrdering' contains a nonpolynomial.")
-        
-        non_operator, collect_ad, collect_a = \
-            collect_alpha_type_oper_from_monomial_by_sub(self.args[0])
-        
-        return collect_ad, collect_a
+        return r"\left\{ %s \right\}_{s=%s}" % (sp.latex(self.content), sp.latex(self.s_val))
         
     def explicit(self) -> sp.Expr:
         if not(self.contains_poly):
             return self
         
-        collect_ad, collect_a = self._collect_oper()
-        
-        match self.args[1]:
+        match self.s_val:
             case -1:
-                return sp.Mul(*[a**b for a,b in collect_a.values()], 
-                              *[a**b for a,b in collect_ad.values()])
+                return self.content
             case 0:
-                out = 1
+                out_factors = []
                 for sub in sub_cache:
-                    ad, m = collect_ad[sub]
-                    a, n = collect_a[sub]
+                    ad, m = createOp(sub), self.poly_dict[sub][0]
+                    a, n = annihilateOp(sub), self.poly_dict[sub][1]
                     to_permutate = [ad]*m + [a]*n
-                    out_single_sub = 0
+                    out_single_sub_summands = []
                     for permutation in permutations(to_permutate, len(to_permutate)):
-                        out_single_sub += sp.Mul(*permutation)
+                        out_single_sub_summands.append(sp.Mul(*permutation))
                     if len(to_permutate) != 0:
-                        out *= sp.cancel(out_single_sub / sp.factorial(len(to_permutate)))
-                return out
+                        out_factors.append(sp.cancel(sp.Add(*out_single_sub_summands) / sp.factorial(len(to_permutate))))
+                return sp.Mul(*out_factors)
             case 1:
-                return sp.Mul(*[a**b for a,b in collect_ad.values()], 
-                              *[a**b for a,b in collect_a.values()])
+                return sp.Mul(*[b**e for sub,pow_lst in self.poly_dict.items() 
+                         for b,e in zip([annihilateOp(sub),createOp(sub)],
+                                        reversed(pow_lst))])
             case default:
                 return self
 
-    def express(self, t = 1, explicit=True) -> sp.Expr:
+    def express(self, t = 1) -> sp.Expr:
         """
         Expand the expression in terms of t-ordered expressions.
         By default, `t=1` corresponds to normal-ordering. If `define`,
@@ -184,25 +189,53 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
         if not(self.contains_poly):
             return self
         
-        collect_ad, collect_a = self._collect_oper()                            
+        coef_lst = []
+        poly_dict_val = [] 
+        # Each entry is for one sub, and contains the terms of the
+        # expanded series for that sub. Each term is not evaluated;
+        # we have instead a list of factors. 
+        # 
+        # We multiply the series for all the subs, so this is the same as taking 
+        # the Cartesian product of the terms. The Cartesian product of the items 
+        # in poly_dict_val will be used to form the poly_dict to construct the 
+        # sOrdering content for the given output term.
+        #
+        # Code may be less readable, but we want to go fast since this function 
+        # is implemented in CGTransform.
         
-        def expand_s_ordered_unipartite_string(sub):
-            ad, m = collect_ad[sub]
-            a, n = collect_a[sub]
-            out = 0
+        for sub in sub_cache:
+            m = self.poly_dict[sub][0]
+            n = self.poly_dict[sub][1]
+            terms_coef = []
+            terms_poly_dict_val = []
             for k in range(min(m,n) + 1):
-                yy = sOrdering(ad**(m-k) * a**(n-k), s=t)
-                if (explicit 
-                    and isinstance(yy, sOrdering)
-                    and t in (-1, 0, 1)):
-                    yy = yy.explicit()
-                    
-                out += (sp.factorial(k) * sp.binomial(m,k) * sp.binomial(n,k)
-                        * ((t-self.args[1])/2)**k * yy)
-            return out
+                terms_coef.append([
+                    sp.factorial(k),
+                    sp.binomial(m, k),
+                    sp.binomial(n, k),
+                    sp.Rational(1, 2**k),
+                    (t-self.s_val)**k, 
+                ])
+                terms_poly_dict_val.append(
+                    [m-k, n-k]
+                )
+            coef_lst.append(terms_coef)
+            poly_dict_val.append(terms_poly_dict_val)
         
-        return sp.Mul(*[expand_s_ordered_unipartite_string(sub) 
-                        for sub in sub_cache])
+        out_summands = []
+        for coef_combo, poly_dict_val_combo in zip(product(*coef_lst),
+                                                   product(*poly_dict_val)):
+            coef = [c for c_lst in coef_combo for c in c_lst]
+            poly_dict = {sub : mn for sub, mn in zip(sub_cache, poly_dict_val_combo)}
+            out_summands.append(sp.Mul(*coef,
+                                       sOrdering(1, 
+                                                 s=t, 
+                                                 _fast_constructor=[poly_dict, 
+                                                                   []]
+                                                 )
+                                       )
+                                )
+        return sp.Add(*out_summands)
 
 def normal_order(expr : sp.Expr) -> sp.Expr:
     return explicit_sOrdering(sOrdering(expr, s=1))
