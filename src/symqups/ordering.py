@@ -11,6 +11,7 @@ from ._internal.math import (separate_operator,
                              has_universal_oper,
                              collect_alpha_type_oper_from_monomial_by_sub)
 from ._internal.preprocessing import preprocess_class
+from ._internal.multiprocessing import mp_helper
 
 from .objects.operators import Operator, annihilateOp, createOp
 
@@ -222,19 +223,22 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
             coef_lst.append(terms_coef)
             poly_dict_val.append(terms_poly_dict_val)
         
-        out_summands = []
-        for coef_combo, poly_dict_val_combo in zip(product(*coef_lst),
-                                                   product(*poly_dict_val)):
-            coef = [c for c_lst in coef_combo for c in c_lst]
-            poly_dict = {sub : mn for sub, mn in zip(sub_cache, poly_dict_val_combo)}
-            sordered = sOrdering(1, s=t, _fast_constructor=[poly_dict, []])
-            
-            if explicit and isinstance(sordered, sOrdering):
-                sordered = sordered.explicit()
-                
-            out_summands.append(sp.Mul(*coef, sordered))
-            
+        out_summands = mp_helper(list(zip(product(*coef_lst), product(*poly_dict_val))),
+                                 functools.partial(get_express_out_summand,
+                                                   t = t,
+                                                   explicit = explicit))            
         return sp.Add(*out_summands)
+    
+def get_express_out_summand(inpt, t, explicit):
+    coef_combo, poly_dict_val_combo = inpt
+    coef = [c for c_lst in coef_combo for c in c_lst]
+    poly_dict = {sub : mn for sub, mn in zip(sub_cache, poly_dict_val_combo)}
+    sordered = sOrdering(1, s=t, _fast_constructor=[poly_dict, []])
+    if explicit and isinstance(sordered, sOrdering):
+        sordered = sordered.explicit()
+    return sp.Mul(*coef, sordered)
+
+###
 
 def normal_order(expr : sp.Expr) -> sp.Expr:
     return explicit_sOrdering(sOrdering(expr, s=1))
