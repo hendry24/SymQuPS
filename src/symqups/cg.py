@@ -170,6 +170,7 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             if isinstance(expr, _LindbladMasterEquation):
                 lhs /= pi.val
                 rhs /= pi.val
+                rhs.expand()
             return sp.Equality(CGTransform(lhs),
                                CGTransform(rhs))
         

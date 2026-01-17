@@ -62,6 +62,16 @@ class _LindbladDissipator(_AddOnlyExpr):
 class _LindbladMasterEquation(sp.Equality):
     def __new__(cls, lhs, rhs, **options):
         return super().__new__(cls, lhs, rhs, **options)
+    
+    def expand(self, **hints):
+        rhs = self.rhs
+        expanded_rhs_summands = []
+        for arg in rhs.args:
+            if isinstance(arg, _LindbladDissipator):
+                expanded_rhs_summands.append(arg.define())
+            else:
+                expanded_rhs_summands.append(arg)
+        return self.func(self.lhs, sp.Add(*expanded_rhs_summands))
 
 @preprocess_class
 class LindbladMasterEquation(sp.Basic):
