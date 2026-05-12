@@ -1,6 +1,5 @@
 import sympy as sp
 import functools
-from pickle import PicklingError
 
 def preprocess_func(func):
     @functools.wraps(func)
@@ -34,15 +33,7 @@ def preprocess_func(func):
             
             sympified_kwargs[k] = v
         
-        # HACK: The multiprocessing implementation has an issue
-        # where the first call in a session involving objects
-        # defined within that session will raise a Pickling error
-        # that does not occur when we call the second time.
-        
-        try:
-            return func(*sympified_args, **sympified_kwargs)
-        except PicklingError:
-            return func(*sympified_args, **sympified_kwargs)
+        return func(*sympified_args, **sympified_kwargs)
 
     return wrapper
 

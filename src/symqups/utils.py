@@ -3,7 +3,6 @@ from sympy.core.function import UndefinedFunction
 import random
 import functools
 
-from ._internal.multiprocessing import mp_helper
 from ._internal.cache import sub_cache
 from ._internal.preprocessing import preprocess_func
 
@@ -41,7 +40,7 @@ def derivative_not_in_num(A : sp.Expr) -> sp.Expr:
     """
     
     if isinstance(A, sp.Add):
-        return sp.Add(*mp_helper(A.args, derivative_not_in_num), evaluate=False)
+        return sp.Add(*[derivative_not_in_num(arg) for arg in A.args], evaluate=False)
     
     if not A.has(sp.Derivative):
         return A

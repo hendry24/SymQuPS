@@ -8,7 +8,6 @@ from ._internal.math import (has_universal_oper, separate_term_oper_by_sub, get_
                              separate_term_by_nonconstant_polynomiality, is_nonconstant_polynomial)
 from ._internal.cache import ( op2sc_subs_dict, sc2op_subs_dict, 
                               alpha2qp_subs_dict, qp2alpha_subs_dict, ProtectedDict)
-from ._internal.multiprocessing import mp_helper
 from ._internal.grouping import qpType, alphaType, HilbertSpaceObject, PhaseSpaceVariableOperator
 from ._internal.preprocessing import preprocess_func, preprocess_class
 
@@ -51,7 +50,7 @@ def dagger(expr : sp.Expr) -> sp.Expr:
         return dagger(A.args[0]) ** A.args[1]
     
     def treat_mul(A : sp.Expr):
-        return sp.Mul(*list(reversed(mp_helper(A.args, dagger))))
+        return sp.Mul(*list(reversed([dagger(arg) for arg in A.args])))
     
     return operation_routine(expr,
                             "symqups.manipulations.dagger",
@@ -217,7 +216,7 @@ def normal_ordered_equivalent(expr : sp.Expr) -> sp.Expr:
             if len(sep) == 1:
                 return sep[0]
             else:
-                return sp.Mul(*mp_helper(sep, normal_ordered_equivalent))
+                return sp.Mul(*[normal_ordered_equivalent(s) for s in sep])
         
         if (not(A.is_polynomial(annihilateOp, createOp)) 
             or has_universal_oper(expr)):
@@ -226,7 +225,7 @@ def normal_ordered_equivalent(expr : sp.Expr) -> sp.Expr:
         A_sep = separate_term_oper_by_sub(A)
         coef = A_sep.pop(0)
                 
-        return sp.Mul(coef, *mp_helper(A_sep, _eval_Blasiak))
+        return sp.Mul(coef, *[_eval_Blasiak(s) for s in A_sep])
         # NOTE: no need for _final_swap since this is automaticaly done
         # by the patched sympy.Mul.flatten.
         

@@ -9,7 +9,6 @@ from ._internal.basic_routines import (operation_routine,
                                        EmptyPlaceholder)
 from ._internal.math import has_universal_oper
 from ._internal.preprocessing import preprocess_class
-from ._internal.multiprocessing import mp_helper
 
 from .objects.operators import Operator, annihilateOp, createOp
 
@@ -160,7 +159,7 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
                 return self.content
             case 0:
                 out_factors = []
-                for sub in sub_cache:
+                for sub in self.poly_dict.keys():
                     ad, m = createOp(sub), self.poly_dict[sub][0]
                     a, n = annihilateOp(sub), self.poly_dict[sub][1]
                     to_permutate = [ad]*m + [a]*n
@@ -202,7 +201,7 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
         # Code may be less readable, but we want to go fast since this function 
         # is implemented in CGTransform.
         
-        for sub in sub_cache:
+        for sub in self.poly_dict.keys():
             m = self.poly_dict[sub][0]
             n = self.poly_dict[sub][1]
             terms_coef = []
@@ -220,17 +219,15 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
                 )
             coef_lst.append(terms_coef)
             poly_dict_val.append(terms_poly_dict_val)
-        
-        out_summands = mp_helper(list(zip(product(*coef_lst), product(*poly_dict_val))),
-                                 functools.partial(get_express_out_summand,
-                                                   t = t,
-                                                   explicit = explicit))            
-        return sp.Add(*out_summands)
+         
+        return sp.Add(*[get_express_out_summand(val, t, explicit, self.poly_dict.keys()) 
+                        for val in list(zip(product(*coef_lst), product(*poly_dict_val))) 
+                        ])
     
-def get_express_out_summand(inpt, t, explicit):
+def get_express_out_summand(inpt, t, explicit, sub_lst):
     coef_combo, poly_dict_val_combo = inpt
     coef = [c for c_lst in coef_combo for c in c_lst]
-    poly_dict = {sub : mn for sub, mn in zip(sub_cache, poly_dict_val_combo)}
+    poly_dict = {sub : mn for sub, mn in zip(sub_lst, poly_dict_val_combo)}
     sordered = sOrdering(1, s=t, _fast_constructor=[poly_dict, []])
     if explicit and isinstance(sordered, sOrdering):
         sordered = sordered.explicit()

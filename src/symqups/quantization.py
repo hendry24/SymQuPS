@@ -11,7 +11,7 @@ def _set_s_and_quantize(expr, s):
     CahillGlauberS.val  = s
     out = iCGTransform(expr)
     CahillGlauberS.val = original_s
-    return out            
+    return out
 
 def normal_quantize(expr : sp.Expr) -> sp.Expr:
     return _set_s_and_quantize(expr, 1)

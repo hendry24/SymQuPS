@@ -16,10 +16,6 @@ del apply_patches
 
 ###
 
-from ._internal.multiprocessing import MP_CONFIG
-
-###
-
 from .objects.scalars import q, p, alpha, alphaD, W
 from .objects.operators import (qOp, pOp, createOp, annihilateOp, rho)
 

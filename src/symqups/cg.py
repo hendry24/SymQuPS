@@ -1,8 +1,7 @@
 import sympy as sp
 import itertools, functools
 
-from ._internal.multiprocessing import mp_helper
-from ._internal.basic_routines import operation_routine
+from ._internal.basic_routines import operation_routine, default_treat_add
 from ._internal.grouping import (PhaseSpaceVariable, PhaseSpaceObject, Defined, 
                                  HilbertSpaceObject, NotAnOperator, NotAScalar,
                                  PhaseSpaceVariableOperator)
@@ -177,10 +176,10 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
         if not(_vars):
             _vars = sub_cache._get_alphaType_scalar()
         
-        def treat_add(A : sp.Expr) -> sp.Expr:
-            return sp.Add(*mp_helper(A.args, CGTransform))
+        def treat_add(A : sp.Add) -> sp.Expr:
+            return default_treat_add(A.args, CGTransform)
         
-        def treat_mul(A : sp.Expr) -> sp.Expr:
+        def treat_mul(A : sp.Mul) -> sp.Expr:
         
             if (A.is_polynomial(PhaseSpaceVariableOperator) and
                 all(isinstance(atom, PhaseSpaceVariableOperator) 
@@ -251,10 +250,10 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
                     der_term = _AnnihilateOpAsDer(dagger(psv), xi)
                     
                     to_combo.extend([[psv_term, der_term]]*e)
-                
-                return sp.Add(*mp_helper(list(itertools.product(*to_combo)),
-                                        functools.partial(_normal_ordered_PSBO_on_B,
-                                                        B = CGTransform(nonpoly))))
+                    
+                return default_treat_add(list(itertools.product(*to_combo)),
+                                         functools.partial(_normal_ordered_PSBO_on_B,
+                                                           B = CGTransform(nonpoly)))
 
             nonpoly_found = nonpoly_found_PSBO if mode.lower() == "PSBO" else nonpoly_found_explicit
             
@@ -353,7 +352,7 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             return make(A)
         
         def treat_HattedStar(A : HattedStar) -> sp.Expr:
-            return sp.Mul(*mp_helper(A.args, CGTransform))
+            return sp.Mul(*[CGTransform(arg) for arg in A.args])
         
         def treat_der(A : sp.Derivative):
             return Derivative(CGTransform(A.args[0]), *A.args[1:])
@@ -416,7 +415,7 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
             _vars = sub_cache._get_alphaType_oper()
         
         def treat_add(A : sp.Add) -> sp.Expr:
-            return sp.Add(*mp_helper(A.args, iCGTransform))
+            return default_treat_add(A.args, iCGTransform)
         
         def treat_der(A : sp.Derivative) -> sp.Expr: 
             der_args = A.args
@@ -516,7 +515,7 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
             return sOrdering(sc2op(A))
         
         def treat_Star(A : Star) -> sp.Expr:
-            return sp.Mul(*mp_helper(A.args, iCGTransform))
+            return sp.Mul(*[iCGTransform(arg) for arg in A.args])
                 
         def make(A : sp.Expr) -> iCGTransform:
             return super(cls, cls).__new__(cls, A, *_vars)

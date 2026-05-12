@@ -270,32 +270,3 @@ def separate_term_oper_by_sub(expr : sp.Expr) -> list[sp.Expr]:
     ###################
                 
     return out
-
-# def decouple(expr : sp.Expr):
-#     """
-#     Decouple expressions when the noncommuting symbols actually belong
-#     to different 'sub's.
-#     """
-#     # NOTE: WIP
-        
-#     if not(expr.has(Operator)):
-#         return expr
-    
-#     # Power of Mul
-#     def query(A : sp.Expr):
-#         return (isinstance(A, sp.Pow) 
-#                 and isinstance(A.args[0], sp.Mul) 
-#                 and A.args[0].has(Operator))
-#     def value(A : sp.Pow):
-#         base = A.args[0]
-#         base_separated_by_subs = separate_term_oper_by_sub()
-#         exponent = A.args[1]
-#         separate_term_oper_by_sub(base)
-#         return sp.Mul(*[factor**exponent for factor in base_separated_by_subs])
-#     expr = expr.replace(query, value)
-    
-#     # Functions whose 
-#     functions = []
-#     # expr = expr.replace(lambda A: isinstance(A, sp.exp) and isinstance())
-    
-#     return expr

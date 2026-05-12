@@ -1,8 +1,6 @@
 import sympy as sp
 from typing import Callable, Dict, Union, Sequence, Any
 
-from .multiprocessing import mp_helper
-
 def treat_sub(sub, has_sub) -> sp.Symbol:
     """
     Treat the input subscript to always be a 'sympy.Symbol'.
@@ -92,7 +90,7 @@ def default_treat_add(summands : tuple[sp.Expr], foo : callable) -> sp.Expr:
     Default 'sp.Add' treatment, where 'foo' is applied to each of
     'summands'.
     """
-    return sp.Add(*mp_helper(summands, foo))
+    return sp.Add(*[foo(s) for s in summands])
 
 def only_allow_leaves_in_branches(expr : sp.Expr,
                                   name : str,

@@ -9,7 +9,6 @@ from ._internal.grouping import (
 )
 from ._internal.basic_routines import operation_routine
 from ._internal.math import is_nonconstant_polynomial
-from ._internal.multiprocessing import mp_helper
 from ._internal.preprocessing import preprocess_class
 
 from .objects.scalars import alpha, alphaD, StateFunction
@@ -164,12 +163,7 @@ def _star_base(F : sp.Expr,
         raise _CannotBoppFlag
     
     def treat_add(A : sp.Add):
-        return sp.Add(*mp_helper(A.args,
-                                 functools.partial(bopp_monomial,
-                                                   B=other,
-                                                   left=left)
-                                 )
-                      )
+        return sp.Add(*[bopp_monomial(arg, other, left) for arg in A.args])
     
     return operation_routine(Bopp_shifted,
                              _StarTemplate,
