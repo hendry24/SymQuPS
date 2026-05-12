@@ -7,9 +7,7 @@ from ._internal.cache import sub_cache
 from ._internal.basic_routines import (operation_routine, 
                                        default_treat_add,
                                        EmptyPlaceholder)
-from ._internal.math import (separate_operator,
-                             has_universal_oper,
-                             collect_alpha_type_oper_from_monomial_by_sub)
+from ._internal.math import has_universal_oper
 from ._internal.preprocessing import preprocess_class
 from ._internal.multiprocessing import mp_helper
 
@@ -32,13 +30,19 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
         if s is None:
             s = CahillGlauberS.val
             
+        def has_ordering_ambiguity(A : sp.Expr) -> bool:
+            if any(A.has(annihilateOp(sub)) and A.has(createOp(sub))
+                   for sub in sub_cache):
+                return True
+            return False
+            
         def make(poly_dict : dict,
                  nonpoly_args: tuple) -> sOrdering:
             A = sp.Mul(*[b**e for sub,pow_lst in poly_dict.items() 
                          for b,e in zip([createOp(sub), annihilateOp(sub)],
                                         pow_lst)],
                         *nonpoly_args)
-            if A == 1:
+            if not(has_ordering_ambiguity(A)):
                 return A
             obj = super(cls, cls).__new__(cls, A, s, EmptyPlaceholder())
             obj._poly_dict = poly_dict
@@ -58,12 +62,6 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
             msg += "Input may contain 'densityOp' which never goes in "
             msg += "the ordering braces."
             raise ValueError(msg)
-    
-        def has_ordering_ambiguity(A : sp.Expr) -> bool:
-            if any(A.has(annihilateOp(sub)) and A.has(createOp(sub))
-                   for sub in sub_cache):
-                return True
-            return False
         
         def treat_add(A : sp.Expr) -> sp.Expr:
             return default_treat_add(A.args, functools.partial(sOrdering,
@@ -158,7 +156,7 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
             return self
         
         match self.s_val:
-            case -1:
+            case 1:
                 return self.content
             case 0:
                 out_factors = []
@@ -172,7 +170,7 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
                     if len(to_permutate) != 0:
                         out_factors.append(sp.cancel(sp.Add(*out_single_sub_summands) / sp.factorial(len(to_permutate))))
                 return sp.Mul(*out_factors)
-            case 1:
+            case -1:
                 return sp.Mul(*[b**e for sub,pow_lst in self.poly_dict.items() 
                          for b,e in zip([annihilateOp(sub),createOp(sub)],
                                         reversed(pow_lst))])

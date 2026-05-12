@@ -22,6 +22,9 @@ sub_cache.clear()
 
 from symqups.cg import CGTransform, iCGTransform
 
+import symqups as sq 
+sq.MP_CONFIG["enable"]=False
+
 ###
 
 N = random.randint(1, 5)

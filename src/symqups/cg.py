@@ -395,6 +395,11 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
 
 @preprocess_class
 class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
+    """
+    NOTE: Some unevaluated expressions may be evaluable using `iCGTransform(CGTransform(x))`, e.g.,
+    the hatter star product between two `sOrdering` objects.
+    """
+    
     @staticmethod
     def _definition():
         lhs = sp.Symbol(_iCGT_str(r"f\left(\bm{\alpha}\right)"))
@@ -402,10 +407,10 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
         return sp.Equality(lhs, rhs)
     definition = _definition()
     
-    def __new__(cls, expr : sp.Expr, lazy=False, *_vars) -> sp.Expr:
+    def __new__(cls, expr : sp.Expr, *_vars) -> sp.Expr:
         if expr.is_Equality:
-            return sp.Equality(iCGTransform(expr.lhs, lazy, *_vars),
-                               iCGTransform(expr.rhs, lazy, *_vars))
+            return sp.Equality(iCGTransform(expr.lhs, *_vars),
+                               iCGTransform(expr.rhs, *_vars))
             
         if not(_vars):
             _vars = sub_cache._get_alphaType_oper()
@@ -429,7 +434,7 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
         def treat_mul(A : sp.Mul) -> sp.Expr:
             if (A.is_polynomial(PhaseSpaceVariable) and
                 not(A.has(StateFunction))):
-                return sOrdering(sc2op(A), lazy=lazy)
+                return sOrdering(sc2op(A))
             
             # TODO: Might want to optimize this part by fully using 
             # the combo method, since there is nested Add-and-Mul

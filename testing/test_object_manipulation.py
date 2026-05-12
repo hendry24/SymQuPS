@@ -60,14 +60,12 @@ def test_alpha2qp_and_qp2alpha():
     assert qp2alpha(alpha(sub)) == alpha(sub)
     assert qp2alpha(annihilateOp(sub)) == annihilateOp(sub)
     
-    zetaD = sp.conjugate(zeta)
-    
     for qq, pp, a, ad in zip([q(sub), qOp(sub)], 
                                 [p(sub), pOp(sub)], 
                                 [alpha(sub), annihilateOp(sub)], 
                                 [alphaD(sub), createOp(sub)]):
-        assert sp.expand(qp2alpha(qq) - sp.sqrt(2*hbar)*(zeta*a + zetaD*ad)/(zeta**2+zetaD**2)) == 0
-        assert sp.expand(qp2alpha(pp) - sp.sqrt(2*hbar)*sp.I*zeta*zetaD*(zeta*ad-zetaD*a)/(zeta**2+zetaD**2)) == 0
+        assert sp.expand(qp2alpha(qq) - sp.sqrt(2*hbar)*(a + ad)/(2*zeta)) == 0
+        assert sp.expand(qp2alpha(pp) - sp.sqrt(2*hbar)*(a-ad)*zeta/(2*sp.I)) == 0
     
     qp_sc_lst = []
     qp_op_lst = []
