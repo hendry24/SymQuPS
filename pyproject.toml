@@ -6,8 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "SymQuPS"
 version = "0.0.1"
 dependencies = [
-    "sympy >= 1.13.3",
-    "dill"
+    "sympy >= 1.13.3"
 ]
 requires-python = ">= 3.8"
 authors = [
