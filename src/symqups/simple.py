@@ -2,7 +2,7 @@ import sympy as sp
 
 ###
 
-from . import s
+from . import s, hbar, zeta
 
 ###
 
