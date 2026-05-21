@@ -76,6 +76,7 @@ class PositiveRealConstant(Constant):
         elif not(hasattr(value, "is_positive")) or not(value.is_positive):
             msg = f"Invalid value for {self.__class__.__name__}. Value must be a real 'Symbol' or "
             msg += f"a positive number."
+            raise AttributeError(msg)
         
         super(PositiveRealConstant,
               PositiveRealConstant).val.__set__(self, value)

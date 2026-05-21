@@ -9,7 +9,7 @@ from ._internal.math import has_universal_oper
 from ._internal.cache import sub_cache
 from ._internal.preprocessing import preprocess_class
 
-from .objects.scalars import W, StateFunction, alpha, alphaD
+from .objects.scalars import W, StateFunction, alpha, alphaD, Scalar
 from .objects.operators import (Operator, densityOp, rho, annihilateOp, 
                                 createOp, TimeDependentOp)
 
@@ -336,7 +336,7 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             # This also applies to any function in only one of `qOp` and `pOp`,
             # but only in the 's=0' case (the Wigner transform).
             
-            def is_evaluable(AA : sp.Function) -> bool:
+            def is_evaluable(AA : sp.Function) -> bool: # has copy in iCGTransform (line 482)
                 sub_found = []
                 for oper in AA.atoms(Operator):
                     if oper.sub in sub_found:
@@ -478,7 +478,20 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
             elif len(others) == 1:
                 F = iCGTransform(others[0])
             else:
-                F = make(sp.Mul(*others))
+                mul_nonpoly = sp.Mul(*others)
+
+                def is_evaluable(AA : sp.Function) -> bool: # has similar function in CGTransform (line 339)
+                    sub_found = []
+                    for oper in AA.atoms(Scalar):
+                        if oper.sub in sub_found:
+                            return False
+                        sub_found.append(oper.sub)
+                    return True
+                
+                if is_evaluable(mul_nonpoly) and not(mul_nonpoly.has(StateFunction)):
+                    F = sc2op(mul_nonpoly)
+                else:
+                    F = make(mul_nonpoly)
                 # Since we can collect all nonpolynomials together, it would avoid
                 # clutter to keep the nonpolynomial part unevaluated.
             
