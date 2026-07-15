@@ -3,7 +3,7 @@ import sympy as sp
 import random
 
 from symqups.objects.scalars import q, p, alpha, alphaD, W, t
-from symqups.objects.operators import qOp, pOp, annihilateOp, createOp, rho, TimeDependentOp, rhoTD
+from symqups.objects.operators import qOp, pOp, annihilateOp, createOp, rho, TimeDependentOp
 
 from symqups.ordering import sOrdering
 from symqups.manipulations import qp2alpha, op2sc, Derivative, Commutator, normal_ordered_equivalent
@@ -61,7 +61,7 @@ def test_CGTransform():
     assert CGTransform(A) == A
     
     # Density matrix
-    assert CGTransform(rho) == pi**get_N()*W
+    assert CGTransform(rho) == W
     
     # Addition
     A = CGTransform(ins[0]+ins[1])
@@ -89,10 +89,10 @@ def test_CGTransform():
     assert CGTransform(HattedStar(F,G)) == CGTransform(F)*CGTransform(G)
     
     # Derivative
-    assert CGTransform(Derivative(TimeDependentOp(rho)/pi**get_N(), t())) == Derivative(W, t())
+    assert CGTransform(Derivative(rho, t())) == Derivative(W, t())
     
     # Commutator
-    A = CGTransform(Commutator(ad*a, rho/pi**get_N())).doit().expand()
+    A = CGTransform(Commutator(ad*a, rho)).doit().expand()
     B = alphaD()*Derivative(W,alphaD()) - alpha()*Derivative(W,alpha())
     assert sp.expand(A-B) == 0
     
@@ -104,6 +104,42 @@ def test_CGTransform():
     assert (sp.expand(A-B) == 0
             and sp.expand(A-C) == 0
             and sp.expand(B-C) == 0)
+    
+    ###
+    
+    from symqups import s
+    old_s_val = s.val
+    
+    # Test P correspondence
+    s.val = -1
+    aop = annihilateOp()
+    adop = createOp()
+    a = alpha()
+    ad = alphaD()
+    assert "P" in sp.latex(CGTransform(rho))
+    assert CGTransform(aop*rho) == a*W
+    assert sp.expand(CGTransform(adop*rho) - (ad*W -sp.Derivative(W,a))) == 0
+    assert sp.expand(CGTransform(rho*aop) - (a*W - sp.Derivative(W,ad))) == 0
+    assert CGTransform(rho*adop) == ad*W
+    
+    # Test W correspondence
+    s.val = 0
+    assert "W" in sp.latex(CGTransform(rho))
+    assert sp.expand(CGTransform(aop*rho) - (a*W + sp.Derivative(W, ad)/2)) == 0
+    assert sp.expand(CGTransform(adop*rho) - (ad*W - sp.Derivative(W, a)/2)) == 0
+    assert sp.expand(CGTransform(rho*aop) - (a*W - sp.Derivative(W,ad)/2)) == 0
+    assert sp.expand(CGTransform(rho*adop) - (ad*W + sp.Derivative(W,a)/2)) == 0
+    
+    # Test Q correspondence
+    s.val = 1
+    assert "Q" in sp.latex(CGTransform(rho))
+    assert sp.expand(CGTransform(aop*rho) - (a*W + sp.Derivative(W, ad))) == 0
+    assert sp.expand(CGTransform(adop*rho) - (ad*W)) == 0
+    assert sp.expand(CGTransform(rho*aop) - (a*W)) == 0
+    assert sp.expand(CGTransform(rho*adop) - (ad*W + sp.Derivative(W,a))) == 0
+    
+    # Return s value for other tests
+    s.val = old_s_val
 
 @pytest.mark.fast
 def test_iCGTransform():
@@ -116,7 +152,7 @@ def test_iCGTransform():
     ins = [get_random_poly([a,ad]) for _ in range(2)]
     
     # State function
-    assert iCGTransform((pi**get_N())*W) == rhoTD
+    assert iCGTransform(W) == rho
     
     # Addition
     A = iCGTransform(ins[0]+ins[1])
@@ -124,9 +160,9 @@ def test_iCGTransform():
     assert sp.expand(normal_ordered_equivalent(A-B)) == 0
     
     # Derivative
-    assert iCGTransform(Derivative((pi**get_N())*W, a)) == Commutator(rhoTD, createOp())
-    assert iCGTransform(Derivative((pi**get_N())*W, ad)) == Commutator(annihilateOp(), rhoTD)
-    assert iCGTransform(Derivative((pi**get_N())*W, t())).doit() == Derivative(rhoTD, t())
+    assert iCGTransform(Derivative(W, a)) == Commutator(rho, createOp())
+    assert iCGTransform(Derivative(W, ad)) == Commutator(annihilateOp(), rho)
+    assert iCGTransform(Derivative(W, t())).doit() == Derivative(rho, t())
     
     # Power
     assert isinstance(iCGTransform(Derivative(W,t())**2), iCGTransform)
@@ -149,6 +185,42 @@ def test_iCGTransform():
     G = sp.Function("G")(a,ad)
     assert iCGTransform(Star(F,G)) == iCGTransform(F)*iCGTransform(G)
     
+    ###
+    
+    from symqups import s
+    old_s_val = s.val
+    
+    # Test P correspondence
+    s.val = -1
+    aop = annihilateOp()
+    adop = createOp()
+    a = alpha()
+    ad = alphaD()
+    assert "P" in sp.latex(W)
+    assert CGTransform(aop*rho) == a*W
+    assert sp.expand(adop*rho - iCGTransform(ad*W -sp.Derivative(W,a)).doit()) == 0
+    assert sp.expand(rho*aop - iCGTransform(a*W - sp.Derivative(W,ad)).doit()) == 0
+    assert rho*adop == iCGTransform(ad*W)
+    
+    # Test W correspondence
+    s.val = 0
+    assert "W" in sp.latex(W)
+    assert sp.expand((aop*rho) -  iCGTransform(a*W + sp.Derivative(W, ad)/2).doit()) == 0
+    assert sp.expand((adop*rho) - iCGTransform (ad*W - sp.Derivative(W, a)/2).doit()) == 0
+    assert sp.expand((rho*aop) -  iCGTransform(a*W - sp.Derivative(W,ad)/2).doit()) == 0
+    assert sp.expand((rho*adop) - iCGTransform (ad*W + sp.Derivative(W,a)/2).doit()) == 0
+    
+    # Test Q correspondence
+    s.val = 1
+    assert "Q" in sp.latex(W)
+    assert sp.expand((aop*rho) - iCGTransform(a*W + sp.Derivative(W, ad)).doit()) == 0
+    assert sp.expand((adop*rho) -iCGTransform (ad*W).doit()) == 0
+    assert sp.expand((rho*aop) - iCGTransform(a*W).doit()) == 0
+    assert sp.expand((rho*adop) -iCGTransform (ad*W + sp.Derivative(W,a)).doit()) == 0
+    
+    # Return s value for other tests
+    s.val = old_s_val
+    
 pytest.mark.fast
 def test_CG_correspondence():
     a, ad = annihilateOp(), createOp()
@@ -156,6 +228,6 @@ def test_CG_correspondence():
     
     assert normal_ordered_equivalent(iCGTransform(CGTransform(rp)) - rp).expand() == 0
     
-    A = Commutator(ad*a, rhoTD/pi**get_N()).doit().expand()
+    A = Commutator(ad*a, rho).doit().expand()
     B = normal_ordered_equivalent(iCGTransform(CGTransform(A))).doit()
     assert sp.expand(A-B) == 0

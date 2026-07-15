@@ -76,10 +76,8 @@ class TestObjectInstantiation:
             assert isinstance(obj, Operator)
             assert obj.is_Atom
             assert base in sp.latex(obj)
-            
-        assert rho == densityOp()
-        assert not(rho.has_sub)
-        
-        A = TimeDependentOp(rho)
-        assert isinstance(A, TimeDependentOp)
-        assert dill.loads(dill.dumps(A)) == A
+                    
+        assert isinstance(rho, TimeDependentOp)
+        assert rho.has(densityOp)
+        assert not(rho.args[0].has_sub)
+        assert dill.loads(dill.dumps(rho)) == rho

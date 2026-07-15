@@ -10,7 +10,7 @@ sMul = deepcopy(sp.Mul)
 from symqups._internal.grouping import alphaType, qpType
 from symqups.objects.scalars import (Scalar, q, p, t, W, alpha, alphaD)
 from symqups.objects.operators import (Operator, qOp, pOp, createOp, annihilateOp,
-                                        densityOp, rho, rhoTD)
+                                        densityOp, rho)
 from symqups.utils import get_random_poly
 from symqups.ordering import sOrdering, normal_order
 
@@ -151,7 +151,7 @@ def test_normal_ordered_equivalent():
              - sp.expand((1+adop[0]*aop[0])*(1+adop[1]*aop[1])))
             == 0)
     
-    for nonpoly in [rho, rhoTD, sp.exp(aop[0])]:
+    for nonpoly in [rho, sp.exp(aop[0])]:
         A = normal_ordered_equivalent(aop[0]*adop[0]*nonpoly*aop[0]*adop[0]*nonpoly)
         B = (1+adop[0]*aop[0])*nonpoly*(1+adop[0]*aop[0])*nonpoly
         assert sp.expand(A-B)==0
@@ -219,6 +219,5 @@ def test_derivative():
     assert Derivative(X, x).doit() == sp.Derivative(X, x)
     assert (Derivative(X, adOp, x) - Derivative(Commutator(aOp, X), x)).doit().expand() == 0 
     
-    assert Derivative(rho, tt).doit() == 0
-    assert Derivative(rhoTD, tt).doit() != 0
-    assert (Derivative(rhoTD, tt, adOp) - Derivative(Commutator(aOp, rhoTD), tt)).doit().expand() == 0
+    assert Derivative(rho, tt).doit() != 0
+    assert (Derivative(rho, tt, adOp) - Derivative(Commutator(aOp, rho), tt)).doit().expand() == 0

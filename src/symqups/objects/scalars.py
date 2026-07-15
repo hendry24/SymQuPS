@@ -7,6 +7,8 @@ from .._internal.grouping import (qpType, alphaType, PhaseSpaceVariable,
 from .._internal.cache import sub_cache
 from .._internal.basic_routines import treat_sub, invalid_input
 
+
+
 __all__ = ["q", "p", "alpha", "alphaD", "W"]
 
 class Scalar(Base):
@@ -119,13 +121,15 @@ class StateFunction(sp.Expr, PhaseSpaceObject, CannotBoppShift):
     def _latex(self, printer):
         match CahillGlauberS.val:
             case -1:
-                return r"Q"
+                from ..utils import get_N
+                N = get_N()
+                return r"\left(\pi^{%s} P\right)" % ("" if N==1 else N)
             case 0:
                 return r"W"
             case 1:
-                return r"P"
+                return r"Q"
             case default:
-                return r"W_{s}"
+                return r"W_{%s}" % (-CahillGlauberS.val)
     
 global W
 W = StateFunction(t())

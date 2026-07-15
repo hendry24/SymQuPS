@@ -1,16 +1,11 @@
 import sympy as sp
 from sympy.core.function import UndefinedFunction
 import random
-import functools
 
 from ._internal.cache import sub_cache
 from ._internal.preprocessing import preprocess_func
 
 from .objects import scalars
-from .objects.operators import annihilateOp, createOp
-
-from .manipulations import Commutator
-
 ###
 
 def get_N():

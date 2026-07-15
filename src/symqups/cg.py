@@ -10,8 +10,8 @@ from ._internal.cache import sub_cache
 from ._internal.preprocessing import preprocess_class
 
 from .objects.scalars import W, StateFunction, alpha, alphaD, Scalar
-from .objects.operators import (Operator, densityOp, rho, annihilateOp, 
-                                createOp, TimeDependentOp)
+from .objects.operators import (Operator, densityOp, annihilateOp, 
+                                createOp, rho, TimeDependentOp)
 
 from .bopp import PSBO
 from .star import Star, HattedStar
@@ -361,7 +361,7 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             return CGTransform(A.args[0]*A.args[1] - A.args[1]*A.args[0])
         
         def treat_tdOp(A : TimeDependentOp):
-            # Assuming rhoTD only.
+            # Assuming rho only.
             return CGTransform(A.args[0])
             
         def make(A : sp.Expr):
@@ -377,7 +377,7 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
                                  sp.Mul : treat_mul,
                                  sp.Function : treat_function,
                                  (PhaseSpaceVariableOperator, sp.Pow) : lambda A: op2sc(A),
-                                 densityOp : (pi.val)**get_N() * W,
+                                 densityOp : W,
                                  sOrdering : treat_sOrdering,
                                  iCGTransform : lambda A: A.args[0],
                                  Commutator : treat_commutator,
@@ -544,7 +544,7 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
                                  sp.Pow : treat_pow,
                                  sp.Mul : treat_mul,
                                  PhaseSpaceVariable : lambda A: sc2op(A),
-                                 StateFunction : TimeDependentOp(rho)/(pi.val)**get_N(),
+                                 StateFunction : rho,
                                  sp.Function : treat_foo,
                                  CGTransform : lambda A: A.args[0],
                                  Star : treat_Star}

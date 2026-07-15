@@ -112,9 +112,6 @@ class densityOp(HermitianOp, CannotBoppShift):
     def __new__(cls, _sub = None):
         return super().__new__(cls, _sub)
     
-global rho
-rho = densityOp()
-
 ###
 
 class TimeDependentOp(sp.Expr, HilbertSpaceObject, CannotBoppShift):
@@ -145,5 +142,5 @@ class TimeDependentOp(sp.Expr, HilbertSpaceObject, CannotBoppShift):
         msg += "'annihilateOp' and 'createOp'. See this package's 'Derivative' object."
         raise NotImplementedError(msg)
     
-global rhoTD
-rhoTD = TimeDependentOp(rho)
+global rho
+rho = TimeDependentOp(densityOp())

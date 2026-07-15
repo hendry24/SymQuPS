@@ -6,7 +6,7 @@ from ._internal.math import separate_operator
 from ._internal.preprocessing import preprocess_class
 
 from .objects.scalars import t
-from .objects.operators import rho, Operator, TimeDependentOp
+from .objects.operators import rho, Operator
 
 from .manipulations import dagger, Commutator, Derivative
 
@@ -103,7 +103,7 @@ class LindbladMasterEquation(sp.Basic):
                 nondiagonal dissipator. 
         
         """
-        lhs = Derivative(TimeDependentOp(rho), t())
+        lhs = Derivative(rho, t())
         
         dissip_lst = []
         for dissip in dissipators:

@@ -16,7 +16,7 @@ del alpha, alphaD
 
 ###
 
-from .objects.operators import qOp, pOp, annihilateOp, createOp, rho, rhoTD
+from .objects.operators import qOp, pOp, annihilateOp, createOp, rho
 qOp = qOp()
 pOp = pOp()
 aOp = annihilateOp()
