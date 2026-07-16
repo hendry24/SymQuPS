@@ -45,7 +45,7 @@ class _LindbladDissipator(_AddOnlyExpr):
                 % (sp.latex(self.coef) if (self.coef != 1) else "", 
                    op_str)
     
-    def define(self):
+    def _eval_expand_mul(self, **hints):
         P = self.operator_1
         Q = self.operator_2
         Qd = dagger(Q)
@@ -54,27 +54,13 @@ class _LindbladDissipator(_AddOnlyExpr):
         coef_mul = self.coef / 2
         with sp.evaluate(False): # force pretty printing
             out = coef_mul * out
-        
+
         return out
 
 ###
 
-class _LindbladMasterEquation(sp.Equality):
-    def __new__(cls, lhs, rhs, **options):
-        return super().__new__(cls, lhs, rhs, **options)
-    
-    def expand(self, **hints):
-        rhs = self.rhs
-        expanded_rhs_summands = []
-        for arg in rhs.args:
-            if isinstance(arg, _LindbladDissipator):
-                expanded_rhs_summands.append(arg.define())
-            else:
-                expanded_rhs_summands.append(arg)
-        return self.func(self.lhs, sp.Add(*expanded_rhs_summands))
-
 @preprocess_class
-class LindbladMasterEquation(sp.Basic):
+class LindbladMasterEquation(sp.Equality):
     """
     The Lindblad master equation.
     """
@@ -131,7 +117,7 @@ class LindbladMasterEquation(sp.Basic):
         rhs = sp.Add(-sp.I/hbar.val * Commutator(H, rho),
                      *dissip_lst)
         
-        return _LindbladMasterEquation(lhs, rhs)
+        return sp.Equality(lhs, rhs)
 
 class LME(LindbladMasterEquation):
     pass

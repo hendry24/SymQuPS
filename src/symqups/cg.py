@@ -161,15 +161,9 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             msg = "Invalid mode. Either 'Star','PSBO', or 'explicit'."
             raise ValueError(msg)
         
-        if expr.is_Equality:
-            from .eom import _LindbladMasterEquation
-            
+        if expr.is_Equality:            
             lhs = expr.lhs
             rhs = expr.rhs
-            if isinstance(expr, _LindbladMasterEquation):
-                lhs /= pi.val
-                rhs /= pi.val
-                rhs.expand()
             return sp.Equality(CGTransform(lhs),
                                CGTransform(rhs))
         
@@ -361,12 +355,11 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             return CGTransform(A.args[0]*A.args[1] - A.args[1]*A.args[0])
         
         def treat_tdOp(A : TimeDependentOp):
-            # Assuming rho only.
             return CGTransform(A.args[0])
             
         def make(A : sp.Expr):
             return super(cls, cls).__new__(cls, A, *_vars)
-        
+
         expr = qp2alpha(expr)
         return operation_routine(expr,
                                 CGTransform,
