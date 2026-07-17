@@ -30,8 +30,7 @@ class _BoppActor(Base, Acting):
                 target : sp.Expr|None = None,
                 left : bool = False):
         """
-        Construct a HSBS or a PSBO. For the formalism, see Appendix B in 
-        https://arxiv.org/abs/2509.17106.
+        Construct a HSBS or a PSBO. 
         
         Parameters
         ----------
@@ -77,14 +76,14 @@ class _BoppActor(Base, Acting):
 
 class HilbertSpaceBoppSuperoperator(_BoppActor, HilbertSpaceObject, NotAnOperator):
     """
-    The Hilbert-space Bopp superoperator (HSBS). See Appendix B in https://arxiv.org/abs/2509.17106.
+    The Hilbert-space Bopp superoperator (HSBS).
     """
     Hilbert = True
 HSBS = HilbertSpaceBoppSuperoperator
     
 class PhaseSpaceBoppOperator(_BoppActor, PhaseSpaceObject, NotAScalar):
     """
-    The phase-space Bopp operator (PSBO). See Appendix B in https://arxiv.org/abs/2509.17106.
+    The phase-space Bopp operator (PSBO).
     """
     Hilbert = False
     

@@ -13,10 +13,13 @@ from .scalars import t
 
 class Operator(Base, HilbertSpaceObject):
     """
-    Base class for Hilbert space operators.
+    A Hilbert-space operator object.
     """
     
     base = NotImplemented
+    
+    #: Whether the object is allowed to have subscripts. If `False`, then the `.sub` attribute
+    #: always returns the empty Symbol.
     has_sub = True
     
     def _get_symbol_name_and_assumptions(cls, sub):
@@ -25,7 +28,7 @@ class Operator(Base, HilbertSpaceObject):
     
     def __new__(cls, sub = None):
         """
-        Construct an operator object.
+        Construct an Operator object.
         
         Parameters
         ----------
@@ -33,8 +36,8 @@ class Operator(Base, HilbertSpaceObject):
         sub : sympify-able, default: None
             Subscript of the operator representing the subsystem. If `None`,
             then `sympy.Symbol("")` is used to represent no subscript.
-            
         """
+                
         sub = treat_sub(sub, cls.has_sub)
         
         if cls.has_sub:
@@ -44,9 +47,15 @@ class Operator(Base, HilbertSpaceObject):
         
     @property
     def sub(self):
+        """
+        The subscript of the object, representing which subsystem it belongs to in multipartite descriptions.
+        """
         return self._custom_args[0]
     
     def dagger(self):
+        """
+        Returns the Hermitian conjugate of self.
+        """
         raise NotImplementedError()
     
     @property
@@ -115,9 +124,33 @@ class densityOp(HermitianOp, CannotBoppShift):
 ###
 
 class TimeDependentOp(sp.Expr, HilbertSpaceObject, CannotBoppShift):
+    """
+    Time dependent version of an `Operator` object, currently only supporting
+    time-dependent `densityOp`. This object allows differentiation with respect
+    to :class:`symqups.objects.scalars.t` to stay undefined, useful to make the expression :math:`\\mathrm{d}\\rho/\\mathrm{d}t` that
+    appears in an equation of motion.
+    
+    Not intended for a typical user, since the package variable :data:`symqups.rho` is assigned on
+    import. 
+    """
+    
     is_commutative = False
     
-    def __new__(cls, base : sp.Expr, *_args, **assumptions):
+    def __new__(cls, base : Operator, *_args, **assumptions):
+        """
+        Construct a time-dependent operator, which is a `sympy.Expr` containing
+        `base` and :class:`symqups.objects.scalars.t` as `args`.
+        
+        Parameters
+        ----------
+        
+        base : Operator
+            Base time-independent `Operator` object. Currently, only :class:`densityOp` is
+            supported, as the phase-space formulation is conventionally done in the
+            Schroedinger picture.
+
+        """
+        
         # need *args since we include two inputs to super() but
         # only accept one input for the instantiation.
         td_op_lst = [densityOp] # Currently, only 'rho' is convertible to be time-dependent. 
@@ -141,6 +174,6 @@ class TimeDependentOp(sp.Expr, HilbertSpaceObject, CannotBoppShift):
         msg += "This package, however, implements the formal derivative with respect to"
         msg += "'annihilateOp' and 'createOp'. See this package's 'Derivative' object."
         raise NotImplementedError(msg)
-    
+
 global rho
 rho = TimeDependentOp(densityOp())

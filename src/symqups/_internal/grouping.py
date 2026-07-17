@@ -96,11 +96,19 @@ class Defined(ObjectGroup):
     @staticmethod
     def _definition():
         return NotImplementedError
+    
     definition = _definition()
+    """
+    The definition of the object, in LaTeX string.
+    """
     
 ###
 
 class _AddOnlyExpr(sp.Expr):
+    """
+    This expression can only be an argument for a summation.
+    """
+    
     def __pow__(self, other):
         raise NotImplementedError()
     __rpow__ = __pow__
@@ -112,6 +120,10 @@ class _AddOnlyExpr(sp.Expr):
     __rtruediv__ = __pow__
     
 class _ReadOnlyExpr(_AddOnlyExpr):
+    """
+    This expression is read-only. No algebraic manipulations may be performed.
+    """
+    
     def __add__(self, other):
         raise NotImplementedError()
     __radd__ = __add__

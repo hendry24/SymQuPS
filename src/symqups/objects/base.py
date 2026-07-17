@@ -10,6 +10,14 @@ class Base(sp.Symbol):
     
     We use `Symbol` instead of `AtomicExpr` since the functionalities we need are already available
     in the former, and "reinventing the wheel" with the latter would just be needlessly troublesome.
+
+    While `Symbol` can only take an argument `name` other than its `assumptions`, this object takes
+    a sequence of `*custom_args` which is then fed into the method `_get_symbol_name_and_assumptions`
+    to get both `name` and `assumptions` for the `Symbol`; this method is not implemented in `Base` 
+    and should be specified when subclassing `Base`. Upon instantiation, the custom arguments are stored
+    in the `._custom_args` attribute for other uses, such as defining subclass-specific methods.
+    
+    A typical user need not use this class. 
     """
     
     def _get_symbol_name_and_assumptions(cls, *custom_args):

@@ -40,11 +40,9 @@ def derivative_not_in_num(A : sp.Expr) -> sp.Expr:
     if not A.has(sp.Derivative):
         return A
     
-    """
-    `der_lst` here contains all the Derivative objects in a given term, 
-    including the ones nested within another Derivative objects. We
-    get the first one since it is the outermost.  
-    """
+    # `der_lst` here contains all the Derivative objects in a given term, 
+    # including the ones nested within another Derivative objects. We
+    # get the first one since it is the outermost.
 
     args_without_der = list(A.args)
     der_args = []
@@ -62,7 +60,7 @@ def derivative_not_in_num(A : sp.Expr) -> sp.Expr:
 def collect_by_derivative(A : sp.Expr, 
                           f : None | UndefinedFunction = None) -> sp.Expr:
     """
-    Collect terms by the derivatives of the input function, by default those of the Wigner function `W`.
+    Collect terms by the derivatives of the input function, by default those of the state function.
 
     Parameters
     ----------

@@ -27,15 +27,29 @@ def _subs_template(expr : sp.Expr, subs_dict : ProtectedDict, lookup_atoms : tup
     return expr.xreplace(trimmed_subs_dict)
     
 def alpha2qp(expr : sp.Expr) -> sp.Expr:
+    """
+    Write :math:`\\alpha` and :math:`\\alpha^*` in terms of :math:`q` and :math:`p`, and similarly for the 
+    operator counterparts, in the input ``expr``.
+    """
     return _subs_template(expr, alpha2qp_subs_dict, (alphaType,))
     
 def qp2alpha(expr : sp.Expr) -> sp.Expr:
+    """
+    Write :math:`q` and :math:`p` in terms of :math:`\\alpha` and :math:`\\alpha^*`, and similarly for the 
+    operator counterparts, in the input ``expr``.
+    """
     return _subs_template(expr, qp2alpha_subs_dict, (qpType,))
     
 def op2sc(expr : sp.Expr) -> sp.Expr:
+    """
+    Substitute :math:`\\hat{q},\\hat{p},\\hat{\\alpha},\\hat{\\alpha}^\\dagger` with their scalar counterparts in the input ``expr``.
+    """
     return _subs_template(expr, op2sc_subs_dict, (Operator,))
 
 def sc2op(expr : sp.Expr) -> sp.Expr:
+    """
+    Substitute :math:`q,p,\\alpha,\\alpha^*` with their operator counterparts in the input ``expr``.
+    """
     return _subs_template(expr, sc2op_subs_dict, (Scalar,))
 
 ###

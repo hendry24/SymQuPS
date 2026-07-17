@@ -19,7 +19,6 @@ from .ordering import sOrdering
 from .manipulations import (qp2alpha, op2sc, alpha2qp, sc2op, Commutator,
                             s_ordered_equivalent, dagger, normal_ordered_equivalent,
                             Derivative)
-from .utils import get_N
 
 from . import s as CahillGlauberS
 from . import pi
@@ -386,12 +385,7 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
 ###
 
 @preprocess_class
-class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
-    """
-    NOTE: Some unevaluated expressions may be evaluable using `iCGTransform(CGTransform(x))`, e.g.,
-    the hatter star product between two `sOrdering` objects.
-    """
-    
+class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):    
     @staticmethod
     def _definition():
         lhs = sp.Symbol(_iCGT_str(r"f\left(\bm{\alpha}\right)"))
@@ -400,6 +394,11 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
     definition = _definition()
     
     def __new__(cls, expr : sp.Expr, *_vars) -> sp.Expr:
+        """
+        NOTE: Some unevaluated expressions may be evaluable using `iCGTransform(CGTransform(x))`, e.g.,
+        the hatter star product between two `sOrdering` objects.
+        """
+        
         if expr.is_Equality:
             return sp.Equality(iCGTransform(expr.lhs, *_vars),
                                iCGTransform(expr.rhs, *_vars))

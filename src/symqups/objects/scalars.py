@@ -16,7 +16,11 @@ class Scalar(Base):
     Base class for scalar objects.
     """
     base = NotImplemented
+    
+    #: Whether the object is allowed to have subscripts. If `False`, then the `.sub` attribute
+    #: always returns the empty Symbol.
     has_sub = True
+    
     is_real = True
     
     def _get_symbol_name_and_assumptions(cls, sub):
@@ -25,7 +29,7 @@ class Scalar(Base):
         
     def __new__(cls, sub = None):
         """
-        Construct an operator object.
+        Construct a scalar object.
         
         Parameters
         ----------
@@ -45,11 +49,18 @@ class Scalar(Base):
         
     @property
     def sub(self):
+        """
+        The subscript of the object, representing which subsystem it belongs to in multipartite descriptions.
+        """
         return self._custom_args[0]
     
 ###
 
 class t(Scalar):
+    """
+    The time variable.
+    """
+    
     base = r"t"
     has_sub = False
 
@@ -76,6 +87,7 @@ class alpha(Scalar, PhaseSpaceVariable, alphaType):
     
     def conjugate(self):
         return alphaD(self.sub)
+    
     def _eval_conjugate(self):
         return self.conjugate()
     
@@ -96,7 +108,10 @@ class alphaD(Scalar, PhaseSpaceVariable, alphaType):
 
 class StateFunction(sp.Expr, PhaseSpaceObject, CannotBoppShift):
     """
-    The state function object.
+    The state function object, is a `sympy.Expr`.
+    
+    Not intended for a typical user, as the package variable `W` is
+    already assigned on import.
     
     Parameters
     ----------

@@ -8,12 +8,18 @@ from ..objects.scalars import Scalar
 from ..objects.operators import Operator, createOp, annihilateOp
 
 def get_sub(expr : sp.Expr) -> set[sp.Symbol]:
+    """
+    Get all subscripts appearing in the input `expr`.
+    """
     return {atom.sub for atom in expr.atoms(Scalar, Operator) if atom.has_sub}
             # Must use a set to avoid repeated 'sub's.
             
 def is_nonconstant_polynomial(A : sp.Expr, *gens) -> bool:
     """
-    If '.is_polynomial' returns `None`, then it is taken to generally NOT be a polynomial.
+    Check whether the expression `A` is a nonconstant polynomial in `*gens`. SymPy's built-in
+    `.is_polynomial` attribute is insufficient since it returns True when the expression does
+    not have any of the generators. Furthermore, if '.is_polynomial' returns `None`, then this
+    function takes the expression to NOT be a polynomial.
     """
     is_poly = A.is_polynomial(*gens)
     if is_poly is None:
@@ -41,7 +47,7 @@ def separate_term_by_nonconstant_polynomiality(expr : sp.Expr,
                                                polynomials_in : tuple[sp.Basic]
                                                ) -> list[sp.Expr] :
     """
-    Subsequent elements of the output has alternating (non-constant) polynomiality 
+    Separate `expr` into its factors with alternating non-constant polynomiality 
     in 'polynomials_in'. Always starts with a nonpolynomial part. If factors of `expr`
     start with a polynomial, then the first entry is unity.
     """
@@ -79,6 +85,10 @@ def separate_term_by_nonconstant_polynomiality(expr : sp.Expr,
 def get_factor_nonconstant_polynomiality(expr : sp.Expr,
                              polynomials_in : tuple[sp.Basic]
                              ) -> list[bool]:
+    """
+    Returns a list of Boolean values of whether each factor of `expr` is
+    a nonconstant polynomial in `polynomials_in`
+    """
     
     if not(isinstance(polynomials_in, Sequence)):
         polynomials_in = [polynomials_in]
@@ -100,13 +110,27 @@ def get_factor_nonconstant_polynomiality(expr : sp.Expr,
 def has_universal_oper(expr : sp.Expr) -> bool:
     """
     Returns 'True' if the input has at least one universally-noncommuting
-    operator, e.g. 'densityOp'. Returns 'False' otherwise.
+    operator specified by `has_sub=False`, e.g. 'densityOp'.
     """
     if not(expr.has(Operator)):
         return False
     return not(all(atom.has_sub for atom in expr.atoms(Operator)))
 
 def separate_operator(expr: sp.Expr) -> Tuple[sp.Expr, sp.Expr]:
+    """
+    Separate `expr` into its non-Operator and Operator factors.
+    
+    Returns
+    -------
+    
+    non_operator : sympy.Expr
+        Non-operator factor of `expr`.
+        
+    operator : sympy.Expr
+        Factor of `expr` containing `Operator`.
+        
+    """
+    
     expr = sp.sympify(expr)
     
     screen_type(expr, sp.Add, separate_operator)
@@ -131,6 +155,17 @@ def separate_operator(expr: sp.Expr) -> Tuple[sp.Expr, sp.Expr]:
     return sp.Mul(*non_operator), sp.Mul(*operator)
 
 def collect_alpha_type_oper_from_monomial_by_sub(expr : sp.Expr) -> Tuple[sp.Expr, dict, dict]:
+    """
+    Assuming that `expr` is a polynomial in `annihilateOp` and `createOp`, this function
+    returns 3 objects. First is the factor of `expr` that does not contain any ladder operators.
+    Second is a {subscript : power} dictionary for `createOp` objects found within `expr`. Third is
+    the same dictionary for `annihilationOp` objects. 
+    
+    NOTE: Since operators are noncommuting, this function effectively ignores the operator
+    ordering. Interanlly, the package uses this function to create the `sOrdering` bracket, which does
+    not care about operator ordering inside.  
+    """
+    
     expr = sp.sympify(expr)
     
     screen_type(expr, sp.Add, collect_alpha_type_oper_from_monomial_by_sub)
