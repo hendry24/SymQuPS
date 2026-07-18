@@ -3,11 +3,10 @@ from sympy.core.sympify import CantSympify
 import warnings
 
 from .grouping import _ReadOnlyExpr
-from .preprocessing import preprocess_class
+from .preprocessing import preprocess_func
 
 from ..objects.base import Base
 
-@preprocess_class
 class Constant(CantSympify, _ReadOnlyExpr, Base):
     """
     Base class for package constants. Set its value by setting the `.val`
@@ -29,6 +28,7 @@ class Constant(CantSympify, _ReadOnlyExpr, Base):
         return self._val
 
     @val.setter
+    @preprocess_func
     def val(self, value):        
         self._val = value
         

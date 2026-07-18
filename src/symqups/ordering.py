@@ -19,15 +19,40 @@ from . import s as CahillGlauberS
 ###
 
 class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
+    """
+    The s-ordering bracket.
+    """
     
     is_commutative = False
     
     @preprocess_func    
-    def __new__(cls, expr : sp.Expr, s : sp.Number | None = None, 
+    def __new__(cls, expr : sp.Expr, s : float = CahillGlauberS.val, 
                 _fast_constructor : tuple = None) -> sp.Expr:
         
-        if s is None:
-            s = CahillGlauberS.val
+        """
+        Construct an s-ordering bracket.
+        
+        Parameters
+        ----------
+        
+        expr : sympy.Expr
+            The expression to be enclosed. If no ``Operator``s are present, then the expression is
+            returned as is. If ``Operator``s with ``has_sub=False`` like ``rho`` is contained, then 
+            an error is raised.
+            
+        s : float, default: s.val
+            Ordering parameter for the bracket. This input does not affect the package variable ``s``.
+            If a number is passed, the package raises a warning if it is not a real number between
+            -1 and 1, inclusive. Using any ``sympy.Symbol`` is allowed.
+            
+        _fast_constructor : tuple, default: None
+            A tuple `(poly_dict, nonpoly_args)` for fast construction of the bracket. Used internally 
+            by the package, but the user is welcome to try.
+        
+        """
+        
+        CahillGlauberS.val = s # To trigger warning 
+        CahillGlauberS.val = CahillGlauberS.default_value
             
         def has_ordering_ambiguity(A : sp.Expr) -> bool:
             if any(A.has(annihilateOp(sub)) and A.has(createOp(sub))
@@ -129,22 +154,43 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
     
     @property
     def content(self):
+        """
+        Content of the bracket. Generally not equivalent to the input expression.
+        """
+        
         return self.args[0]
     
     @property
     def s_val(self):
+        """
+        Ordering paramter of the bracket.
+        """
+        
         return self.args[1]
     
     @property
     def poly_dict(self) -> dict:
+        """
+        Polynomial dict in ``annihilateOp`` and ``createOp`` with the format
+        `{sub : (power of createOp(sub), power of annihilateOp(sub))}`
+        """
+        
         return self._poly_dict
     
     @property
     def nonpoly_args(self) -> list:
+        """
+        List of non-polynomial factors of the content. 
+        """
+        
         return self._nonpoly_args
     
     @property
     def contains_poly(self) -> bool:
+        """
+        Whether the content is a polynomial.
+        """
+        
         return not(self.nonpoly_args)
             
     def _latex(self, printer) -> str:

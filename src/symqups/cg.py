@@ -121,54 +121,49 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
     
     @preprocess_func    
     def __new__(cls, expr : sp.Expr, *_vars, mode = "Star"):
-        # """
-        # Compute the CG transform of ``expr``. 
+        """
+        Compute the CG transform of ``expr``. A ``CGTransform`` instance is returned if the constructor cannot
+        evaluate the transform for the input expression.
         
-        # Parameters
-        # ----------
+        Parameters
+        ----------
         
-        # expr : sympy.Expr
-        #     Input Hilbert-space expression. The class will raise an error if anything identified as
-        #     a :class:`PhaseSpaceObject` is contained within ``expr``. 
+        expr : sympy.Expr
+            Input Hilbert-space expression. An error will be raised if phase-space objects
+            are contained.  
         
-        # mode : str
-        #     Evaluation mode for expressions containing polynomial and nonpolynomial
-        #     parts. 
+        mode : str
+            Evaluation mode for expressions containing polynomial and nonpolynomial
+            parts. 
             
-        #     -   Cascaded application of PSBOs. This is SLOW, possibly due
-        #         to the multiply nested expressions. Running `.doit` 
-        #         afterwards would also be more expensive due to all 
-        #         the nesting. This is mode `"PSBO"`.
+            -   Cascaded application of PSBOs. This is SLOW, possibly due
+                to the multiply nested expressions. Running `.doit` 
+                afterwards would also be more expensive due to all 
+                the nesting. This is mode `"PSBO"`.
         
-        #     -   Star product of the CG Transforn of the factors 
-        #         divided by polynomiality. This is FAST, since we 
-        #         can abuse the efficiency of the star-product algorithm
-        #         which has no ordering problem for its arguments. 
-        #         This is mode `"Star"`.
+            -   Star product of the CG Transforn of the factors 
+                divided by polynomiality. This is FAST, since we 
+                can abuse the efficiency of the star-product algorithm
+                which has no ordering problem for its arguments. 
+                This is mode `"Star"`.
             
-        #     -   Make every possible word where every operator is
-        #         replaced by the corresponding PSBO split into 
-        #         the PSV part and the derivative part. Then, normal
-        #         order each word utilizing the similarity between
-        #         `[aOp, adOp] = 1` and `[dx, x] = 1` to obtain the explicit
-        #         series expanded to the greatest extend possible (i.e., 
-        #         with the product rule already evaluated). This is SLOW,
-        #         because it takes multiple loops to (i) separate the factors
-        #         by polynomiality, (ii) make each word, (iii) normal order
-        #         each word, and (iv) evaluate each term in the output. This
-        #         is mode `"explicit"`.
+            -   Make every possible word where every operator is
+                replaced by the corresponding PSBO split into 
+                the PSV part and the derivative part. Then, normal
+                order each word utilizing the similarity between
+                `[aOp, adOp] = 1` and `[dx, x] = 1` to obtain the explicit
+                series expanded to the greatest extend possible (i.e., 
+                with the product rule already evaluated). This is SLOW,
+                because it takes multiple loops to (i) separate the factors
+                by polynomiality, (ii) make each word, (iii) normal order
+                each word, and (iv) evaluate each term in the output. This
+                is mode `"explicit"`.
                 
-        #     If the input is a polynomial in the phase-space-variable operators, then
-        #     this class simply computes the s-ordered equivalent and do operator-to-scalar
-        #     substitution of the s-ordering bracket content. 
+            If the input is a polynomial in the phase-space-variable operators, then
+            this class simply computes the s-ordered equivalent and do operator-to-scalar
+            substitution of the s-ordering bracket content. 
 
-        # Returns
-        # -------
-        
-        # out : sympy.Epxr
-        #     Output phase-space expression that is the CG transform of ``expr``. 
-
-        # """
+        """
         
         if isinstance(mode, sp.Symbol): # deal with decorator
             mode = mode.name
@@ -403,7 +398,8 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
 
 class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):   
     """
-    The inverse Cahill-Glauber transform or canonical quantization.
+    The inverse Cahill-Glauber transform or canonical quantization. An ``iCGTransform`` instance is returned if the constructor cannot
+    evaluate the transform for the input expression.
     """
      
     @staticmethod
@@ -422,19 +418,13 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
         ----------
         
         expr : sympy.Expr
-            Input phase-space expression. The class will raise an error if anything identified as
-            a :class:`HilbertSpaceObject` is contained within ``expr``. 
-            
-        Returns
-        -------
-        
-        out : sympy.Epxr
-            Output Hilbert-space expression that is the inverse CG transform of ``expr``. 
+            Input phase-space expression. Error will be raised if Hilbert-space objects are contained. 
+                    
         
         .. note::
         
-            Some unevaluated expressions may be evaluable using `iCGTransform(CGTransform(x))`, e.g.,
-            the hatter star product between two :class:`sOrdering` objects.
+            Some unevaluated expressions may be evaluable using ``iCGTransform(CGTransform(x))``, e.g.,
+            the hatter star product between two :class:`symqups.ordering.sOrdering` objects.
         """
         
         if expr.is_Equality:

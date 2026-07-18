@@ -26,7 +26,7 @@ del annihilateOp, createOp
 
 ###
 
-from .cg import CGTransform, iCGTransform, CGProps
+from .cg import CGTransform, iCGTransform
 from .eom import LindbladMasterEquation, LME
 from .manipulations import (alpha2qp, qp2alpha, sc2op, op2sc, dagger, 
                             explicit_sOrdering, express_sOrdering, 

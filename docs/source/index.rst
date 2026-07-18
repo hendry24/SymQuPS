@@ -29,7 +29,7 @@ product** between the inverse mappings of the factors; the hatted star product a
 odot product [Bracken2003]_.
 
 SymQuPS implements the Cahill-Glauber correspondence [Cahill1969a]_ [Cahill1969b]_, alongside the results
-of [Soloviev2015]_ and [Lim2026]_ to implement the star products and their hatted counterparts. The correspondence is a continuous
+of [Soloviev2015]_ and [Lim2025]_ to implement the star products and their hatted counterparts. The correspondence is a continuous
 family that interpolates between the "big three" of ordering choices: the antinormal, symmetric, and normal orderings. 
 More details are available in the four references given in this paragraph, which are briefly summarized in our **API REFERENCE**. 
 
@@ -47,6 +47,12 @@ with main focus on polynomials. Here we highlight some functionalities offered b
 
    as well as their operator counterparts, within the extent of core arithmetics (addition, multiplication, exponentiation) and 
    generic functions (:math:`\mathrm{exp},\mathrm{ln},` or undefined functions). See :doc:`apidoc/apiref/objects-laymen`.
+
+   .. important::
+
+      While the package allows the user to manipulate expressions in terms of :math:`(q,p)`, the main functionalities of the package
+      always returns expressions written in terms of :math:`(\alpha,\alpha^*)` (similarly for the operators). This is because the Cahill-Glauebr
+      framework is built upon the algebra of ladder operators. The user can always convert back to the :math:`(q,p)` system using :func:`symqups.manipulations.alpha2qp`.
 
 -  Rewrite operator expressions in any ordering defined within the Cahill-Glauber framework. See :doc:`apidoc/apiref/ordering` and
    :doc:`apidoc/apiref/manipulations`. 
@@ -100,6 +106,7 @@ is a BibTeX entry you can copy:
    :maxdepth: 1
    :caption: API Reference
 
+   apidoc/apiref/constants
    apidoc/apiref/objects-laymen
    apidoc/apiref/objects-powerusers
    apidoc/apiref/manipulations
@@ -153,9 +160,9 @@ References
    creation and annihilation operators. *Physica Scripta*, 90, 074008. 
    http://dx.doi.org/10.1088/0031-8949/90/7/074008
 
-.. [Lim2026] Lim, H. M. (2026). Canonical quantization of a product within
-   the Cahill-Glauber correspondence. arXiv:2509.17106v3 [quant-ph]. 
-   https://doi.org/10.48550/arXiv.2509.17106
+.. [Lim2025] Lim, H. M. (2025). Algebraic machinery of quantization. 
+   arXiv:2509.17106v2 [quant-ph]. 
+   https://doi.org/10.48550/arXiv.2509.17106v2
 
 .. [Manzano2020] Manzano, D. (2020). A short introduction to the Lindblad 
    master equation. *AIP Advances*, 10, 025106. 

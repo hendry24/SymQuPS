@@ -1,5 +1,5 @@
-The Cahill-Glauber Correspondence
-=================================
+The Cahill-Glauber Correspondence and Quantization
+==================================================
 
 The Cahill-Glauber correspondence is a family of correspondence designed to form a correspondence between
 an :math:`s`-ordered polynomial (see :doc:`ordering`) in :math:`(\hat{a},\hat{a}^\dagger)` and a scalar polynomial which has the

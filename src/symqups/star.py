@@ -227,9 +227,30 @@ class _StarTemplate(sp.Expr, CannotBoppShift, Defined):
         return out
     
 class Star(_StarTemplate):
+    """
+    The star product.
+    """
+    
     def __new__(cls, *args : sp.Expr):
+        """
+        Compute the star product between ``*args``. The package tries to completely evaluate
+        the operation, and will return a ``Star`` instance if it can no longer evaluate the remaining
+        products. There can be at most one non-polynomial in the phase-space variables in ``*args`` for
+        complete evaluation to be possible. The state function ``W`` is counted as a non-polynomial.
+        """
+        
         return super().__new__(cls, *args, hatted=False)
 
 class HattedStar(_StarTemplate):
+    """
+    The hatted star product.
+    """
+    
     def __new__(cls, *args : sp.Expr):
+        """
+        Compute the hatted star product between ``*args``. The package tries to completely evaluate
+        the operation, and will return a ``HattedStar`` instance if it can no longer evaluate the remaining
+        products. There can be at most one non-polynomial in the phase-space-variable operators in ``*args`` for
+        complete evaluation to be possible. The density operator ``rho`` is counted as a non-polynomial.
+        """
         return super().__new__(cls, *args, hatted=True)

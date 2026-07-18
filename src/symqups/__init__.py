@@ -20,7 +20,7 @@ from .objects.scalars import q, p, alpha, alphaD, W
 from .objects.operators import (qOp, pOp, createOp, annihilateOp, rho)
 
 from .bopp import HilbertSpaceBoppSuperoperator, PhaseSpaceBoppOperator
-from .cg import CGTransform, iCGTransform, CGProps
+from .cg import CGTransform, iCGTransform
 from .eom import LindbladMasterEquation
 from .manipulations import (
     alpha2qp, qp2alpha, sc2op, op2sc, dagger, explicit_sOrdering, express_sOrdering,

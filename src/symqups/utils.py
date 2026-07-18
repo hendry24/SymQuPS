@@ -65,7 +65,7 @@ def collect_by_derivative(A : sp.Expr,
     Parameters
     ----------
 
-    A : sympy object
+    A : sympy.Expr
         Quantity whose terms is to be collected. If `A` contains no
         function, then it is returned as is. 
 
@@ -75,7 +75,7 @@ def collect_by_derivative(A : sp.Expr,
     Returns
     -------
 
-    out : sympy object
+    out : sympy.Expr
         The same quantity with its terms collected. 
     """
 

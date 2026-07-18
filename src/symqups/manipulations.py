@@ -29,27 +29,25 @@ def _subs_template(expr : sp.Expr, subs_dict : ProtectedDict, lookup_atoms : tup
     
 def alpha2qp(expr : sp.Expr) -> sp.Expr:
     """
-    Write :math:`\\alpha` and :math:`\\alpha^*` in terms of :math:`q` and :math:`p`, and similarly for the 
-    operator counterparts, in the input ``expr``.
+    Returns an equivalent expression to ``expr`` with ``(alpha,alphaD)`` written in terms of ``(q,p)``.
     """
     return _subs_template(expr, alpha2qp_subs_dict, (alphaType,))
     
 def qp2alpha(expr : sp.Expr) -> sp.Expr:
     """
-    Write :math:`q` and :math:`p` in terms of :math:`\\alpha` and :math:`\\alpha^*`, and similarly for the 
-    operator counterparts, in the input ``expr``.
+    Returns an equivalent expression to ``expr`` with ``(q,p)`` written in terms of ``(alpha,alphaD)``.
     """
     return _subs_template(expr, qp2alpha_subs_dict, (qpType,))
     
 def op2sc(expr : sp.Expr) -> sp.Expr:
     """
-    Substitute :math:`\\hat{q},\\hat{p},\\hat{\\alpha},\\hat{\\alpha}^\\dagger` with their scalar counterparts in the input ``expr``.
+    Substitute ``(qOp, pOp, annihilateOp, createOp)`` with their scalar counterparts in the input ``expr``.
     """
     return _subs_template(expr, op2sc_subs_dict, (Operator,))
 
 def sc2op(expr : sp.Expr) -> sp.Expr:
     """
-    Substitute :math:`q,p,\\alpha,\\alpha^*` with their operator counterparts in the input ``expr``.
+    Substitute `(q,p,alpha,alphaD)` with their operator counterparts in the input ``expr``.
     """
     return _subs_template(expr, sc2op_subs_dict, (Scalar,))
 
@@ -60,7 +58,6 @@ def dagger(expr : sp.Expr) -> sp.Expr:
     """
     Compute the Hermitian conjugate of ``expr``.
     """
-    
     
     def treat_add(A : sp.Expr):
         return default_treat_add(A.args, dagger)
@@ -106,7 +103,7 @@ def express_sOrdering(expr : sp.Expr, t=1, explicit=True) -> sp.Expr:
 
 class Commutator(spq.Commutator, HilbertSpaceObject):
     """
-    The commutator bracket :math:`[A,B] = AB-BA`.
+    The commutator bracket ``[A,B] = A*B-B*A``.
     """
     
     @preprocess_func    
