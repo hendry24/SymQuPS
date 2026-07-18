@@ -1,2 +1,2 @@
-The Lindblad master equation, brought to phase space
+The Lindblad Master Equation, Brought to Phase Space
 ====================================================

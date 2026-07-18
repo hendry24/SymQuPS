@@ -1,8 +1,8 @@
 Objects in SymQuPS (For Power Users)
 ====================================
 
-This page lists all object classes of the package that is meant for power users. A typical user
-should not need to deal with these functionalities and may refer to :doc:`../basic/objects-laymen`.
+This page lists all other object classes of the package meant for power users. A typical user
+should not need to deal with these functionalities and may refer to :doc:`../apiref/objects-laymen`.
 
 ..  autoclass:: symqups.objects.base.Base
 

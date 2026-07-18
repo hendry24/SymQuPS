@@ -1,3 +1,0 @@
-Algebraic manipulations
-=======================
-

@@ -24,7 +24,8 @@ def _subs_template(expr : sp.Expr, subs_dict : ProtectedDict, lookup_atoms : tup
     # dictionary by only having keys that are actually present in the input expression.
     trimmed_subs_dict = {key : subs_dict[key] 
                          for key in expr.atoms(*lookup_atoms) & subs_dict.keys()}
-    return expr.xreplace(trimmed_subs_dict)
+    
+    return expr.subs(trimmed_subs_dict)
     
 def alpha2qp(expr : sp.Expr) -> sp.Expr:
     """
@@ -56,6 +57,10 @@ def sc2op(expr : sp.Expr) -> sp.Expr:
 
 @preprocess_func
 def dagger(expr : sp.Expr) -> sp.Expr:
+    """
+    Compute the Hermitian conjugate of ``expr``.
+    """
+    
     
     def treat_add(A : sp.Expr):
         return default_treat_add(A.args, dagger)
@@ -79,12 +84,20 @@ def dagger(expr : sp.Expr) -> sp.Expr:
 
 @preprocess_func
 def explicit_sOrdering(expr: sp.Expr) -> sp.Expr:
+    """
+    Replace :class:`symqups.ordering.sOrdering` brackets in ``expr`` with its ``explicit`` version,
+    applicable for :math:`s=-1,0,1`.
+    """
     from .ordering import sOrdering
     return expr.replace(lambda A: isinstance(A, sOrdering),
                         lambda A: A.explicit())
 
 @preprocess_func
 def express_sOrdering(expr : sp.Expr, t=1, explicit=True) -> sp.Expr:
+    """
+    Expand :class:`symqups.ordering.sOrdering` brackets in ``expr`` in terms of ``t``-ordered ``sOrdering``
+    brackets, written ``explicit``-ly, if specified. 
+    """
     from .ordering import sOrdering
     return expr.replace(lambda A: isinstance(A, sOrdering),
                         lambda A: A.express(t=t, explicit=explicit))
@@ -93,6 +106,10 @@ def express_sOrdering(expr : sp.Expr, t=1, explicit=True) -> sp.Expr:
 
 @preprocess_class
 class Commutator(spq.Commutator, HilbertSpaceObject):
+    """
+    The commutator bracket :math:`[A,B] = AB-BA`.
+    """
+    
     
     def __new__(cls, A : sp.Expr, B : sp.Expr):
         
@@ -260,6 +277,10 @@ def normal_ordered_equivalent(expr : sp.Expr) -> sp.Expr:
 ###
 
 def s_ordered_equivalent(expr : sp.Expr) -> sp.Expr:
+    """
+    Compute the s-ordered equivalent of ``expr``.
+    """
+    
     # TODO: Might want to add nonpoly support here.
     from .ordering import sOrdering
     from . import s 
@@ -270,7 +291,11 @@ def s_ordered_equivalent(expr : sp.Expr) -> sp.Expr:
 @preprocess_class
 class Derivative(sp.Derivative):
     """
-    The derivative constructor.
+    The derivative constructor for SymQuPS, with special treatment for "derivatives" with respect
+    to the ladder operators which are turned into commutators before the expression is passed to
+    ``sympy.Derivative``.
+    
+    Running ``sympy.Derivative`` with respect to the ladder operator objects will raise an error.
     """
     def __new__(cls, expr, *variables, **hints):
         

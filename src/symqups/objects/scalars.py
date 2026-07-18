@@ -125,7 +125,7 @@ class StateFunction(sp.Expr, PhaseSpaceObject, CannotBoppShift):
         return self._args
     
     def _set_args(self, value):
-        if not(all(isinstance(x, (t, alpha, alphaD))
+        if not(all(isinstance(x, (t, alpha, alphaD, q, p))
                    for x in value)):
             invalid_input(value, "StateFunction.args")
         
