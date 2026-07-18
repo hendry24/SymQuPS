@@ -31,7 +31,8 @@ odot product [Bracken2003]_.
 SymQuPS implements the Cahill-Glauber correspondence [Cahill1969a]_ [Cahill1969b]_, alongside the results
 of [Soloviev2015]_ and [Lim2025]_ to implement the star products and their hatted counterparts. The correspondence is a continuous
 family that interpolates between the "big three" of ordering choices: the antinormal, symmetric, and normal orderings. 
-More details are available in the four references given in this paragraph, which are briefly summarized in our **API REFERENCE**. 
+More details are available in the four references given in this paragraph, which are briefly summarized in our **API REFERENCE** for 
+unipartite systems (the generalization is straightforward for multipartite systems).
 
 While motivated by the desire for convenience in obtaining the phase-space representation of equations of motion,
 such as the Lindblad master equation [Manzano2020]_, SymQuPS has been developed as a calculator-esque environment that allows 
@@ -60,7 +61,7 @@ with main focus on polynomials. Here we highlight some functionalities offered b
 -  Compute an arbitrarily long chain of star products and hatted star products. See :doc:`apidoc/apiref/star`.
 
 -  Compute the phase space representation of any expressions containing the quantum operators. In particular, compute the
-   phase space representation of an arbitrary Lindblad master equation. See :doc:`apidoc/apiref/cg-quantization` and :doc:`apidoc/tutorials/eom`.
+   phase space representation of an arbitrary Lindblad master equation. See :doc:`apidoc/apiref/cg-quantization` and :doc:`apidoc/apiref/eom`.
 
 -  Compute the canonical quantization of any functions in the phase-space variables. See :doc:`apidoc/apiref/cg-quantization`.
 
@@ -100,7 +101,7 @@ is a BibTeX entry you can copy:
 
    apidoc/tutorials/install
    apidoc/tutorials/simple
-   apidoc/tutorials/eom
+   apidoc/tutorials/qsl-oscillator
 
 .. toctree::
    :maxdepth: 1
@@ -113,6 +114,7 @@ is a BibTeX entry you can copy:
    apidoc/apiref/ordering
    apidoc/apiref/star
    apidoc/apiref/cg-quantization
+   apidoc/apiref/eom
    apidoc/apiref/bopp
    apidoc/apiref/other-utils
 

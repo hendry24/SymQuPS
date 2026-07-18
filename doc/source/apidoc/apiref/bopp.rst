@@ -9,7 +9,7 @@ inverse-transforming an equation of motion). Both are probably not interesting t
 but we think it is nice to provide these functionalities in the pacakge for the user, and have thus implemented them.
 These properties are discussed by [Lim2025]_.
 
-The phase-space bopp operators
+The phase-space Bopp operators
 ------------------------------
 
 Given real-analytic :math:`\hat{F}=\hat{F}\left(\hat{a},\hat{a}^\dagger \right)`, we have the property that (see :doc:`cg-quantization` and :doc:`star`)
@@ -48,7 +48,7 @@ the PSBOs do not commute with each other.
 .. autoclass:: symqups.bopp.PSBO
     :members:
 
-The Hilbert-space bopp superoperators
+The Hilbert-space Bopp superoperators
 -------------------------------------
 
 Given real-analytic :math:`f=f\left(\alpha,\alpha^* \right)`, we have the property that (see :doc:`cg-quantization` and :doc:`star`)

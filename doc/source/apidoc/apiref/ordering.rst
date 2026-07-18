@@ -1,11 +1,6 @@
 Operator Ordering
 =================
 
-.. When doing canonical quantization, we are immediately faced with the dilemma of operator ordering: to promote 
-.. classical observables such as :math:`\alpha^*\alpha`, how should we order :math:`\hat{a}` and :math:`\hat{a}^\dagger`? 
-.. We can do :math:`\hat{a}\hat{a}^\dagger` or :math:`\hat{a}^\dagget\hat{a}` or even :math:`\pi \hat{a}\hat{a}^\dagger + (1-\pi)\hat{a}^\dagget\hat{a}`;
-.. all are equally valid. 
-
 Given a number :math:`m` of :math:`\hat{a}^\dagger` and a number :math:`n` of :math:`\hat{a}`, the Cahill-Glauber framework
 admits a continuous family of operator orderings, parameterized by :math:`s` (see :py:data:`symqups.s`). Other than the 
 "big three" orderings (normal, symmetric/Weyl, anti-normal) corresponding to the values :math:`s=1,0,-1`, respectively, the generic 
