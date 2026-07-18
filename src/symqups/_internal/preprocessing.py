@@ -36,9 +36,3 @@ def preprocess_func(func):
         return func(*sympified_args, **sympified_kwargs)
 
     return wrapper
-
-def preprocess_class(cls):    
-    for name, attr in vars(cls).items():
-        if callable(attr):
-            setattr(cls, name, preprocess_func(attr))
-    return cls

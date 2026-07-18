@@ -41,3 +41,5 @@ extensions = ["sphinx.ext.autodoc",
 autodoc_default_options = {
     "show-inheritance": True,
 }
+
+autodoc_member_order = "bysource"

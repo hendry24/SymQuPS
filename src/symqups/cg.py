@@ -7,7 +7,7 @@ from ._internal.grouping import (PhaseSpaceVariable, PhaseSpaceObject, Defined,
                                  PhaseSpaceVariableOperator)
 from ._internal.math import has_universal_oper
 from ._internal.cache import sub_cache
-from ._internal.preprocessing import preprocess_class
+from ._internal.preprocessing import preprocess_func
 
 from .objects.scalars import W, StateFunction, alpha, alphaD, Scalar
 from .objects.operators import (Operator, densityOp, annihilateOp, 
@@ -108,9 +108,10 @@ def _normal_ordered_PSBO_on_B(combo, B):
     
     return sp.Add(*out_summands)
 
-@preprocess_class
 class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
-    
+    """
+    The Cahill-Glauber s-parameterized transform.
+    """
     @staticmethod
     def _definition():
         lhs = sp.Symbol(_CGT_str(r"\hat{A}"))
@@ -118,40 +119,56 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
         return sp.Equality(lhs, rhs)
     definition = _definition()
     
+    @preprocess_func    
     def __new__(cls, expr : sp.Expr, *_vars, mode = "Star"):
-        """
+        # """
+        # Compute the CG transform of ``expr``. 
         
-        PARAMETERS
-        ----------
+        # Parameters
+        # ----------
         
-        mode : str
-            Evaluation mode for expressions containing polynomial and nonpolynomial
-            parts.
+        # expr : sympy.Expr
+        #     Input Hilbert-space expression. The class will raise an error if anything identified as
+        #     a :class:`PhaseSpaceObject` is contained within ``expr``. 
+        
+        # mode : str
+        #     Evaluation mode for expressions containing polynomial and nonpolynomial
+        #     parts. 
             
-            (1) Cascaded application of PSBOs. This is SLOW, possibly due
-                to the multiply nested expressions. Running `.doit` 
-                afterwards would also be more expensive due to all 
-                the nesting. This is mode `"PSBO"`.
+        #     -   Cascaded application of PSBOs. This is SLOW, possibly due
+        #         to the multiply nested expressions. Running `.doit` 
+        #         afterwards would also be more expensive due to all 
+        #         the nesting. This is mode `"PSBO"`.
+        
+        #     -   Star product of the CG Transforn of the factors 
+        #         divided by polynomiality. This is FAST, since we 
+        #         can abuse the efficiency of the star-product algorithm
+        #         which has no ordering problem for its arguments. 
+        #         This is mode `"Star"`.
             
-            (2) Star product of the CG Transforn of the factors 
-                divided by polynomiality. This is FAST, since we 
-                can abuse the efficiency of the star-product algorithm
-                which has no ordering problem for its arguments. 
-                This is mode `"Star"`.
-            
-            (3) Make every possible word where every operator is
-                replaced by the corresponding PSBO split into 
-                the PSV part and the derivative part. Then, normal
-                order each word utilizing the similarity between
-                `[aOp, adOp] = 1` and `[dx, x] = 1` to obtain the explicit
-                series expanded to the greatest extend possible (i.e., 
-                with the product rule already evaluated). This is SLOW,
-                because it takes multiple loops to (i) separate the factors
-                by polynomiality, (ii) make each word, (iii) normal order
-                each word, and (iv) evaluate each term in the output. This
-                is mode `"explicit"`.
+        #     -   Make every possible word where every operator is
+        #         replaced by the corresponding PSBO split into 
+        #         the PSV part and the derivative part. Then, normal
+        #         order each word utilizing the similarity between
+        #         `[aOp, adOp] = 1` and `[dx, x] = 1` to obtain the explicit
+        #         series expanded to the greatest extend possible (i.e., 
+        #         with the product rule already evaluated). This is SLOW,
+        #         because it takes multiple loops to (i) separate the factors
+        #         by polynomiality, (ii) make each word, (iii) normal order
+        #         each word, and (iv) evaluate each term in the output. This
+        #         is mode `"explicit"`.
+                
+        #     If the input is a polynomial in the phase-space-variable operators, then
+        #     this class simply computes the s-ordered equivalent and do operator-to-scalar
+        #     substitution of the s-ordering bracket content. 
 
-        """
+        # Returns
+        # -------
+        
+        # out : sympy.Epxr
+        #     Output phase-space expression that is the CG transform of ``expr``. 
+
+        # """
         
         if isinstance(mode, sp.Symbol): # deal with decorator
             mode = mode.name
@@ -384,8 +401,11 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
     
 ###
 
-@preprocess_class
-class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):    
+class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):   
+    """
+    The inverse Cahill-Glauber transform or canonical quantization.
+    """
+     
     @staticmethod
     def _definition():
         lhs = sp.Symbol(_iCGT_str(r"f\left(\bm{\alpha}\right)"))
@@ -393,10 +413,28 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
         return sp.Equality(lhs, rhs)
     definition = _definition()
     
+    @preprocess_func    
     def __new__(cls, expr : sp.Expr, *_vars) -> sp.Expr:
         """
-        NOTE: Some unevaluated expressions may be evaluable using `iCGTransform(CGTransform(x))`, e.g.,
-        the hatter star product between two `sOrdering` objects.
+        Computes the inverse CG transform of ``expr``.
+        
+        Parameters
+        ----------
+        
+        expr : sympy.Expr
+            Input phase-space expression. The class will raise an error if anything identified as
+            a :class:`HilbertSpaceObject` is contained within ``expr``. 
+            
+        Returns
+        -------
+        
+        out : sympy.Epxr
+            Output Hilbert-space expression that is the inverse CG transform of ``expr``. 
+        
+        .. note::
+        
+            Some unevaluated expressions may be evaluable using `iCGTransform(CGTransform(x))`, e.g.,
+            the hatter star product between two :class:`sOrdering` objects.
         """
         
         if expr.is_Equality:
@@ -544,48 +582,3 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
     def _latex(self, printer):
         return r"\mathcal{W}^{-1}_{s={%s}}\left[{%s}\right]" % (sp.latex(CahillGlauberS.val),
                                                                 sp.latex(self.args[0]))
-###
-
-def _make_eq(lhs:str, rhs:str):
-    return sp.Equality(sp.Symbol(lhs), sp.Symbol(rhs))
-
-def _property_0():
-        lhs = _CGT_str(r"\rho", True)
-        rhs = r"\pi^N W_s\left(\bm{\alpha}\right)" # = \left(2\pi\hbar\right)^N W_s\left(\bm{q},\bm{p}\right)"
-        rhs += r"\quad\Rightarrow\quad \int_{\mathbb{R}^{2N}} \mathrm{d}\bm{\alpha}\, W_s\left(\bm{\alpha}\right) = 1"
-        # rhs += r"=\int_{\mathbb{R}^{2N}} \frac{\mathrm{d}\bm{q}\,\mathrm{d}\bm{p}}{\left(2\hbar\right)^N} W_s\left(\bm{q},\bm{p}\right) = 1"
-        return _make_eq(lhs, rhs)
-    
-def _property_1():
-        lhs = _CGT_str(r"\mu\hat{f}+\nu\hat{g}")
-        rhs = r"\mu" + _CGT_str(r"\hat{f}") + "+" + r"\nu" + _CGT_str(r"\hat{g}") + r", \quad"
-        rhs += _iCGT_str(r"\mu f+\nu g")
-        rhs += r"=\mu" + _iCGT_str(r"f") + "+" + r"\nu" + _iCGT_str(r"g")
-        rhs += r",\quad \mu,\nu\in\mathbb{C}"
-        return _make_eq(lhs, rhs)
-
-class CGProps:
-    
-    def __init__(self):
-        self.desclist = ["CG transform of the density matrix.",
-                         "Complex-linearity of the transforms.",]
-        
-        self.proplist = [globals()[f"_property_{j}"]() for j in range(2)]
-    
-    def legend(self):
-        out  = "Transform properties of the Cahill-Glauber s-parameterized transform \n"
-        out += "="*(len(out)-2) + "\n"
-        for j, desc in enumerate(self.desclist):
-            out += f"[{j}] {desc} \n"
-        return out
-    
-    def __getitem__(self, key):
-        print(self.desclist[key])
-        print("=" * len(self.desclist[key]))
-        return self.proplist[key]
-    
-    def __str__(self):
-        return self.legend()
-
-    def __repr__(self):
-        return self.legend()

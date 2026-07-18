@@ -1,8 +1,7 @@
 import sympy as sp
 
-from .._internal.preprocessing import preprocess_class
+from .._internal.preprocessing import preprocess_func
 
-@preprocess_class
 class Base(sp.Symbol):
     """
     Base object for the package, essentially a modified `sympy.Symbol` supporting extra accessible
@@ -23,6 +22,7 @@ class Base(sp.Symbol):
     def _get_symbol_name_and_assumptions(cls, *custom_args):
         raise NotImplementedError()
     
+    @preprocess_func
     def __new__(cls, *custom_args):
         
         name, assumptions = cls._get_symbol_name_and_assumptions(cls, *custom_args)

@@ -1,5 +1,4 @@
 import sympy as sp
-import functools
 import itertools
 
 from ._internal.grouping import (
@@ -9,7 +8,7 @@ from ._internal.grouping import (
 )
 from ._internal.basic_routines import operation_routine
 from ._internal.math import is_nonconstant_polynomial
-from ._internal.preprocessing import preprocess_class
+from ._internal.preprocessing import preprocess_func
 
 from .objects.scalars import alpha, alphaD, StateFunction
 from .objects.operators import annihilateOp, densityOp
@@ -181,7 +180,6 @@ def _star_base(F : sp.Expr,
                               }
                              )
 
-@preprocess_class
 class _StarTemplate(sp.Expr, CannotBoppShift, Defined):
    
     @staticmethod
@@ -189,6 +187,7 @@ class _StarTemplate(sp.Expr, CannotBoppShift, Defined):
         return NotImplemented
     definition = _definition()
     
+    @preprocess_func    
     def __new__(cls, *args : sp.Expr, hatted : bool):
         unevaluated_args = []
         

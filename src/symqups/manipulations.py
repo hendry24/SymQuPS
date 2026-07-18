@@ -9,7 +9,7 @@ from ._internal.math import (has_universal_oper, separate_term_oper_by_sub, get_
 from ._internal.cache import ( op2sc_subs_dict, sc2op_subs_dict, 
                               alpha2qp_subs_dict, qp2alpha_subs_dict, ProtectedDict)
 from ._internal.grouping import qpType, alphaType, HilbertSpaceObject, PhaseSpaceVariableOperator
-from ._internal.preprocessing import preprocess_func, preprocess_class
+from ._internal.preprocessing import preprocess_func
 
 from .objects.scalars import Scalar, t
 from .objects.operators import annihilateOp, createOp, Operator, TimeDependentOp
@@ -104,13 +104,12 @@ def express_sOrdering(expr : sp.Expr, t=1, explicit=True) -> sp.Expr:
 
 ###
 
-@preprocess_class
 class Commutator(spq.Commutator, HilbertSpaceObject):
     """
     The commutator bracket :math:`[A,B] = AB-BA`.
     """
     
-    
+    @preprocess_func    
     def __new__(cls, A : sp.Expr, B : sp.Expr):
         
         A_is_universal = has_universal_oper(A)
@@ -288,7 +287,6 @@ def s_ordered_equivalent(expr : sp.Expr) -> sp.Expr:
 
 ###
 
-@preprocess_class
 class Derivative(sp.Derivative):
     """
     The derivative constructor for SymQuPS, with special treatment for "derivatives" with respect
@@ -297,7 +295,30 @@ class Derivative(sp.Derivative):
     
     Running ``sympy.Derivative`` with respect to the ladder operator objects will raise an error.
     """
+    
+    @preprocess_func
     def __new__(cls, expr, *variables, **hints):
+        """
+        Create the derivative expression.
+        
+        Parameters
+        ----------
+        
+        expr : sympy.Expr
+            Expression to differentiate.
+            
+        *variables : sympy.Symbol or Scalar or Operator
+            Variables to take derivatives against. If ``annihilateOp`` or ``createOp`` 
+            are input, then this constructor turns them into commutators before passing
+            the resulting expression into ``sympy.Derivative`` alongside the rest of the
+            differentiation variables. Syntax is the same as
+            ``sympy.Derivative``, so (variable, order) tuples are also accepted.
+            
+        **hints 
+            Hints passed to ``sympy.Derivative``.
+        
+        """
+        
         
         if not(variables):
             return expr

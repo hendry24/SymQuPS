@@ -3,7 +3,7 @@ from typing import Sequence
 
 from ._internal.grouping import _AddOnlyExpr
 from ._internal.math import separate_operator
-from ._internal.preprocessing import preprocess_class
+from ._internal.preprocessing import preprocess_func
 
 from .objects.scalars import t
 from .objects.operators import rho, Operator
@@ -15,6 +15,7 @@ from . import hbar
 __all__ = ["LindbladMasterEquation"]
 
 class _LindbladDissipator(_AddOnlyExpr):
+    
     def __new__(cls, coef = 1, operator_1 = 1, operator_2 = None):        
         operator_2 = operator_2 if (operator_2 is not None) else operator_1        
         
@@ -59,7 +60,6 @@ class _LindbladDissipator(_AddOnlyExpr):
 
 ###
 
-@preprocess_class
 class LindbladMasterEquation(sp.Equality):
     """
     The Lindblad master equation.
@@ -67,6 +67,7 @@ class LindbladMasterEquation(sp.Equality):
     
     is_Equality = True
         
+    @preprocess_func
     def __new__(cls, H : sp.Expr = sp.Integer(0), *dissipators):
         """
         Construct a Lindblad master equation.

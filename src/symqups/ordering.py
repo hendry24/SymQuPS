@@ -8,7 +8,7 @@ from ._internal.basic_routines import (operation_routine,
                                        default_treat_add,
                                        EmptyPlaceholder)
 from ._internal.math import has_universal_oper
-from ._internal.preprocessing import preprocess_class
+from ._internal.preprocessing import preprocess_func
 
 from .objects.operators import Operator, annihilateOp, createOp
 
@@ -18,11 +18,11 @@ from . import s as CahillGlauberS
 
 ###
 
-@preprocess_class
 class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
     
     is_commutative = False
     
+    @preprocess_func    
     def __new__(cls, expr : sp.Expr, s : sp.Number | None = None, 
                 _fast_constructor : tuple = None) -> sp.Expr:
         
@@ -151,6 +151,11 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
         return r"\left\{ %s \right\}_{s=%s}" % (sp.latex(self.content), sp.latex(self.s_val))
         
     def explicit(self) -> sp.Expr:
+        """
+        Return the explicit form. Only applicable to s=-1,0,1 ordering brackets, otherwise
+        the return ``self``. 
+        """
+        
         if not(self.contains_poly):
             return self
         
@@ -176,6 +181,7 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
             case default:
                 return self
 
+    @preprocess_func
     def express(self, t = 1, explicit=True) -> sp.Expr:
         """
         Expand the expression in terms of t-ordered expressions.
@@ -219,27 +225,39 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
                 )
             coef_lst.append(terms_coef)
             poly_dict_val.append(terms_poly_dict_val)
+            
+        def get_express_out_summand(inpt, t, explicit, sub_lst):
+            coef_combo, poly_dict_val_combo = inpt
+            coef = [c for c_lst in coef_combo for c in c_lst]
+            poly_dict = {sub : mn for sub, mn in zip(sub_lst, poly_dict_val_combo)}
+            sordered = sOrdering(1, s=t, _fast_constructor=[poly_dict, []])
+            if explicit and isinstance(sordered, sOrdering):
+                sordered = sordered.explicit()
+            return sp.Mul(*coef, sordered)
          
         return sp.Add(*[get_express_out_summand(val, t, explicit, self.poly_dict.keys()) 
                         for val in list(zip(product(*coef_lst), product(*poly_dict_val))) 
                         ])
-    
-def get_express_out_summand(inpt, t, explicit, sub_lst):
-    coef_combo, poly_dict_val_combo = inpt
-    coef = [c for c_lst in coef_combo for c in c_lst]
-    poly_dict = {sub : mn for sub, mn in zip(sub_lst, poly_dict_val_combo)}
-    sordered = sOrdering(1, s=t, _fast_constructor=[poly_dict, []])
-    if explicit and isinstance(sordered, sOrdering):
-        sordered = sordered.explicit()
-    return sp.Mul(*coef, sordered)
 
 ###
 
+@preprocess_func
 def normal_order(expr : sp.Expr) -> sp.Expr:
+    """
+    Normal-order ``expr``. The resulting expression is generally NOT equivalent.
+    """
     return explicit_sOrdering(sOrdering(expr, s=1))
 
+@preprocess_func
 def antinormal_order(expr : sp.Expr) -> sp.Expr:
+    """
+    Anti-normal-order ``expr``. The resulting expression is generally NOT equivalent.
+    """
     return explicit_sOrdering(sOrdering(expr, s=-1))
 
+@preprocess_func
 def Weyl_order(expr : sp.Expr) -> sp.Expr:
+    """
+    Weyl-order (or symmetric-order) ``expr``. The resulting expression is generally NOT equivalent.
+    """
     return explicit_sOrdering(sOrdering(expr, s=0))

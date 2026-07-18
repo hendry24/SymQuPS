@@ -99,7 +99,7 @@ class Defined(ObjectGroup):
     
     definition = _definition()
     """
-    The definition of the object, in LaTeX string.
+    The definition of the object, is a SymPy object like ``sympy.Equality``.
     """
     
 ###

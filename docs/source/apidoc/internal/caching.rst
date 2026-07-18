@@ -1,7 +1,7 @@
 Subscript Caching
 =================
 
-Every time an object with ``has_sub=True`` is created (see :doc:`../basic/objects-laymen` and :doc:`objects-powerusers`),
+Every time an object with ``has_sub=True`` is created (see :doc:`../apiref/objects-laymen` and :doc:`../apiref/objects-powerusers`),
 the package checks whether its ``sub`` already exists. If not, then that subscript is added to the ``sub_cache`` and the
 package refreshes relevant data to reflect the addition of "new subsystems" in the session. This includes:
 

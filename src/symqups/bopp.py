@@ -4,7 +4,7 @@ from ._internal.grouping import (
     HilbertSpaceObject, PhaseSpaceObject, NotAnOperator, Acting,
     NotAScalar
 )
-from ._internal.preprocessing import preprocess_class
+from ._internal.preprocessing import preprocess_func
 
 from .objects.base import Base
 from .objects.scalars import alpha, alphaD
@@ -14,7 +14,6 @@ from .manipulations import dagger, Derivative
 
 from . import s as CahillGlauberS
 
-@preprocess_class
 class _BoppActor(Base, Acting):
     """
     Base class for HSBS and PSBO.
@@ -25,6 +24,7 @@ class _BoppActor(Base, Acting):
         dir = "L" if left else "R"
         return r"\hat{\mathcal{B}}_{%s}^{%s}" % (sp.latex(base), dir), {"commutative":True}
     
+    @preprocess_func
     def __new__(cls,
                 base : annihilateOp|createOp|alpha|alphaD, 
                 target : sp.Expr|None = None,
@@ -65,6 +65,7 @@ class _BoppActor(Base, Acting):
     def left(self):
         return self._left
     
+    @preprocess_func
     def act(self, target : sp.Expr):
         s = CahillGlauberS.val
         sgn = -1 if isinstance(self.base, (annihilateOp, alpha)) else 1
