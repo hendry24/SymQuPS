@@ -6,7 +6,7 @@ hatted star products summarized in :doc:`star` can be seen as differential opera
 superoperators, respectively. While the former is not so useful, the latter has a nice commutative property that
 allows for significant speed-up for :class:`symqups.cg.iCGTransform` for non-polynomial inputs (e.g., when 
 inverse-transforming an equation of motion). Both are probably not interesting to a typical quantum theorist, 
-but we think it is nice to provide these functionalities in the pacakge for the user, and have thus implemented them.
+but we think it is nice to provide these functionalities in the package for the user, and have thus implemented them.
 These properties are discussed by [Lim2025]_.
 
 The phase-space Bopp operators

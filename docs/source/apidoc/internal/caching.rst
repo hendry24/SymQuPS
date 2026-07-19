@@ -9,4 +9,4 @@ package refreshes relevant data to reflect the addition of "new subsystems" in t
 
 - Updating the operator-to-scalar and scalar-to-operator substitution dictionaries, which are used to promote phase-space scalars to Hilbert space operators and vice-versa.
 
-- Updating the qp-to-alpha and alpha-to-qp substitution dictionaries, which are used to convert between the (q,p) canonical phase space and the (alpha, alpha*) formal complexified phase space, and similarly for their operator counterparts.
+- Updating the qp-to-alpha and alpha-to-qp substitution dictionaries, which are used to convert between the :math:`(q,p)` canonical phase space and the :math:`(\alpha, \alpha^*)` complexified phase space, and similarly for their operator counterparts.

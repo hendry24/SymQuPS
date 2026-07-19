@@ -1,7 +1,7 @@
 Argument Preprocessing
 ======================
 
-All top-level functionalities of the package is decorated with the ``preprocess_func`` or ``preprocess_class`` decorator,
+All top-level functionalities of the package which takes input from the user are decorated with the ``preprocess_func`` decorator,
 which does two things:
 
 -   It "sympifies" all arguments to be SymPy-compatible.

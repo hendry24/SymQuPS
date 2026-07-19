@@ -23,7 +23,7 @@ where
     =
     \hat{F}_j\rho\hat{F}_k - \frac{1}{2} \left(\hat{F}_k^\dagger \hat{F}_j\rho + \rho \hat{F}_k^\dagger \hat{F}_j\right)
 
-is the Lindblad dissipator. The rate coefficients :math:`\left\{\gamma_{jk}\right\}` must form a positive smeidefinite matrix. In the 
+is the Lindblad dissipator. The rate coefficients :math:`\left\{\gamma_{jk}\right\}` must form a positive semidefinite matrix. In the 
 case that it is diagonal and hence real-valued, it is customary to use the jump operators :math:`\sqrt{\gamma_{jj}}\hat{F}_j=\hat{L}_j`, thereby abosrbing
 the rate coefficients.
 

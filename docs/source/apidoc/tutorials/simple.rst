@@ -3,7 +3,7 @@ Using ``symqups.simple`` for Unipartite Systems
 
 The best use case of the phase space representation is when our quantum system is **unipartite**, in which case the phase space 
 is two dimensional. Starting with bipartite systems, we have four-dimensional phase space, which is not exactly fun to visualize.
-As such, we expect most use cases to deal with unipartite systems, in which case the full power of SymQuPS is probbaly overkill.
+As such, we expect most use cases to deal with unipartite systems, in which case the full power of SymQuPS is probably overkill.
 To that end, we provide ``symqups.simple``, a simpler SymQuPS **without subscripts** where the objects have been created and 
 assigned as package variables. This simplified package comes with SymQuPS and can be accessed using ``from symqups.simple import *``
 (yes, we recommend pulling in everything there). A use that uses ``symqups.simple`` has probably no need to import from the main package.

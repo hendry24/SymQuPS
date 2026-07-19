@@ -6,7 +6,7 @@
 Introducing, SymQuPS!
 =====================
 
-SymQuPS is a computer algebra system based on SymPy that serves as a tool to algebraically go between the Hilbert space equipped with the canonical commutator
+SymQuPS (**Sym**bolic **Qu**antum **P**hase **S**pace) is a computer algebra system based on SymPy that serves as a tool to algebraically go between the Hilbert space equipped with the canonical commutator
 and the phase space equipped with the Poisson bracket structure, mainly to obtain the phase-space representation of quantum 
 equations of motion to help quantum theorists with the cumbersome algebra. 
 
@@ -14,33 +14,34 @@ For descriptions that "start" in the Hilbert space, such as that of a quantum sy
 the **phase space representation** of that quantum system. On the flip side, for things that "start" in the phase
 space, such as a classical observable function, the transformation into the Hilbert space is known as the 
 **canonical quantization** of that classical observable, i.e., we find a quantum mechanical operator which represents
-said observable.
+said observable. Nowadays, canonical quantization has become a mature field in physics, which is why we focus on the phase space 
+representation that is still relevant in developing fields like quantum optics.
 
 It has been shown by [Groenewold1946]_ and [VanHove1951]_ that the transformation between the two spaces is not unique;
 we can have multiple correspondences, each associated with a choice of operator ordering, e.g., :math:`qp\leftrightarrow \hat{q}\hat{p}`
 and :math:`qp\leftrightarrow\hat{p}\hat{q}`. As such, there exists multiple, equally-valid, correspondences, each with its own
-peculiarities. Choosing what to use, then, is a matter of asking what we want to see.
+peculiarities. 
 
 The algebra of quantum mechanical operators is *noncommutative*, while the algebra of classical observables is *commutative*.
 As a consequence, the mapping of products is nontrivially related to the mappings of its factors. For Hilbert-to-phase-space 
 transforms, the mapping of a product is given by the **star product** between the mappings of the factors, a prime example of
 which is the Moyal product [Moyal1949]_. Meanwhile, the inverse mapping of a product is given by what we call the **hatted star
 product** between the inverse mappings of the factors; the hatted star product associated with the Moyal product is Bracken's 
-odot product [Bracken2003]_.
+"odot" product [Bracken2003]_.
 
 SymQuPS implements the Cahill-Glauber correspondence [Cahill1969a]_ [Cahill1969b]_, alongside the results
 of [Soloviev2015]_ and [Lim2025]_ to implement the star products and their hatted counterparts. The correspondence is a continuous
-family that interpolates between the "big three" of ordering choices: the antinormal, symmetric, and normal orderings. 
+family that interpolates between the "big three" of ordering choices: the anti-normal, symmetric, and normal orderings. 
 More details are available in the four references given in this paragraph, which are briefly summarized in our **API REFERENCE** for 
 unipartite systems (the generalization is straightforward for multipartite systems).
 
 While motivated by the desire for convenience in obtaining the phase-space representation of equations of motion,
 such as the Lindblad master equation [Manzano2020]_, SymQuPS has been developed as a calculator-esque environment that allows 
-multiple ways to algebraically manipulate mathematical expressions involving the phase-space variables and their operaotr counterparts, 
-with main focus on polynomials. Here we highlight some functionalities offered by the pacakge:
+multiple ways to algebraically manipulate mathematical expressions involving the phase-space variables and their operator counterparts, 
+with main focus on polynomials. Here we highlight some functionalities offered by the package:
 
 -  Create and algebraically manipulate expressions in the canonical phase-space variables :math:`(q,p)` and the corresponding 
-   formal complexified phase-space variables :math:`(\alpha,\alpha^*)`, where 
+   formally complexified phase-space variables :math:`(\alpha,\alpha^*)`, where 
 
    .. math::
 
@@ -52,7 +53,7 @@ with main focus on polynomials. Here we highlight some functionalities offered b
    .. important::
 
       While the package allows the user to manipulate expressions in terms of :math:`(q,p)`, the main functionalities of the package
-      always returns expressions written in terms of :math:`(\alpha,\alpha^*)` (similarly for the operators). This is because the Cahill-Glauebr
+      always returns expressions written in terms of :math:`(\alpha,\alpha^*)` (similarly for the operators). This is because the Cahill-Glauber
       framework is built upon the algebra of ladder operators. The user can always convert back to the :math:`(q,p)` system using :func:`symqups.manipulations.alpha2qp`.
 
 -  Rewrite operator expressions in any ordering defined within the Cahill-Glauber framework. See :doc:`apidoc/apiref/ordering` and
@@ -163,8 +164,7 @@ References
    http://dx.doi.org/10.1088/0031-8949/90/7/074008
 
 .. [Lim2025] Lim, H. M. (2025). Algebraic machinery of quantization. 
-   arXiv:2509.17106v2 [quant-ph]. 
-   https://doi.org/10.48550/arXiv.2509.17106v2
+   arXiv:2509.17106v2 [quant-ph]. https://arxiv.org/abs/2509.17106v2
 
 .. [Manzano2020] Manzano, D. (2020). A short introduction to the Lindblad 
    master equation. *AIP Advances*, 10, 025106. 
