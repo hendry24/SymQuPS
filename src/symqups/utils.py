@@ -57,48 +57,26 @@ def derivative_not_in_num(A : sp.Expr) -> sp.Expr:
         return sp.Mul(non_der, der)
     
 @preprocess_func
-def collect_by_derivative(A : sp.Expr, 
-                          f : None | UndefinedFunction = None) -> sp.Expr:
+def collect_by_derivative(A : sp.Expr | sp.Equality) -> sp.Expr:
     """
     Collect terms by the derivatives of the input function, by default those of the state function.
 
     Parameters
     ----------
 
-    A : sympy.Expr
-        Quantity whose terms is to be collected. If `A` contains no
-        function, then it is returned as is. 
-
-    f : sympy.Function, default: `W`
-        Function whose derivatives are considered.
+    A : sympy.Expr or sympy.Equality
+        Expression whose terms is to be collected.
 
     Returns
     -------
 
-    out : sympy.Expr
+    out : sympy.Expr or sympy.Equality
         The same quantity with its terms collected. 
     """
 
-    A = sp.expand(A)
+    if A.is_Equality:
+        return sp.Equality(collect_by_derivative(A.lhs),
+                           collect_by_derivative(A.rhs))
 
-    if not(A.atoms(sp.Function)):
-        return A
-
-    q = scalars.q()
-    p = scalars.p()
-    if f is None:
-        f = scalars.W()
-
-    max_order = max([A_.derivative_count 
-                     for A_ in list(A.atoms(sp.Derivative))]+[0])
-
-    def dq_m_dp_n(m, n):
-        if m==0 and n==0:
-            return f
-        return sp.Derivative(f, 
-                             *[q for _ in range(m)], 
-                             *[p for _ in range(n)])
-    
-    return sp.collect(A, [dq_m_dp_n(m, n) 
-                          for m in range(max_order) 
-                          for n in range(max_order - m)])
+    return sp.collect(A,
+                      list(A.atoms(sp.Derivative)))
