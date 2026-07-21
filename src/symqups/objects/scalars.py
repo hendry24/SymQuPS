@@ -142,7 +142,7 @@ class StateFunction(sp.Expr, PhaseSpaceObject, CannotBoppShift):
             case 1:
                 return r"Q"
             case default:
-                return r"W_{%s}" % (-sp.latex(s.val))
+                return r"W_{%s}" % (sp.latex(-s.val))
     
 global W
 W = StateFunction(t())

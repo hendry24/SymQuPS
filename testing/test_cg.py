@@ -10,9 +10,8 @@ from symqups.manipulations import qp2alpha, op2sc, Derivative, Commutator, norma
 from symqups.utils import get_random_poly, get_N
 from symqups.star import Star, HattedStar
 
-from symqups import s, pi
+from symqups import s
 s = s.val
-pi = pi.val
 
 from symqups._internal.cache import sub_cache
 sub_cache.clear()

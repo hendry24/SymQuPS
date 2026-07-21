@@ -6,7 +6,7 @@
 Introducing, SymQuPS!
 =====================
 
-SymQuPS (**Sym**bolic **Qu**antum **P**hase **S**pace) is a computer algebra system based on SymPy that serves as a tool to algebraically go between the Hilbert space equipped with the canonical commutator
+SymQuPS (**Sym**\ bolic **Qu**\ antum **P**\ hase **S**\ pace) is a computer algebra system based on SymPy that serves as a tool to algebraically go between the Hilbert space equipped with the canonical commutator
 and the phase space equipped with the Poisson bracket structure, mainly to obtain the phase-space representation of quantum 
 equations of motion to help quantum theorists with the cumbersome algebra. 
 

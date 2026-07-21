@@ -27,10 +27,6 @@ Constants
 
     The scaling paramter :math:`\zeta` for :math:`\alpha`. See :doc:`../apiref/constants`.
 
-.. py:data:: pi
-
-    The transcendental number :math:`pi`. See :doc:`../apiref/constants`.
-
 Scalars
 ~~~~~~~
 

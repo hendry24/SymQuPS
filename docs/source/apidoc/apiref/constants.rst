@@ -30,7 +30,3 @@ using ``const.default_value``, so a constant can be set to its default value usi
     
     Defaults to the symbol :math:`\zeta` and can be set to any positive real value, such as :math:`\sqrt{m\omega}` for 
     a simple harmonic oscillator.
-
-.. py:data:: symqups.pi
-
-    The one and only.
