@@ -1,13 +1,10 @@
 import sympy as sp
 
-from .. import s as CahillGlauberS
 from .base import Base
 from .._internal.grouping import (qpType, alphaType, PhaseSpaceVariable, 
                                   PhaseSpaceObject, CannotBoppShift)
 from .._internal.cache import sub_cache
 from .._internal.basic_routines import treat_sub, invalid_input
-
-
 
 __all__ = ["q", "p", "alpha", "alphaD", "W"]
 
@@ -134,7 +131,8 @@ class StateFunction(sp.Expr, PhaseSpaceObject, CannotBoppShift):
     ###
     
     def _latex(self, printer):
-        match CahillGlauberS.val:
+        from .. import s
+        match s.val:
             case -1:
                 from ..utils import get_N
                 N = get_N()
@@ -144,7 +142,7 @@ class StateFunction(sp.Expr, PhaseSpaceObject, CannotBoppShift):
             case 1:
                 return r"Q"
             case default:
-                return r"W_{%s}" % (-CahillGlauberS.val)
+                return r"W_{%s}" % (-sp.latex(s.val))
     
 global W
 W = StateFunction(t())

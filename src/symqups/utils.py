@@ -1,11 +1,9 @@
 import sympy as sp
-from sympy.core.function import UndefinedFunction
 import random
 
 from ._internal.cache import sub_cache
 from ._internal.preprocessing import preprocess_func
 
-from .objects import scalars
 ###
 
 def get_N():

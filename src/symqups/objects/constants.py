@@ -2,10 +2,10 @@ import sympy as sp
 from sympy.core.sympify import CantSympify
 import warnings
 
-from .grouping import _ReadOnlyExpr
-from .preprocessing import preprocess_func
+from .._internal.grouping import _ReadOnlyExpr
+from .._internal.preprocessing import preprocess_func
 
-from ..objects.base import Base
+from .base import Base
 
 class Constant(CantSympify, _ReadOnlyExpr, Base):
     """
@@ -32,7 +32,7 @@ class Constant(CantSympify, _ReadOnlyExpr, Base):
     def val(self, value):        
         self._val = value
         
-        from .cache import sub_cache
+        from .._internal.cache import sub_cache
         sub_cache._refresh_all()
         
     def _latex(self, printer):
@@ -90,13 +90,3 @@ class ReducedPlanckConstant(PositiveRealConstant):
 class AlphaScalingParameter(PositiveRealConstant):
     name = r"\zeta"
     default_value = sp.Symbol(r"zeta")
-
-###
-
-class piTranscendentalNumber(Constant):
-    name = r"\pi"
-    default_value = sp.Symbol(r"pi")
-    
-    @Constant.val.setter
-    def val(self, value):
-        raise NotImplementedError("Cannot set the value of 'pi'.")

@@ -15,8 +15,6 @@ from .objects.operators import annihilateOp, densityOp
 
 from .manipulations import qp2alpha, dagger, Derivative
 
-from . import s as CahillGlauberS
-
 ###
 
 class _CannotBoppFlag(TypeError):
@@ -25,7 +23,9 @@ class _CannotBoppFlag(TypeError):
 ###
 
 def _Star_Bopp_monomial_A_times_B(A : sp.Expr, B : sp.Expr, left : bool):
-    s = CahillGlauberS.val
+
+    from . import s
+    s = s.val
     
     if A.is_Mul:
         args = A.args
@@ -74,7 +74,8 @@ def _Star_Bopp_monomial_A_times_B(A : sp.Expr, B : sp.Expr, left : bool):
 
 def _HattedStar_Bopp_monomial_A_times_B(A : sp.Expr, B : sp.Expr, left : bool):
 
-    s = CahillGlauberS.val
+    from . import s
+    s = s.val
     
     if A.is_Mul:
         args = A.args

@@ -1,7 +1,7 @@
 import sympy as sp
 import sympy.physics.quantum as spq
 from typing import Sequence
-from functools import partial
+from copy import deepcopy
 
 from ._internal.basic_routines import operation_routine, default_treat_add
 from ._internal.math import (has_universal_oper, separate_term_oper_by_sub, get_sub,
@@ -11,9 +11,9 @@ from ._internal.cache import ( op2sc_subs_dict, sc2op_subs_dict,
 from ._internal.grouping import qpType, alphaType, HilbertSpaceObject, PhaseSpaceVariableOperator
 from ._internal.preprocessing import preprocess_func
 
-from .objects.scalars import Scalar, t
+from .objects.scalars import Scalar
 from .objects.operators import annihilateOp, createOp, Operator, TimeDependentOp
-    
+ 
 ###
 
 @preprocess_func

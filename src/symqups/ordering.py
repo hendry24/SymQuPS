@@ -14,8 +14,6 @@ from .objects.operators import Operator, annihilateOp, createOp
 
 from .manipulations import qp2alpha, explicit_sOrdering
 
-from . import s as CahillGlauberS
-
 ###
 
 class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
@@ -26,7 +24,7 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
     is_commutative = False
     
     @preprocess_func    
-    def __new__(cls, expr : sp.Expr, s : float = CahillGlauberS.val, 
+    def __new__(cls, expr : sp.Expr, s : float = None, 
                 _fast_constructor : tuple = None) -> sp.Expr:
         
         """
@@ -40,10 +38,11 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
             returned as is. If ``Operator``s with ``has_sub=False`` like ``rho`` is contained, then 
             an error is raised.
             
-        s : float, default: s.val
+        s : float, optional
             Ordering parameter for the bracket. This input does not affect the package variable ``s``.
             If a number is passed, the package raises a warning if it is not a real number between
-            -1 and 1, inclusive. Using any ``sympy.Symbol`` is allowed.
+            -1 and 1, inclusive. Using any ``sympy.Symbol`` is allowed. By default, the current value
+            of ``symqups.s`` is used.
             
         _fast_constructor : tuple, default: None
             A tuple `(poly_dict, nonpoly_args)` for fast construction of the bracket. Used internally 
@@ -51,8 +50,17 @@ class sOrdering(sp.Expr, HilbertSpaceObject, CannotBoppShift):
         
         """
         
-        CahillGlauberS.val = s # To trigger warning 
-        CahillGlauberS.val = CahillGlauberS.default_value
+        from . import s as CahillGlauberS
+        
+        if s is None:
+            s = CahillGlauberS.val
+        else:
+            # We need to trigger warning in case a bad `s` is input by trying to
+            # set the value of the package's `s`. After that, we return to the 
+            # current set value. 
+            current_s_value = CahillGlauberS.val
+            CahillGlauberS.val = s # This will trigger a warning for bad `s`.
+            CahillGlauberS.val = current_s_value
             
         def has_ordering_ambiguity(A : sp.Expr) -> bool:
             if any(A.has(annihilateOp(sub)) and A.has(createOp(sub))

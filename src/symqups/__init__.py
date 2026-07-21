@@ -1,9 +1,8 @@
-from ._internal import constants as m
+from .objects import constants as m
 
 s = m.CahillGlauberSParameter()
 hbar = m.ReducedPlanckConstant()
 zeta = m.AlphaScalingParameter()
-pi = m.piTranscendentalNumber()
 
 del m
 

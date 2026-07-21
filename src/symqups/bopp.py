@@ -12,8 +12,6 @@ from .objects.operators import annihilateOp, createOp
 
 from .manipulations import dagger, Derivative
 
-from . import s as CahillGlauberS
-
 class _BoppActor(Base, Acting):
     """
     Base class for HSBS and PSBO.
@@ -67,7 +65,9 @@ class _BoppActor(Base, Acting):
     
     @preprocess_func
     def act(self, target : sp.Expr):
-        s = CahillGlauberS.val
+        from . import s
+        s = s.val
+        
         sgn = -1 if isinstance(self.base, (annihilateOp, alpha)) else 1
         space_sgn = -1 if self.Hilbert else 1
         if self.left:

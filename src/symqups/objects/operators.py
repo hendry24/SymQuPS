@@ -8,9 +8,6 @@ from .._internal.basic_routines import treat_sub
 
 from .scalars import t
 
-# NOTE: 'import .._internal.operator_handling' will result
-# in circular imports. 
-
 class Operator(Base, HilbertSpaceObject):
     """
     A Hilbert-space operator object.

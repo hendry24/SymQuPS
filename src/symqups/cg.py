@@ -20,9 +20,6 @@ from .manipulations import (qp2alpha, op2sc, alpha2qp, sc2op, Commutator,
                             s_ordered_equivalent, dagger, normal_ordered_equivalent,
                             Derivative)
 
-from . import s as CahillGlauberS
-from . import pi
-
 ###
 
 _kernel_string = r"\mathcal{T}_s\left(\bm{\alpha}\right) = "
@@ -165,6 +162,10 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
 
         """
         
+        
+        from . import s
+        s = s.val
+        
         if isinstance(mode, sp.Symbol): # deal with decorator
             mode = mode.name
         mode = mode.lower()
@@ -192,8 +193,6 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
                 return op2sc(s_ordered_equivalent(A))
             
             ###
-            
-            s = CahillGlauberS.val
             
             coefs = []
             out_star_factors = [] 
@@ -426,6 +425,9 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
             Some unevaluated expressions may be evaluable using ``iCGTransform(CGTransform(x))``, e.g.,
             the hatter star product between two :class:`symqups.ordering.sOrdering` objects.
         """
+        
+        from . import s
+        s = s.val
         
         if expr.is_Equality:
             return sp.Equality(iCGTransform(expr.lhs, *_vars),
