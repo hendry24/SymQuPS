@@ -318,10 +318,10 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
             return sp.Mul(*coefs, Star(*out_star_factors))
 
         def treat_sOrdering(A : sOrdering) -> sp.Expr:
-            if (A.args[1] != CahillGlauberS.val):
+            if (A.args[1] != s):
                 if not(A.args[0].is_polynomial(PhaseSpaceVariableOperator)):
                     return make(A)
-                return CGTransform(A.express(CahillGlauberS.val, False))
+                return CGTransform(A.express(s, False))
             
             # In the following A has the same s-value as the transform,
             # so we can simply discard the braces and replace the operators
@@ -349,7 +349,7 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
                 return True
             
             if (is_evaluable(A)
-                or (CahillGlauberS.val==0
+                or (s==0
                     and is_evaluable(alpha2qp(A)))):
                 return op2sc(A)
             
@@ -390,7 +390,9 @@ class CGTransform(sp.Expr, PhaseSpaceObject, Defined, NotAnOperator):
                                 )
         
     def _latex(self, printer):
-        return r"\mathcal{W}_{s={%s}}\left[{%s}\right]" % (sp.latex(CahillGlauberS.val),
+        from . import s
+        s = s.val
+        return r"\mathcal{W}_{s={%s}}\left[{%s}\right]" % (sp.latex(s),
                                                            sp.latex(self.args[0]))
     
 ###
@@ -524,8 +526,8 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
                 n = n_dict[sub]
                 ad = createOp(sub)
                 a = annihilateOp(sub)
-                k1 = (1-CahillGlauberS.val)/2
-                k2 = (1+CahillGlauberS.val)/2
+                k1 = (1-s)/2
+                k2 = (1+s)/2
                 summands = []
                 for j in range(m+1):
                     for k in range(n+1):
@@ -572,5 +574,7 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
                                  Star : treat_Star}
                                 )
     def _latex(self, printer):
-        return r"\mathcal{W}^{-1}_{s={%s}}\left[{%s}\right]" % (sp.latex(CahillGlauberS.val),
+        from . import s
+        s = s.val
+        return r"\mathcal{W}^{-1}_{s={%s}}\left[{%s}\right]" % (sp.latex(s),
                                                                 sp.latex(self.args[0]))
