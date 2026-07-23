@@ -464,7 +464,7 @@ class iCGTransform(sp.Expr, HilbertSpaceObject, Defined, NotAScalar):
             # for the output generation below. This will increase
             # cost with number of subsystems. May not be needed if
             # use cases is focused on single sub, in which case the
-            # explicit sum may be faster than assembling combos.                                                                            
+            # explicit sum may be faster than assembling combos.                                                                     
             
             coefs = []
             m_dict = {sub : 0 for sub in sub_cache}
