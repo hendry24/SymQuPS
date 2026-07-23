@@ -41,7 +41,7 @@ def get_random_poly(objects : Sequence,
         allows for constant terms to appear. Must not be negative.
         
     max_pow : int, default: 3
-        Maximum number of ``objects`` a term may have, i.e., the polynomial order. Must not
+        Maximum number of ``objects`` a term may have, i.e., the polynomial degree. Must not
         be negative.
         
     n_terms : int, default: 3
