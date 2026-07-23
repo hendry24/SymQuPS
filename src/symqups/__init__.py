@@ -29,6 +29,6 @@ from .ordering import sOrdering, normal_order, Weyl_order, antinormal_order
 from .quantization import s_quantize, normal_quantize, Weyl_quantize, antinormal_quantize
 from .star import Star, HattedStar
 from .utils import (
-    collect_by_derivative, derivative_not_in_num, 
+    collect_by_derivative, 
     get_N, get_random_poly
 )

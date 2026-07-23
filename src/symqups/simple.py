@@ -26,6 +26,7 @@ del annihilateOp, createOp
 
 ###
 
+from .bopp import PhaseSpaceBoppOperator, PSBO, HilbertSpaceBoppSuperoperator, HSBS
 from .cg import CGTransform, iCGTransform
 from .eom import LindbladMasterEquation, LME
 from .manipulations import (alpha2qp, qp2alpha, sc2op, op2sc, dagger, 

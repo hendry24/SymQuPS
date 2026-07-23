@@ -46,6 +46,15 @@ class _BoppActor(Base, Acting):
         left : bool, default = False
             Whether the HSBS or PSBO acts to its left.
         """
+        
+        if cls.Hilbert:
+            valid_base = [annihilateOp, createOp]
+        else:
+            valid_base = [alpha, alphaD]
+        
+        if type(base) not in valid_base:
+            raise ValueError("Invalid base.")
+        
         obj = super().__new__(cls, base, target, left)
         obj._base = base
         obj._left = left

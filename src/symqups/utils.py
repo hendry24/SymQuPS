@@ -47,9 +47,8 @@ def get_random_poly(objects : Sequence,
     n_terms : int, default: 3
         Number of terms to generate. Must not be negative.
     """
-    if any(not(isinstance(x, sp.Integer)) or x<0 for x in [min_pow, max_pow, n_terms]):
-        print(min_pow, max_pow, n_terms)
-        raise ValueError("'min_pow', 'max_pow', and 'n_terms' must be nonnegative integers.")
+    if any(not(isinstance(x, (int,sp.Integer))) or x<0 for x in [min_pow, max_pow, n_terms]):
+        raise ValueError(f"'min_pow', 'max_pow', and 'n_terms' must be nonnegative integers. Got {[min_pow, max_pow, n_terms]}")
     
     return sp.Add(*[sp.Mul(*[random.choice(coeffs)*random.choice(objects)
                              for _ in range(random.randint(min_pow, max_pow))])
