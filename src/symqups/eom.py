@@ -121,4 +121,7 @@ class LindbladMasterEquation(sp.Equality):
         return sp.Equality(lhs, rhs)
 
 class LME(LindbladMasterEquation):
+    """
+    Alias for ``LindbladMasterEquation``.
+    """
     pass

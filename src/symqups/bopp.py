@@ -89,6 +89,8 @@ class HilbertSpaceBoppSuperoperator(_BoppActor, HilbertSpaceObject, NotAnOperato
     The Hilbert-space Bopp superoperator (HSBS).
     """
     Hilbert = True
+    
+#: Alias for ``HilbertSpaceBoppSuperoperator``.
 HSBS = HilbertSpaceBoppSuperoperator
     
 class PhaseSpaceBoppOperator(_BoppActor, PhaseSpaceObject, NotAScalar):
@@ -96,5 +98,6 @@ class PhaseSpaceBoppOperator(_BoppActor, PhaseSpaceObject, NotAScalar):
     The phase-space Bopp operator (PSBO).
     """
     Hilbert = False
-    
+
+#: Alias for ``PhaseSpaceBoppOperator``.
 PSBO = PhaseSpaceBoppOperator

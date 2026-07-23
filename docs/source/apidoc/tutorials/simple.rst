@@ -85,6 +85,11 @@ Package functionalities
 .. autosummary::
    :nosignatures:
 
+   symqups.bopp.PhaseSpaceBoppOperator
+   symqups.bopp.PSBO
+   symqups.bopp.HilbertSpaceBoppSuperoperator
+   symqups.bopp.HSBS
+
    symqups.cg.CGTransform
    symqups.cg.iCGTransform
    
