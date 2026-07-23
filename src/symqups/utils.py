@@ -1,6 +1,8 @@
 import sympy as sp
 import random
 
+from typing import Sequence
+
 from ._internal.cache import sub_cache
 from ._internal.preprocessing import preprocess_func
 
@@ -15,10 +17,40 @@ def get_N():
 ###
 
 @preprocess_func
-def get_random_poly(objects, coeffs=[1], min_pow =0, max_pow=3, n_terms=3) -> sp.Expr:
+def get_random_poly(objects : Sequence, 
+                    coeffs : Sequence = [1], 
+                    min_pow : int = 0, 
+                    max_pow : int = 3, 
+                    n_terms : int = 3) -> sp.Expr:
     """
-    Make a random polynomial in 'objects'.
+    Make a random polynomial in ``objects``.
+    
+    Parameters
+    ----------
+    
+    objects : sequence
+        A sequence of the polynomial variables.
+        
+    coeffs : sequence, default : [1]
+        A sequence of coefficients to choose from alongside each choice
+        of object from ``objects``. As such, each output term has a coefficient that
+        is a product of the elements of ``coeffs``.
+        
+    min_pow : int, default: 0
+        Minimum number of ``objects`` a term may have. For example, setting ``min_pow=0`` 
+        allows for constant terms to appear. Must not be negative.
+        
+    max_pow : int, default: 3
+        Maximum number of ``objects`` a term may have, i.e., the polynomial order. Must not
+        be negative.
+        
+    n_terms : int, default: 3
+        Number of terms to generate. Must not be negative.
     """
+    if any(not(isinstance(x, sp.Integer)) or x<0 for x in [min_pow, max_pow, n_terms]):
+        print(min_pow, max_pow, n_terms)
+        raise ValueError("'min_pow', 'max_pow', and 'n_terms' must be nonnegative integers.")
+    
     return sp.Add(*[sp.Mul(*[random.choice(coeffs)*random.choice(objects)
                              for _ in range(random.randint(min_pow, max_pow))])
                     for _ in range(n_terms)])
