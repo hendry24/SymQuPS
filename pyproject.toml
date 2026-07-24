@@ -10,7 +10,7 @@ dependencies = [
 ]
 requires-python = ">= 3.8"
 authors = [
-    {name = "Hendry Minfui Lim", email = "hendry01@ui.ac.id"}
+    {name = "Hendry Minfui Lim", email = "hendryadi0101@gmail.com"}
 ]
 description = "Python symbolic implementation of the quantum phase space formalism."
 readme = "README.md"
@@ -41,7 +41,7 @@ classifiers = [
 [project.urls]
 Repository = "https://github.com/hendry24/SymQuPS"
 Issues = "https://github.com/hendry24/SymQuPS/issues"
-Tutorial = "https://github.com/hendry24/SymQuPS/blob/main/tutorial.ipynb"
+Documentation = "https://symqups.readthedocs.io"
 
 [tool.setuptools.package-data]
 mypackage = ["py.typed"]
